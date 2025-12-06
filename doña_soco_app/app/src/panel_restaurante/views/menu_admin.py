@@ -113,12 +113,12 @@ def menu_admin_view(page: ft.Page):
                                     ) if imagen else ft.Container(width=50, height=50),
 
                                     ft.Column([
-                                        ft.Text(nombre, size=18, weight="bold"),
-                                        ft.Text(f"${precio:.2f}", size=16),
+                                        ft.Text(nombre, size=18, weight="bold", color=ft.Colors.BLACK),
+                                        ft.Text(f"${precio:.2f}", size=16, color=ft.Colors.BLACK),
                                     ]),
                                 ], alignment=ft.MainAxisAlignment.START),
 
-                                ft.Text(desc or "Sin descripción"),
+                                ft.Text(desc or "Sin descripción", color=ft.Colors.BLACK),
 
                                 ft.Row([
                                     ft.IconButton(
@@ -247,7 +247,7 @@ def menu_admin_view(page: ft.Page):
         expand=True,
         scroll='auto',
         controls=[
-            ft.Text("Agregar o editar platillos", size=20, weight="bold"),
+            ft.Text("Agregar o editar platillos", size=20, weight="bold", color=ft.Colors.BLACK),
             nombre_field,
             descripcion_field,
             precio_field,

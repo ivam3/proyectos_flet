@@ -20,6 +20,19 @@ def main(page: ft.Page):
     pubsub = init_pubsub(page)
 
     page.theme_mode = ft.ThemeMode.LIGHT
+    
+    # Define a custom text theme with slightly smaller font sizes
+    page.theme = ft.Theme(
+        color_scheme_seed="orange",
+        text_theme=ft.TextTheme(
+            body_large=ft.TextStyle(size=15),
+            body_medium=ft.TextStyle(size=13),
+            body_small=ft.TextStyle(size=11),
+            title_large=ft.TextStyle(size=20),
+            title_medium=ft.TextStyle(size=15),
+            title_small=ft.TextStyle(size=13),
+        )
+    )
     page.window.width = 400
     page.window.height = 700
 
@@ -87,7 +100,7 @@ def main(page: ft.Page):
 
     # ------- HEADER (doble clic para admin) -------
     top_bar = ft.Container(
-        content=ft.Text("Antojitos Doña Soco", size=22, weight="bold"),
+        content=ft.Text("Antojitos Doña Soco", size=22, weight="bold", color=ft.Colors.BLACK),
         alignment=ft.alignment.center,
         on_click=activar_admin,
         padding=15

@@ -16,9 +16,10 @@ def seguimiento_view(page: ft.Page):
         label="Tu número de teléfono",
         keyboard_type=ft.KeyboardType.PHONE,
         value=telefono_guardado or "",
+        label_style=ft.TextStyle(color=ft.Colors.BLACK)
     )
 
-    resultado_text = ft.Text("", size=16)
+    resultado_text = ft.Text("", size=16, color=ft.Colors.BLACK)
     pedidos_list = ft.Column(scroll="auto")
 
     # --- FUNCIÓN PARA ACTUALIZAR PANTALLA ---
@@ -68,20 +69,20 @@ def seguimiento_view(page: ft.Page):
                     color = {
                         "pendiente": ft.Colors.AMBER_700,
                         "en preparación": ft.Colors.ORANGE,
-                        "en camino": ft.Colors.BLUE,
+                        "en camino": ft.Colors.TEAL_700,
                         "entregado": ft.Colors.GREEN,
                     }.get(h_estado, ft.Colors.GREY)
                     pasos.append(
                         ft.Row([
                             ft.Icon(ft.Icons.CHECK_CIRCLE, color=color),
-                            ft.Text(f"{h_estado.title()} — {h_fecha}", size=13)
+                            ft.Text(f"{h_estado.title()} — {h_fecha}", size=13, color=ft.Colors.BLACK)
                         ])
                     )
 
                 color_estado_actual = {
                     "pendiente": ft.Colors.AMBER_700,
                     "en preparación": ft.Colors.ORANGE,
-                    "en camino": ft.Colors.BLUE,
+                    "en camino": ft.Colors.TEAL_700,
                     "entregado": ft.Colors.GREEN,
                 }.get(estado, ft.Colors.GREY)
 
@@ -90,12 +91,12 @@ def seguimiento_view(page: ft.Page):
                         content=ft.Container(
                             padding=10,
                             content=ft.Column([
-                                ft.Text(f"Pedido #{orden_id}", size=18, weight="bold"),
-                                ft.Text(f"Fecha: {fecha}"),
-                                ft.Text(f"Total: ${total:.2f}"),
+                                ft.Text(f"Pedido #{orden_id}", size=18, weight="bold", color=ft.Colors.BLACK),
+                                ft.Text(f"Fecha: {fecha}", color=ft.Colors.BLACK),
+                                ft.Text(f"Total: ${total:.2f}", color=ft.Colors.BLACK),
                                 ft.Text(f"Estado actual: {estado.upper()}", color=color_estado_actual, size=16, weight="bold"),
                                 ft.Divider(),
-                                ft.Text("Historial de estados:", size=14, weight="bold"),
+                                ft.Text("Historial de estados:", size=14, weight="bold", color=ft.Colors.BLACK),
                                 *pasos  # timeline visual
                             ])
                         )
@@ -130,7 +131,7 @@ def seguimiento_view(page: ft.Page):
     pubsub.subscribe(recibir_mensaje)
 
     return ft.Column([
-        ft.Text("📲 Seguimiento de tu pedido", size=24, weight="bold"),
+        ft.Text("📲 Seguimiento de tu pedido", size=24, weight="bold", color=ft.Colors.BLACK),
         ft.Divider(),
         telefono_field,
         ft.ElevatedButton("Buscar pedidos", on_click=buscar_pedidos),

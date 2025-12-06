@@ -110,22 +110,74 @@ def obtener_menu(solo_activos=True):
     conn.close()
     return platillos
 
-def obtener_pedidos():
-    """Obtiene todos los pedidos con sus detalles."""
+def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None):
+    """
+    Obtiene una lista de pedidos con detalles, con opciones de paginación y filtro por fecha.
+    """
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("""
+    
+    params = []
+    where_clauses = []
+
+    if start_date:
+        where_clauses.append("date(o.fecha) >= ?")
+        params.append(start_date)
+    if end_date:
+        where_clauses.append("date(o.fecha) <= ?")
+        params.append(end_date)
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    query = f"""
         SELECT 
             o.id, o.nombre_cliente, o.telefono, o.direccion, o.referencias, o.total, o.fecha, o.estado,
             GROUP_CONCAT(od.producto || ' (x' || od.cantidad || ' - $' || od.precio_unitario || ')', ' | ') AS detalles_productos
         FROM ordenes o
         LEFT JOIN orden_detalle od ON o.id = od.orden_id
+        {where_sql}
         GROUP BY o.id
         ORDER BY o.fecha DESC
-    """)
+    """
+
+    if limit is not None and offset is not None:
+        query += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+    cursor.execute(query, params)
     pedidos = cursor.fetchall()
     conn.close()
     return pedidos
+
+def obtener_total_pedidos(start_date=None, end_date=None):
+    """
+    Obtiene el número total de pedidos, con filtro opcional por fecha.
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+
+    params = []
+    where_clauses = []
+
+    if start_date:
+        where_clauses.append("date(fecha) >= ?")
+        params.append(start_date)
+    if end_date:
+        where_clauses.append("date(fecha) <= ?")
+        params.append(end_date)
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    query = f"SELECT COUNT(id) FROM ordenes {where_sql}"
+    
+    cursor.execute(query, params)
+    total = cursor.fetchone()[0]
+    conn.close()
+    return total
 
 def actualizar_estado_pedido(orden_id, nuevo_estado):
     """Actualiza el estado de un pedido y registra el cambio en el historial."""

@@ -4,10 +4,9 @@ from .views.pedidos import pedidos_view
 
 def create_admin_panel_view(page: ft.Page):
     """
-    Crea la vista principal del panel de administración con navegación lateral.
+    Crea la vista principal del panel de administración con pestañas de navegación en la parte superior.
     """
     
-    # Contenedor para el contenido principal del panel
     admin_content_area = ft.Container(expand=True)
 
     def switch_admin_view(selected_index):
@@ -19,38 +18,27 @@ def create_admin_panel_view(page: ft.Page):
             admin_content_area.content = ft.Text("Selección no válida")
         page.update()
 
-    def nav_rail_change(e):
+    def tab_change(e):
         switch_admin_view(e.control.selected_index)
 
-    nav_rail = ft.NavigationRail(
+    admin_tabs = ft.Tabs(
         selected_index=0,
-        label_type=ft.NavigationRailLabelType.ALL,
-        extended=False,
-        min_width=80,
-        group_alignment=-0.9,
-        destinations=[
-            ft.NavigationRailDestination(
-                icon=ft.Icons.RESTAURANT_MENU,
-                selected_icon=ft.Icons.RESTAURANT_MENU,
-                label="Gestión de Menú",
-            ),
-            ft.NavigationRailDestination(
-                icon=ft.Icons.LIST_ALT,
-                selected_icon=ft.Icons.LIST,
-                label="Gestión de Pedidos",
-            ),
+        animation_duration=300,
+        tabs=[
+            ft.Tab(text="Gestión de Menú"),
+            ft.Tab(text="Gestión de Pedidos"),
         ],
-        on_change=nav_rail_change,
+        on_change=tab_change,
+        expand=True,
     )
 
     # Carga inicial de la vista de menú en el panel
     switch_admin_view(0)
 
     # El control que se devolverá y se insertará en la página principal
-    admin_panel_layout = ft.Row(
+    admin_panel_layout = ft.Column(
         [
-            nav_rail,
-            ft.VerticalDivider(width=1),
+            admin_tabs,
             admin_content_area,
         ],
         expand=True,

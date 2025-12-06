@@ -12,14 +12,14 @@ def create_carrito_view(page: ft.Page, show_snackbar_func):
     if not items:
         return ft.Column(
             [
-                ft.Text("El carrito está vacío 🛒", size=18),
+                ft.Text("El carrito está vacío 🛒", size=18, color=ft.Colors.BLACK),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
             expand=True
         )
 
     controls = [
-        ft.Text("Tu carrito", size=24, weight="bold"),
+        ft.Text("Tu carrito", size=24, weight="bold", color=ft.Colors.BLACK),
         ft.Divider(),
     ]
 
@@ -38,9 +38,9 @@ def create_carrito_view(page: ft.Page, show_snackbar_func):
                         [
                             ft.Column(
                                 [
-                                    ft.Text(nombre, weight="bold"),
-                                    ft.Text(f"${precio_unit:.2f} c/u"),
-                                    ft.Text(f"Subtotal: ${subtotal:.2f}", size=12),
+                                    ft.Text(nombre, weight="bold", color=ft.Colors.BLACK),
+                                    ft.Text(f"${precio_unit:.2f} c/u", color=ft.Colors.BLACK),
+                                    ft.Text(f"Subtotal: ${subtotal:.2f}", size=12, color=ft.Colors.BLACK),
                                 ],
                                 expand=True
                             ),
@@ -74,7 +74,7 @@ def create_carrito_view(page: ft.Page, show_snackbar_func):
 
     # Total y botón continuar
     controls.append(ft.Divider())
-    controls.append(ft.Text(f"TOTAL: ${cart.get_total():.2f}", size=20, weight="bold"))
+    controls.append(ft.Text(f"TOTAL: ${cart.get_total():.2f}", size=20, weight="bold", color=ft.Colors.BLACK))
     controls.append(
         ft.Row(
             [

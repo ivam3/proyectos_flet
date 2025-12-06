@@ -24,9 +24,9 @@ def cargar_menu(page: ft.Page):
                 page.update()
 
             card_content = [
-                ft.Text(nombre, size=20, weight="bold"),
-                ft.Text(descripcion or "Sin descripción", size=14),
-                ft.Text(f"${precio:.2f}", size=18, weight="bold"),
+                ft.Text(nombre, size=20, weight="bold", color=ft.Colors.BLACK),
+                ft.Text(descripcion or "Sin descripción", size=14, color=ft.Colors.BLACK),
+                ft.Text(f"${precio:.2f}", size=18, weight="bold", color=ft.Colors.BLACK),
                 ft.ElevatedButton("Agregar al carrito", on_click=_on_add)
             ]
 

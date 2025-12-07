@@ -1,6 +1,8 @@
 import sqlite3
 import json
 import os
+import secrets
+import string
 
 # --- Database Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +16,15 @@ def conectar():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row # Allows accessing columns by name
     return conn
+
+def _generar_codigo_unico(cursor, length=6):
+    """Genera un código de seguimiento alfanumérico único."""
+    alphabet = string.ascii_uppercase + string.digits
+    while True:
+        codigo = ''.join(secrets.choice(alphabet) for _ in range(length))
+        cursor.execute("SELECT id FROM ordenes WHERE codigo_seguimiento = ?", (codigo,))
+        if cursor.fetchone() is None:
+            return codigo
 
 def crear_tablas():
     """Creates database tables from the schema.sql file."""
@@ -68,16 +79,18 @@ def actualizar_visibilidad_platillo(platillo_id, is_active):
     conn.close()
 
 def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
-    """Guarda una orden y sus productos en la base de datos."""
+    """Guarda una orden, genera un código de seguimiento y devuelve el resultado."""
     conn = conectar()
     cursor = conn.cursor()
 
     try:
+        codigo_seguimiento = _generar_codigo_unico(cursor)
+        
         # Guardar encabezado de orden
         cursor.execute("""
-            INSERT INTO ordenes (nombre_cliente, telefono, direccion, referencias, total, estado)
-            VALUES (?, ?, ?, ?, ?, 'Nuevo')
-        """, (nombre, telefono, direccion, referencias, total))
+            INSERT INTO ordenes (nombre_cliente, telefono, direccion, referencias, total, estado, codigo_seguimiento)
+            VALUES (?, ?, ?, ?, ?, 'Nuevo', ?)
+        """, (nombre, telefono, direccion, referencias, total, codigo_seguimiento))
         orden_id = cursor.lastrowid
         
         # Registrar el estado inicial en el historial
@@ -94,15 +107,26 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
             """, (orden_id, item["nombre"], item["cantidad"], item["precio"]))
 
         conn.commit()
-        return True
+        return True, codigo_seguimiento
 
     except Exception as e:
         print("Error al guardar pedido:", e)
         conn.rollback()
-        return False
+        return False, None
     finally:
         if conn:
             conn.close()
+
+def obtener_pedido_por_codigo(telefono, codigo):
+    """Obtiene los detalles de un pedido específico usando teléfono y código de seguimiento."""
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM ordenes WHERE telefono = ? AND codigo_seguimiento = ?
+    """, (telefono, codigo))
+    pedido = cursor.fetchone()
+    conn.close()
+    return pedido
 
 def obtener_menu(solo_activos=True, search_term=None):
     """Devuelve la lista de platillos del menú, con opción de búsqueda."""

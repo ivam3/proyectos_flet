@@ -84,11 +84,16 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         
         page.client_storage.set("telefono_cliente", telefono)
         
-        exito = guardar_pedido(nombre, telefono, direccion_completa, referencias, total, items)
+        exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total, items)
 
         if exito:
             dialog.title = ft.Text("Pedido registrado ✅", color=ft.Colors.BLACK)
-            dialog.content = ft.Text("Tu pedido ha sido enviado correctamente.\nRecibirás notificaciones del estado.", color=ft.Colors.BLACK)
+            dialog.content = ft.Column([
+                ft.Text("Tu pedido ha sido enviado correctamente.", color=ft.Colors.BLACK),
+                ft.Text("Usa este código para darle seguimiento:", color=ft.Colors.BLACK),
+                ft.Text(f"{codigo_seguimiento}", weight="bold", size=20, selectable=True, color=ft.Colors.BLACK),
+                ft.Text("Guárdalo bien, lo necesitarás para consultar el estado.", color=ft.Colors.BLACK, italic=True)
+            ])
             dialog.actions = [ft.TextButton("Aceptar", on_click=_ir_a_seguimiento)]
         else:
             dialog.title = ft.Text("Error ❌", color=ft.Colors.BLACK)

@@ -6,52 +6,76 @@ from components.cart import add_item
 
 
 def cargar_menu(page: ft.Page):
-    """Carga y muestra los platillos del menú."""
-    lista = ft.ListView(expand=True, spacing=10, padding=20)
+    """Carga y muestra los platillos del menú con una barra de búsqueda."""
+    
+    menu_list = ft.ListView(expand=True, spacing=10, padding=20)
 
-    platillos = obtener_menu(solo_activos=True)
+    def update_menu_list(search_term=""):
+        """Limpia y recarga la lista de platillos según el término de búsqueda."""
+        menu_list.controls.clear()
+        platillos = obtener_menu(solo_activos=True, search_term=search_term)
 
-    if not platillos:
-        lista.controls.append(ft.Text("No hay platillos registrados aún 🍽️"))
-    else:
-        for id, nombre, descripcion, precio, imagen, is_active in platillos:
+        if not platillos:
+            menu_list.controls.append(ft.Text("No se encontraron platillos 🍽️"))
+        else:
+            for id, nombre, descripcion, precio, imagen, is_active in platillos:
+                def _on_add(e, item_id=id, name=nombre, price=precio):
+                    cart.add_item(item_id, name, price)
+                    snack_bar = ft.SnackBar(ft.Text(f"{name} agregado al carrito ✅"))
+                    page.overlay.append(snack_bar)
+                    snack_bar.open = True
+                    page.update()
 
-            def _on_add(e, item_id=id, name=nombre, price=precio):
-                cart.add_item(item_id, name, price)
-                snack_bar = ft.SnackBar(ft.Text(f"{name} agregado al carrito ✅"))
-                page.overlay.append(snack_bar)
-                snack_bar.open = True
-                page.update()
+                card_content = [
+                    ft.Text(nombre, size=20, weight="bold", color=ft.Colors.BLACK),
+                    ft.Text(descripcion or "Sin descripción", size=14, color=ft.Colors.BLACK),
+                    ft.Text(f"${precio:.2f}", size=18, weight="bold", color=ft.Colors.BLACK),
+                    ft.ElevatedButton("Agregar al carrito", on_click=_on_add)
+                ]
 
-            card_content = [
-                ft.Text(nombre, size=20, weight="bold", color=ft.Colors.BLACK),
-                ft.Text(descripcion or "Sin descripción", size=14, color=ft.Colors.BLACK),
-                ft.Text(f"${precio:.2f}", size=18, weight="bold", color=ft.Colors.BLACK),
-                ft.ElevatedButton("Agregar al carrito", on_click=_on_add)
-            ]
+                if imagen:
+                    card_content.insert(
+                        0,
+                        ft.Image(
+                            src=f"/{imagen}", # Flet espera una ruta relativa a la raíz del servidor de assets
+                            width=100,
+                            height=100,
+                            fit=ft.ImageFit.COVER,
+                            border_radius=ft.border_radius.all(8)
+                        )
+                    )
 
-            # <=------------ CORREGIDO AQUI -------------=>
-            if imagen:
-                card_content.insert(
-                    0,
-                    ft.Image(
-                        src=f"/assets/{imagen}",
-                        width=100,
-                        height=100,
-                        fit=ft.ImageFit.COVER
+                menu_list.controls.append(
+                    ft.Card(
+                        content=ft.Container(
+                            padding=10,
+                            content=ft.Column(card_content, spacing=5)
+                        )
                     )
                 )
+        page.update()
 
-            lista.controls.append(
-                ft.Card(
-                    content=ft.Container(
-                        padding=10,
-                        content=ft.Column(card_content)
-                    )
-                )
-            )
+    def handle_search_change(e):
+        update_menu_list(e.control.value)
 
-    return ft.Container(
+    search_field = ft.TextField(
+        label="Buscar platillo...",
+        prefix_icon=ft.Icons.SEARCH,
+        on_change=handle_search_change,
+        border_radius=ft.border_radius.all(20),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK)
+    )
+
+    # Carga inicial del menú
+    update_menu_list()
+
+    return ft.Column(
         expand=True,
-        content=lista
+        controls=[
+            ft.Container(
+                content=search_field,
+                padding=ft.padding.only(left=15, right=15, top=10)
+            ),
+            menu_list
+        ]
     )

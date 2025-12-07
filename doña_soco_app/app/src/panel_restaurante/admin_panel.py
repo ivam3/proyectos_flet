@@ -2,7 +2,7 @@ import flet as ft
 from .views.menu_admin import menu_admin_view
 from .views.pedidos import pedidos_view
 
-def create_admin_panel_view(page: ft.Page):
+def create_admin_panel_view(page: ft.Page, logout_func):
 
     # Área donde se cargan las vistas (este sí debe expandir)
     admin_content_area = ft.Container(
@@ -49,12 +49,24 @@ def create_admin_panel_view(page: ft.Page):
 
     # Compactar espacio superior
     header = ft.Container(
-        content=ft.Text(
-            "Antojitos Doña Soco - Administración",
-            size=18,
-            weight="bold",
+        content=ft.Row(
+            [
+                ft.Text(
+                    "Centro de Administración",
+                    size=18,
+                    weight="bold",
+                    expand=True,
+                    text_align=ft.TextAlign.CENTER
+                ),
+                ft.IconButton(
+                    icon=ft.Icons.LOGOUT,
+                    on_click=logout_func,
+                    tooltip="Cerrar Sesión"
+                )
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER
         ),
-        alignment=ft.alignment.center,
         padding=10,
         margin=ft.margin.only(bottom=5),
     )

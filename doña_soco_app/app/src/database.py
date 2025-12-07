@@ -75,10 +75,16 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
     try:
         # Guardar encabezado de orden
         cursor.execute("""
-            INSERT INTO ordenes (nombre_cliente, telefono, direccion, referencias, total)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO ordenes (nombre_cliente, telefono, direccion, referencias, total, estado)
+            VALUES (?, ?, ?, ?, ?, 'Nuevo')
         """, (nombre, telefono, direccion, referencias, total))
         orden_id = cursor.lastrowid
+        
+        # Registrar el estado inicial en el historial
+        cursor.execute("""
+            INSERT INTO historial_estados (orden_id, nuevo_estado)
+            VALUES (?, 'Nuevo')
+        """, (orden_id,))
 
         # Guardar cada producto
         for item in items:
@@ -98,14 +104,26 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
         if conn:
             conn.close()
 
-def obtener_menu(solo_activos=True):
-    """Devuelve la lista de platillos del menú."""
+def obtener_menu(solo_activos=True, search_term=None):
+    """Devuelve la lista de platillos del menú, con opción de búsqueda."""
     conn = conectar()
     cursor = conn.cursor()
-    query = "SELECT id, nombre, descripcion, precio, imagen, is_active FROM menu"
+    
+    params = []
+    where_clauses = []
+
     if solo_activos:
-        query += " WHERE is_active = 1"
-    cursor.execute(query)
+        where_clauses.append("is_active = 1")
+
+    if search_term:
+        where_clauses.append("(nombre LIKE ? OR descripcion LIKE ?)")
+        params.extend([f"%{search_term}%", f"%{search_term}%"])
+
+    query = "SELECT id, nombre, descripcion, precio, imagen, is_active FROM menu"
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+    
+    cursor.execute(query, params)
     platillos = cursor.fetchall()
     conn.close()
     return platillos

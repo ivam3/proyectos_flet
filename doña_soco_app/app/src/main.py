@@ -11,6 +11,7 @@ from panel_restaurante.admin_panel import create_admin_panel_view
 def main(page: ft.Page):
     crear_tablas()
     page.title = "Antojitos Doña Soco"
+    page.window_favicon_path = "icon.png"  # <- FAVICON
 
     # Directorio correcto para assets (Flet sirve desde aquí)
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
@@ -52,6 +53,14 @@ def main(page: ft.Page):
 
     # Área central de contenido
     content_area = ft.Container(expand=True)
+    
+    # ------- LOGOUT -------
+    def logout(e=None):
+        nonlocal admin_mode
+        admin_mode = False
+        content_area.content = cargar_menu(page)
+        show_snackbar("Sesión de administrador cerrada")
+        page.update()
 
     # ------- CAMBIAR PANTALLAS -------
     def change_page(e):
@@ -59,12 +68,12 @@ def main(page: ft.Page):
         if selected == 0:
             content_area.content = cargar_menu(page)
         elif selected == 1:
-            content_area.content = create_carrito_view(page, show_snackbar)
+            content_area.content = create_carrito_view(page, show_snackbar, nav)
         elif selected == 2:
             content_area.content = seguimiento_view(page)
         elif selected == 3:
             if admin_mode:
-                content_area.content = create_admin_panel_view(page)
+                content_area.content = create_admin_panel_view(page, logout_func=logout)
             else:
                 show_snackbar("Acceso restringido")
         page.update()
@@ -82,7 +91,7 @@ def main(page: ft.Page):
             admin_mode = True
             close_dialog()
             show_snackbar("Modo administrador activado")
-            content_area.content = create_admin_panel_view(page)
+            content_area.content = create_admin_panel_view(page, logout_func=logout)
         else:
             admin_field.value = ""
             show_snackbar("Clave incorrecta")
@@ -100,10 +109,18 @@ def main(page: ft.Page):
 
     # ------- HEADER (doble clic para admin) -------
     top_bar = ft.Container(
-        content=ft.Text("Antojitos Doña Soco", size=22, weight="bold", color=ft.Colors.BLACK),
-        alignment=ft.alignment.center,
+        content=ft.Row(
+            [
+                ft.Image(src="icon.png", width=45, height=45),
+                ft.Text("Antojitos Doña Soco", size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
+            ],
+            alignment=ft.MainAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
         on_click=activar_admin,
-        padding=15
+        padding=15,
+        bgcolor=ft.Colors.ORANGE_100,
+        border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.BLACK12))
     )
 
     # ------- BOTTOM NAV -------

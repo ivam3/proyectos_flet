@@ -32,45 +32,37 @@ def menu_admin_view(page: ft.Page):
             return
 
         archivo = e.files[0]
+        
+        if not archivo.path:
+            upload_status.value = "Error: el archivo no tiene ruta accesible."
+            page.update()
+            return
 
         try:
-            # Leer contenido binario del archivo (Android friendly)
-            contenido = archivo.file.read()
-            if not contenido:
-                upload_status.value = "Error: no se pudo leer el contenido del archivo."
-                page.update()
-                return
-
-            # Carpeta assets absoluta
             assets_dir = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "../../assets")
             )
             os.makedirs(assets_dir, exist_ok=True)
 
-            # Generar nombre único
-            _, ext = os.path.splitext(archivo.name)
+            ext = os.path.splitext(archivo.name)[1]
             nuevo_nombre = f"{uuid.uuid4()}{ext}"
             destino = os.path.join(assets_dir, nuevo_nombre)
 
-            # Guardar la imagen
-            with open(destino, "wb") as f:
-                f.write(contenido)
+            shutil.copy(archivo.path, destino)
 
-            # Actualizar UI
             imagen_path.value = nuevo_nombre
             imagen_preview.src = f"/assets/{nuevo_nombre}"
             imagen_preview.visible = True
             upload_status.value = "Imagen guardada correctamente."
-
             page.update()
 
         except Exception as ex:
-            upload_status.value = f"Error al guardar archivo: {ex}"
+            upload_status.value = f"Error al copiar archivo: {ex}"
             page.update()
 
     file_picker = ft.FilePicker(on_result=on_file_picked)
     page.overlay.append(file_picker)
-
+    
     # Estado de edición
     editing_id = None
 

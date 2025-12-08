@@ -1,13 +1,13 @@
 # src/views/carrito.py
 import flet as ft
-from components import cart  # importa el módulo de carrito
 
 def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
     """
     Devuelve un ft.Column que representa la pantalla del carrito.
     Llamar esta función cada vez que necesites "refrescar" la vista.
     """
-    items = cart.get_items()
+    user_cart = page.session.get("cart")
+    items = user_cart.get_items()
 
     if not items:
         return ft.Column(
@@ -49,12 +49,12 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
                                 [
                                     ft.IconButton(
                                         icon=ft.Icons.REMOVE,
-                                        on_click=lambda e, item_id=it["id"], idx=idx: _decrement(e, item_id, page, show_snackbar_func, nav)
+                                        on_click=lambda e, item_id=it["id"]: _decrement(e, item_id, page, show_snackbar_func, nav)
                                     ),
                                     ft.Text(str(cantidad)),
                                     ft.IconButton(
                                         icon=ft.Icons.ADD,
-                                        on_click=lambda e, item_id=it["id"], idx=idx: _increment(e, item_id, page, show_snackbar_func, nav)
+                                        on_click=lambda e, item_id=it["id"]: _increment(e, item_id, page, show_snackbar_func, nav)
                                     ),
                                     ft.IconButton(
                                         icon=ft.Icons.DELETE,
@@ -74,7 +74,7 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
 
     # Total y botón continuar
     controls.append(ft.Divider())
-    controls.append(ft.Text(f"TOTAL: ${cart.get_total():.2f}", size=20, weight="bold", color=ft.Colors.BLACK))
+    controls.append(ft.Text(f"TOTAL: ${user_cart.get_total():.2f}", size=20, weight="bold", color=ft.Colors.BLACK))
     controls.append(
         ft.Row(
             [
@@ -95,30 +95,33 @@ def _refrescar(page: ft.Page, show_snackbar_func, nav):
     page.update()
 
 def _eliminar(e, index: int, page: ft.Page, show_snackbar_func, nav):
-    cart.remove_item_at(index)
+    user_cart = page.session.get("cart")
+    user_cart.remove_item_at(index)
     show_snackbar_func("Platillo eliminado")
     _refrescar(page, show_snackbar_func, nav)
 
 def _vaciar(e, page: ft.Page, show_snackbar_func, nav):
-    cart.clear_cart()
+    user_cart = page.session.get("cart")
+    user_cart.clear_cart()
     show_snackbar_func("Carrito vaciado")
     _refrescar(page, show_snackbar_func, nav)
 
 def _increment(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
-    # sumar 1 a la cantidad
-    items = cart.get_items()
+    user_cart = page.session.get("cart")
+    items = user_cart.get_items()
     for it in items:
         if it["id"] == item_id:
-            cart.update_quantity(item_id, it["cantidad"] + 1)
+            user_cart.update_quantity(item_id, it["cantidad"] + 1)
             break
     _refrescar(page, show_snackbar_func, nav)
 
 def _decrement(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
-    items = cart.get_items()
+    user_cart = page.session.get("cart")
+    items = user_cart.get_items()
     for it in items:
         if it["id"] == item_id:
             nueva = it["cantidad"] - 1
-            cart.update_quantity(item_id, nueva)
+            user_cart.update_quantity(item_id, nueva)
             break
     _refrescar(page, show_snackbar_func, nav)
 

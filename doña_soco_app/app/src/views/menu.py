@@ -1,13 +1,14 @@
 # app/src/views/menu.py
 import flet as ft
 from database import obtener_menu
-from components import cart
-from components.cart import add_item
 
 
 def cargar_menu(page: ft.Page):
     """Carga y muestra los platillos del menú con una barra de búsqueda."""
     
+    # Obtener el carrito de la sesión del usuario
+    user_cart = page.session.get("cart")
+
     menu_list = ft.ListView(expand=True, spacing=10, padding=20)
 
     def update_menu_list(search_term=""):
@@ -20,7 +21,8 @@ def cargar_menu(page: ft.Page):
         else:
             for id, nombre, descripcion, precio, imagen, is_active in platillos:
                 def _on_add(e, item_id=id, name=nombre, price=precio):
-                    cart.add_item(item_id, name, price)
+                    # Usar el carrito de la sesión
+                    user_cart.add_item(item_id, name, price)
                     snack_bar = ft.SnackBar(ft.Text(f"{name} agregado al carrito ✅"))
                     page.overlay.append(snack_bar)
                     snack_bar.open = True

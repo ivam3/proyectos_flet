@@ -1,6 +1,5 @@
 # src/views/checkout.py
 import flet as ft
-from components import cart
 from database import guardar_pedido
 from views.menu import cargar_menu
 
@@ -9,6 +8,8 @@ from views.seguimiento import seguimiento_view
 def create_checkout_view(page: ft.Page, show_snackbar, nav):
     """Pantalla donde el usuario ingresa sus datos de envío antes de confirmar el pedido."""
     import re
+
+    user_cart = page.session.get("cart")
 
     # --- CAMPOS DEL FORMULARIO ---
     nombre_field = ft.TextField(label="Nombre completo", autofocus=True, label_style=ft.TextStyle(color=ft.Colors.BLACK))
@@ -23,13 +24,13 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
 
     referencias_field = ft.TextField(label="Referencias (opcional)", multiline=True, max_lines=2, label_style=ft.TextStyle(color=ft.Colors.BLACK))
 
-    total = cart.get_total()
+    total = user_cart.get_total()
     dialog = ft.AlertDialog()
 
     def _ir_a_seguimiento(e):
         """Redirige a la pantalla de seguimiento y limpia el carrito."""
         from views.seguimiento import seguimiento_view
-        cart.clear_cart()
+        user_cart.clear_cart()
         dialog.open = False
         page.controls[1].content = seguimiento_view(page) # Carga la vista de seguimiento
         nav.selected_index = 2 # Actualiza el nav bar
@@ -80,7 +81,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         nombre = nombre_field.value.strip()
         telefono = telefono_field.value.strip()
         referencias = referencias_field.value.strip()
-        items = cart.get_items()
+        items = user_cart.get_items()
         
         page.client_storage.set("telefono_cliente", telefono)
         

@@ -6,10 +6,17 @@ from views.seguimiento import seguimiento_view
 from views.menu import cargar_menu
 from components.notifier import init_pubsub
 from panel_restaurante.admin_panel import create_admin_panel_view
+from components.cart import Cart
 
 
 def main(page: ft.Page):
     crear_tablas()
+
+    # --- INICIALIZACIÓN DE CARRITO POR SESIÓN ---
+    if page.session.get("cart") is None:
+        page.session.set("cart", Cart())
+    # -------------------------------------------
+
     page.title = "Antojitos Doña Soco"
     page.window_favicon_path = "icon.png"  # <- FAVICON
 

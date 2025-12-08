@@ -1,5 +1,6 @@
-import flet as ft
 import os
+os.environ["FLET_SECRET_KEY"] = "ivam3isthebest"
+import flet as ft
 from database import crear_tablas
 from views.carrito import create_carrito_view
 from views.seguimiento import seguimiento_view
@@ -22,8 +23,8 @@ def main(page: ft.Page):
 
     # Directorio correcto para assets (Flet sirve desde aquí)
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
-    page.upload_dir = assets_dir
-
+    page.upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "uploads"))
+    os.makedirs(page.upload_dir, exist_ok=True)
     # Sistema pub-sub
     pubsub = init_pubsub(page)
 

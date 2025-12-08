@@ -29,7 +29,7 @@ def _generar_codigo_unico(cursor, length=6):
 def crear_tablas():
     """Creates database tables from the schema.sql file."""
     try:
-        with open(SCHEMA_PATH, 'r') as f:
+        with open(SCHEMA_PATH, 'r', encoding="utf-8") as f:
             schema = f.read()
         
         conn = conectar()

@@ -125,7 +125,7 @@ for p in pedidos_data:
                         ft.Row(
                             [
                                 estado_dropdown,
-                                ft.ElevatedButton("Ver detalle", on_click=lambda e, oid=orden_id: mostrar_detalle(e, oid)),
+                                ft.Button("Ver detalle", on_click=lambda e, oid=orden_id: mostrar_detalle(e, oid)),
                             ],
                             spacing=10
                         )

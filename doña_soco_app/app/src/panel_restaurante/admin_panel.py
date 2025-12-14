@@ -3,86 +3,50 @@ from .views.menu_admin import menu_admin_view
 from .views.pedidos import pedidos_view
 
 def create_admin_panel_view(page: ft.Page, logout_func):
+    """
+    Crea la vista del panel de administración utilizando una fila de botones
+    para cambiar entre las vistas de gestión.
+    """
 
-    # Área donde se cargan las vistas (este sí debe expandir)
+    # Contenedor donde se mostrará la vista de menú o pedidos
     admin_content_area = ft.Container(
+        content=menu_admin_view(page), # Cargar vista de menú por defecto
         expand=True,
-        padding=0,          # Menos espacio desperdiciado
-        margin=0,
-        content=None
     )
 
-    # Cambiar el contenido según la pestaña
-    def switch_admin_view(selected_index):
-        if selected_index == 0:
-            admin_content_area.content = menu_admin_view(page)
-        elif selected_index == 1:
-            admin_content_area.content = pedidos_view(page)
-        else:
-            admin_content_area.content = ft.Text("Selección no válida")
-        page.update()
+    # Funciones para cambiar el contenido
+    def show_menu_view(e):
+        admin_content_area.content = menu_admin_view(page)
+        admin_content_area.update()
 
-    def tab_change(e):
-        switch_admin_view(e.control.selected_index)
+    def show_pedidos_view(e):
+        admin_content_area.content = pedidos_view(page)
+        admin_content_area.update()
 
-    # Tabs compactos
-    admin_tabs = ft.Tabs(
-        selected_index=0,
-        on_change=tab_change,
-        expand=False,
-        animation_duration=150,
-        height=48,                  # ← Tabs más pequeños
-        tab_alignment=ft.TabAlignment.START,
-        indicator_color=ft.Colors.BROWN_400,
-        divider_color=ft.Colors.BROWN_200,
-        tabs=[
-            ft.Tab(
-                text="Gestión de Menú",
-                icon=ft.Icons.RESTAURANT_MENU,
-            ),
-            ft.Tab(
-                text="Gestión de Pedidos",
-                icon=ft.Icons.RECEIPT,
-            ),
-        ],
-    )
-
-    # Compactar espacio superior
-    header = ft.Container(
-        content=ft.Row(
-            [
-                ft.Text(
-                    "Centro de Administración",
-                    size=18,
-                    weight="bold",
-                    expand=True,
-                    text_align=ft.TextAlign.CENTER
-                ),
-                ft.IconButton(
-                    icon=ft.Icons.LOGOUT,
-                    on_click=logout_func,
-                    tooltip="Cerrar Sesión"
-                )
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER
-        ),
-        padding=10,
-        margin=ft.margin.only(bottom=5),
-    )
-
-    # Panel completo
+    # Layout de la vista del panel de administración
     admin_panel_layout = ft.Column(
-        expand=True,
-        spacing=5,
         controls=[
-            header,
-            admin_tabs,
+            # Header
+            ft.Row(
+                [
+                    ft.Text("Centro de Administración", size=18, weight="bold", expand=True, text_align=ft.TextAlign.CENTER),
+                    ft.TextButton(content=ft.Text("Salir"), on_click=logout_func, tooltip="Cerrar Sesión")
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            ),
+            ft.Divider(),
+            # Botones de navegación
+            ft.Row(
+                [
+                    ft.Button(content=ft.Text("Gestión de Menú"), on_click=show_menu_view, expand=True),
+                    ft.Button(content=ft.Text("Gestión de Pedidos"), on_click=show_pedidos_view, expand=True),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            # Área de contenido dinámico
             admin_content_area,
-        ]
+        ],
+        expand=True,
     )
-
-    # Cargar la primera vista
-    switch_admin_view(0)
 
     return admin_panel_layout

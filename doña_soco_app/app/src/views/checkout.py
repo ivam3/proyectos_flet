@@ -9,7 +9,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
     """Pantalla donde el usuario ingresa sus datos de envío antes de confirmar el pedido."""
     import re
 
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
 
     # --- CAMPOS DEL FORMULARIO ---
     nombre_field = ft.TextField(label="Nombre completo", autofocus=True, label_style=ft.TextStyle(color=ft.Colors.BLACK))
@@ -83,7 +83,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         referencias = referencias_field.value.strip()
         items = user_cart.get_items()
         
-        page.client_storage.set("telefono_cliente", telefono)
+        setattr(page.session, "telefono_cliente", telefono)
         
         exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total, items)
 
@@ -120,7 +120,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             referencias_field,
             ft.Divider(),
             ft.Text(f"Total a pagar: ${total:.2f}", size=20, weight="bold", color=ft.Colors.BLACK),
-            ft.ElevatedButton("Confirmar pedido", on_click=confirmar_pedido)
+            ft.Button("Confirmar pedido", on_click=confirmar_pedido)
         ],
         scroll="auto",
         expand=True

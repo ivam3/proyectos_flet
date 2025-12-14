@@ -7,7 +7,7 @@ def cargar_menu(page: ft.Page):
     """Carga y muestra los platillos del menú con una barra de búsqueda."""
     
     # Obtener el carrito de la sesión del usuario
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
 
     menu_list = ft.ListView(expand=True, spacing=10, padding=20)
 
@@ -32,7 +32,7 @@ def cargar_menu(page: ft.Page):
                     ft.Text(nombre, size=20, weight="bold", color=ft.Colors.BLACK),
                     ft.Text(descripcion or "Sin descripción", size=14, color=ft.Colors.BLACK),
                     ft.Text(f"${precio:.2f}", size=18, weight="bold", color=ft.Colors.BLACK),
-                    ft.ElevatedButton("Agregar al carrito", on_click=_on_add)
+                    ft.FilledButton("Agregar al carrito", on_click=_on_add)
                 ]
 
                 if imagen:
@@ -43,7 +43,7 @@ def cargar_menu(page: ft.Page):
                             width=100,
                             height=100,
                             fit=ft.ImageFit.COVER,
-                            border_radius=ft.border_radius.all(8)
+                            border_radius=ft.BorderRadius.all(8)
                         )
                     )
 
@@ -64,7 +64,7 @@ def cargar_menu(page: ft.Page):
         label="Buscar platillo...",
         prefix_icon=ft.Icons.SEARCH,
         on_change=handle_search_change,
-        border_radius=ft.border_radius.all(20),
+        border_radius=ft.BorderRadius.all(20),
         label_style=ft.TextStyle(color=ft.Colors.BLACK)
     )
 
@@ -76,7 +76,7 @@ def cargar_menu(page: ft.Page):
         controls=[
             ft.Container(
                 content=search_field,
-                padding=ft.padding.only(left=15, right=15, top=10)
+                padding=ft.Padding.only(left=15, right=15, top=10)
             ),
             menu_list
         ]

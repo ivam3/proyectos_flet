@@ -1,6 +1,5 @@
-import os
-os.environ["FLET_SECRET_KEY"] = "ivam3isthebest"
 import flet as ft
+import os
 from database import crear_tablas
 from views.carrito import create_carrito_view
 from views.seguimiento import seguimiento_view
@@ -13,9 +12,9 @@ from components.cart import Cart
 def main(page: ft.Page):
     crear_tablas()
 
-    # --- INICIALIZACIÓN DE CARRITO POR SESIÓN ---
-    if page.session.get("cart") is None:
-        page.session.set("cart", Cart())
+    # Initialize cart
+    if not hasattr(page.session, "cart"):
+        page.session.cart = Cart()
     # -------------------------------------------
 
     page.title = "Antojitos Doña Soco"
@@ -128,7 +127,7 @@ def main(page: ft.Page):
         on_click=activar_admin,
         padding=15,
         bgcolor=ft.Colors.ORANGE_100,
-        border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.BLACK12))
+        border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.BLACK_12))
     )
 
     # ------- BOTTOM NAV -------
@@ -153,4 +152,4 @@ def main(page: ft.Page):
 
 
 # Ruta correcta del assets_dir
-ft.app(target=main, assets_dir="src/assets") #, secret_key="ads2025")
+ft.run(main, assets_dir="src/assets") #, secret_key="ads2025")

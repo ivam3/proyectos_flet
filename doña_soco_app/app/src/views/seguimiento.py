@@ -12,11 +12,11 @@ def seguimiento_view(page: ft.Page):
     pubsub = init_pubsub(page)
 
     # --- CAMPOS DE BÚSQUEDA ---
-    telefono_guardado = page.client_storage.get("telefono_cliente")
+    telefono_guardado = getattr(page.session, "telefono_cliente", "")
     telefono_field = ft.TextField(
         label="Tu número de teléfono",
         keyboard_type=ft.KeyboardType.PHONE,
-        value=telefono_guardado or "",
+        value=telefono_guardado,
         label_style=ft.TextStyle(color=ft.Colors.BLACK)
     )
     codigo_field = ft.TextField(
@@ -94,12 +94,11 @@ def seguimiento_view(page: ft.Page):
             page.snack_bar.open = True
             page.update()
             return
-
-        page.client_storage.set("telefono_cliente", tel)
+        
+        setattr(page.session, "telefono_cliente", tel)
         
         pedido = obtener_pedido_por_codigo(tel, codigo)
         mostrar_pedido(pedido)
-
     # --- ESCUCHAR NOTIFICACIONES PUBSUB ---
     def recibir_mensaje(data):
         tel = telefono_field.value.strip()
@@ -126,7 +125,7 @@ def seguimiento_view(page: ft.Page):
         ft.Divider(),
         telefono_field,
         codigo_field,
-        ft.ElevatedButton("Buscar pedido", on_click=buscar_pedidos),
+        ft.Button("Buscar pedido", on_click=buscar_pedidos),
         ft.Divider(),
         resultado_container
     ], scroll="auto", expand=True)

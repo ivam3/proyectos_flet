@@ -6,7 +6,7 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
     Devuelve un ft.Column que representa la pantalla del carrito.
     Llamar esta función cada vez que necesites "refrescar" la vista.
     """
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
     items = user_cart.get_items()
 
     if not items:
@@ -78,8 +78,8 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
     controls.append(
         ft.Row(
             [
-                ft.ElevatedButton("Vaciar carrito", on_click=lambda e: _vaciar(e, page, show_snackbar_func, nav)),
-                ft.ElevatedButton("Continuar a checkout", on_click=lambda e: _abrir_checkout(e, page, show_snackbar_func, nav))
+                ft.Button("Vaciar carrito", on_click=lambda e: _vaciar(e, page, show_snackbar_func, nav)),
+                ft.Button("Continuar a checkout", on_click=lambda e: _abrir_checkout(e, page, show_snackbar_func, nav))
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
         )
@@ -95,19 +95,19 @@ def _refrescar(page: ft.Page, show_snackbar_func, nav):
     page.update()
 
 def _eliminar(e, index: int, page: ft.Page, show_snackbar_func, nav):
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
     user_cart.remove_item_at(index)
     show_snackbar_func("Platillo eliminado")
     _refrescar(page, show_snackbar_func, nav)
 
 def _vaciar(e, page: ft.Page, show_snackbar_func, nav):
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
     user_cart.clear_cart()
     show_snackbar_func("Carrito vaciado")
     _refrescar(page, show_snackbar_func, nav)
 
 def _increment(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
     items = user_cart.get_items()
     for it in items:
         if it["id"] == item_id:
@@ -116,7 +116,7 @@ def _increment(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
     _refrescar(page, show_snackbar_func, nav)
 
 def _decrement(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
-    user_cart = page.session.get("cart")
+    user_cart = page.session.cart
     items = user_cart.get_items()
     for it in items:
         if it["id"] == item_id:

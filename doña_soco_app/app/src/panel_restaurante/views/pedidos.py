@@ -152,10 +152,10 @@ def pedidos_view(page: ft.Page):
                 estado_dropdown = ft.Dropdown(
                     options=[ft.dropdown.Option(estado) for estado in ['Nuevo', 'En preparación', 'Listo para entregar', 'En camino', 'Entregado', 'Cancelado']],
                     value=pedido["estado"],
-                    on_change=open_confirmation,
                     width=150,
                     text_style=ft.TextStyle(color=ft.Colors.BLACK)
                 )
+                estado_dropdown.on_change = open_confirmation
 
                 pedidos_data_table.rows.append(
                     ft.DataRow(cells=[
@@ -191,8 +191,8 @@ def pedidos_view(page: ft.Page):
     filter_bar = ft.Row([ft.Row([
         start_date_filter,
         end_date_filter,
-        ft.ElevatedButton("Filtrar", on_click=apply_filters),
-        ft.ElevatedButton("Limpiar", on_click=lambda e: (setattr(start_date_filter, "value", ""), setattr(end_date_filter, "value", ""), apply_filters(e)))
+        ft.Button(content=ft.Text("Filtrar"), on_click=apply_filters),
+        ft.Button(content=ft.Text("Limpiar"), on_click=lambda e: (setattr(start_date_filter, "value", ""), setattr(end_date_filter, "value", ""), apply_filters(e)))
     ], alignment=ft.MainAxisAlignment.START, spacing=10)], scroll="auto")
 
     return ft.Column(

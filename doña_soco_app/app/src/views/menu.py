@@ -1,7 +1,6 @@
 # app/src/views/menu.py
 import flet as ft
-from database import obtener_menu
-
+from database import obtener_menu, get_configuracion
 
 def cargar_menu(page: ft.Page):
     """Carga y muestra los platillos del menú con una barra de búsqueda."""
@@ -17,41 +16,72 @@ def cargar_menu(page: ft.Page):
         platillos = obtener_menu(solo_activos=True, search_term=search_term)
 
         if not platillos:
-            menu_list.controls.append(ft.Text("No se encontraron platillos 🍽️"))
+            # Si no hay platillos, mostrar horario de atención
+            config = get_configuracion()
+            horario = config['horario'] if config else "No disponible"
+            
+            menu_list.controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Icon(ft.icons.INFO_OUTLINE, size=48, color=ft.colors.GREY_500),
+                            ft.Text(
+                                "No hay platillos disponibles por el momento.",
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                            ft.Text(
+                                f"Nuestro horario de atención es: {horario}",
+                                size=16,
+                                text_align=ft.TextAlign.CENTER,
+                            ),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    padding=40,
+                    alignment=ft.alignment.center,
+                )
+            )
         else:
-            for id, nombre, descripcion, precio, imagen, is_active in platillos:
-                def _on_add(e, item_id=id, name=nombre, price=precio):
-                    # Usar el carrito de la sesión
+            for platillo in platillos:
+                pid, nombre, descripcion, precio, imagen, _ = platillo
+
+                def _on_add_clicked(e, item_id=pid, name=nombre, price=precio):
                     user_cart.add_item(item_id, name, price)
-                    snack_bar = ft.SnackBar(ft.Text(f"{name} agregado al carrito ✅"))
-                    page.overlay.append(snack_bar)
-                    snack_bar.open = True
-                    page.update()
-
-                card_content = [
-                    ft.Text(nombre, size=20, weight="bold", color=ft.Colors.BLACK),
-                    ft.Text(descripcion or "Sin descripción", size=14, color=ft.Colors.BLACK),
-                    ft.Text(f"${precio:.2f}", size=18, weight="bold", color=ft.Colors.BLACK),
-                    ft.FilledButton("Agregar al carrito", on_click=_on_add)
-                ]
-
-                if imagen:
-                    card_content.insert(
-                        0,
-                        ft.Image(
-                            src=f"/{imagen}", # Flet espera una ruta relativa a la raíz del servidor de assets
-                            width=100,
-                            height=100,
-                            fit=ft.ImageFit.COVER,
-                            border_radius=ft.BorderRadius.all(8)
-                        )
+                    page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"'{name}' agregado al carrito"),
+                        bgcolor=ft.colors.GREEN_700,
                     )
-
+                    page.snack_bar.open = True
+                    page.update()
+                
                 menu_list.controls.append(
                     ft.Card(
-                        content=ft.Container(
-                            padding=10,
-                            content=ft.Column(card_content, spacing=5)
+                        ft.Container(
+                            ft.Column([
+                                ft.ListTile(
+                                    leading=ft.Image(
+                                        src=f"/{imagen}" if imagen else "icons/logo.jpg",
+                                        width=60, height=60, fit="cover", border_radius=8
+                                    ),
+                                    title=ft.Text(nombre, weight=ft.FontWeight.BOLD),
+                                    subtitle=ft.Text(descripcion or "Sin descripción"),
+                                ),
+                                ft.Row(
+                                    [
+                                        ft.Text(f"${precio:.2f}", size=18, weight=ft.FontWeight.BOLD, expand=True),
+                                        ft.FilledButton(
+                                            "Agregar",
+                                            icon="add_shopping_cart",
+                                            on_click=_on_add_clicked
+                                        )
+                                    ],
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                )
+                            ]),
+                            padding=15
                         )
                     )
                 )
@@ -60,12 +90,12 @@ def cargar_menu(page: ft.Page):
     def handle_search_change(e):
         update_menu_list(e.control.value)
 
-    search_field = ft.TextField(
+    search_bar = ft.TextField(
         label="Buscar platillo...",
-        prefix_icon=ft.Icons.SEARCH,
+        prefix_icon="search",
         on_change=handle_search_change,
-        border_radius=ft.BorderRadius.all(20),
-        label_style=ft.TextStyle(color=ft.Colors.BLACK)
+        border_radius=20,
+        filled=True,
     )
 
     # Carga inicial del menú
@@ -75,9 +105,10 @@ def cargar_menu(page: ft.Page):
         expand=True,
         controls=[
             ft.Container(
-                content=search_field,
+                content=search_bar,
                 padding=ft.Padding.only(left=15, right=15, top=10)
             ),
             menu_list
         ]
     )
+

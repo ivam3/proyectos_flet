@@ -78,6 +78,51 @@ def actualizar_visibilidad_platillo(platillo_id, is_active):
     conn.commit()
     conn.close()
 
+def ocultar_todos_los_platillos():
+    """Establece todos los platillos como inactivos."""
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE menu SET is_active = 0")
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error al ocultar todos los platillos: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def get_configuracion():
+    """Obtiene la configuración de la aplicación desde la base de datos."""
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT horario, codigos_postales FROM configuracion WHERE id = 1")
+    config = cursor.fetchone()
+    conn.close()
+    return config
+
+def update_configuracion(horario, codigos_postales):
+    """Actualiza la configuración de la aplicación."""
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE configuracion 
+            SET horario = ?, codigos_postales = ?
+            WHERE id = 1
+        """, (horario, codigos_postales))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error al actualizar la configuración: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
     """Guarda una orden, genera un código de seguimiento y devuelve el resultado."""
     conn = conectar()
@@ -241,4 +286,3 @@ def actualizar_estado_pedido(orden_id, nuevo_estado):
     finally:
         if conn:
             conn.close()
-

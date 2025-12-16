@@ -24,7 +24,7 @@ def cargar_menu(page: ft.Page):
                 ft.Container(
                     content=ft.Column(
                         [
-                            ft.Icon(ft.icons.INFO_OUTLINE, size=48, color=ft.colors.GREY_500),
+                            ft.Icon(ft.icons.INFO_OUTLINE, size=48, color=ft.Colors.GREY_500),
                             ft.Text(
                                 "No hay platillos disponibles por el momento.",
                                 size=18,
@@ -52,7 +52,7 @@ def cargar_menu(page: ft.Page):
                     user_cart.add_item(item_id, name, price)
                     page.snack_bar = ft.SnackBar(
                         content=ft.Text(f"'{name}' agregado al carrito"),
-                        bgcolor=ft.colors.GREEN_700,
+                        bgcolor=ft.Colors.GREEN_700,
                     )
                     page.snack_bar.open = True
                     page.update()
@@ -60,28 +60,28 @@ def cargar_menu(page: ft.Page):
                 menu_list.controls.append(
                     ft.Card(
                         ft.Container(
-                            ft.Column([
-                                ft.ListTile(
-                                    leading=ft.Image(
-                                        src=f"/{imagen}" if imagen else "icons/logo.jpg",
-                                        width=60, height=60, fit="cover", border_radius=8
-                                    ),
-                                    title=ft.Text(nombre, weight=ft.FontWeight.BOLD),
-                                    subtitle=ft.Text(descripcion or "Sin descripción"),
-                                ),
-                                ft.Row(
-                                    [
-                                        ft.Text(f"${precio:.2f}", size=18, weight=ft.FontWeight.BOLD, expand=True),
-                                        ft.FilledButton(
-                                            "Agregar",
-                                            icon="add_shopping_cart",
-                                            on_click=_on_add_clicked
-                                        )
-                                    ],
-                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                )
-                            ]),
-                            padding=15
+                            content=ft.Column(
+                                spacing=8,
+                                controls=[
+                                    ft.Image(src=f"/{imagen}", width=page.width - 40, fit="contain"),
+                                    ft.Text(nombre, size=36, weight=ft.FontWeight.BOLD),
+                                    ft.Text(descripcion or "Sin descripción", size=24),
+                                    ft.Row(
+                                        [
+                                            ft.Text(f"${precio:.2f}", color=ft.Colors.GREY_700, size=36, weight=ft.FontWeight.BOLD, expand=True),
+                                            ft.FilledButton(
+                                                "Agregar",
+                                                icon="add_shopping_cart",
+                                                on_click=_on_add_clicked
+                                            )
+                                        ],
+                                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                    )
+                                ]
+                            ),
+                            padding=12,
+                            border_radius=12,
+                            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.BLACK)
                         )
                     )
                 )

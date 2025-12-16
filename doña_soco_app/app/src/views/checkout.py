@@ -31,7 +31,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
 
         address_validation_status.visible = True
         address_validation_status.controls[1].value = "Verificando dirección..."
-        address_validation_status.controls[1].color = ft.colors.BLACK
+        address_validation_status.controls[1].color = ft.Colors.BLACK
         address_validation_status.controls[0].visible = True # Muestra el anillo de progreso
         page.update()
 
@@ -47,10 +47,10 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         address_validation_status.controls[0].visible = False # Oculta el anillo de progreso
         if is_valid:
             address_validation_status.controls[1].value = "Dirección verificada (simulado) ✔"
-            address_validation_status.controls[1].color = ft.colors.GREEN_700
+            address_validation_status.controls[1].color = ft.Colors.GREEN_700
         else:
             address_validation_status.controls[1].value = "No se pudo verificar la dirección."
-            address_validation_status.controls[1].color = ft.colors.RED_700
+            address_validation_status.controls[1].color = ft.Colors.RED_700
         page.update()
 
     # --- CAMPOS DEL FORMULARIO ---
@@ -77,13 +77,13 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         }
         for nombre, campo in campos.items():
             if not campo.value or not campo.value.strip():
-                show_snackbar(f"El campo '{nombre}' es obligatorio.", ft.colors.AMBER_800)
+                show_snackbar(f"El campo '{nombre}' es obligatorio.", ft.Colors.AMBER_800)
                 return False
         if not re.match(r"^\d{10}$", telefono_field.value.strip()):
-            show_snackbar("El teléfono debe tener 10 dígitos.", ft.colors.AMBER_800)
+            show_snackbar("El teléfono debe tener 10 dígitos.", ft.Colors.AMBER_800)
             return False
         if not re.match(r"^\d{5}$", cp_field.value.strip()):
-            show_snackbar("El Código Postal debe tener 5 dígitos.", ft.colors.AMBER_800)
+            show_snackbar("El Código Postal debe tener 5 dígitos.", ft.Colors.AMBER_800)
             return False
         return True
 
@@ -144,7 +144,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             ft.Divider(height=20),
             ft.ListTile(
                 title=ft.Text("Total a Pagar:", weight=ft.FontWeight.BOLD),
-                trailing=ft.Text(f"${total:.2f}", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_700),
+                trailing=ft.Text(f"${total:.2f}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700),
             ),
             ft.FilledButton(
                 content=ft.Text("Confirmar Pedido"), icon="check_circle_outline",

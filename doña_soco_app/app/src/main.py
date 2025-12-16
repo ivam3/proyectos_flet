@@ -48,10 +48,15 @@ def main(page: ft.Page):
     admin_mode = False
 
     # ------- UTILIDADES -------
-    def show_snackbar(text):
-        snack_bar = ft.SnackBar(ft.Text(text))
-        page.overlay.append(snack_bar)
-        snack_bar.open = True
+    def show_snackbar(message: str, color=ft.Colors.BLACK):
+        page.snack_bar = ft.SnackBar(
+            content=ft.Text(
+                message,
+                color=color,
+            ),
+            behavior=ft.SnackBarBehavior.FLOATING,
+        )
+        page.snack_bar.open = True
         page.update()
 
     def close_dialog():
@@ -152,4 +157,4 @@ def main(page: ft.Page):
 
 
 # Ruta correcta del assets_dir
-ft.run(main, assets_dir="src/assets") #, secret_key="ads2025")
+ft.run(main, assets_dir="src/assets", view=ft.AppView.FLET_APP) #, secret_key="ads2025")

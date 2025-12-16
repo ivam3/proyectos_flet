@@ -1,6 +1,5 @@
-# src/views/checkout.py
 import flet as ft
-from database import guardar_pedido
+from database import guardar_pedido, get_configuracion
 from views.menu import cargar_menu
 
 from views.seguimiento import seguimiento_view
@@ -8,120 +7,149 @@ from views.seguimiento import seguimiento_view
 def create_checkout_view(page: ft.Page, show_snackbar, nav):
     """Pantalla donde el usuario ingresa sus datos de envío antes de confirmar el pedido."""
     import re
+    import time
 
     user_cart = page.session.cart
 
-    # --- CAMPOS DEL FORMULARIO ---
-    nombre_field = ft.TextField(label="Nombre completo", autofocus=True, label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    telefono_field = ft.TextField(label="Teléfono de contacto", keyboard_type=ft.KeyboardType.PHONE, label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    
-    # Campos de dirección desglosados
-    calle_field = ft.TextField(label="Calle", label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    numero_field = ft.TextField(label="Número (ext e int)", label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    ciudad_field = ft.TextField(label="Ciudad", label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    cp_field = ft.TextField(label="Código Postal", keyboard_type=ft.KeyboardType.NUMBER, max_length=5, label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    estado_field = ft.TextField(label="Estado", label_style=ft.TextStyle(color=ft.Colors.BLACK))
+    # --- Placeholder para Validación de Dirección ---
+    address_validation_status = ft.Row(
+        visible=False,
+        controls=[
+            ft.ProgressRing(width=16, height=16, stroke_width=2),
+            ft.Text("Verificando dirección...", style=ft.TextThemeStyle.BODY_SMALL),
+        ]
+    )
 
-    referencias_field = ft.TextField(label="Referencias (opcional)", multiline=True, max_lines=2, label_style=ft.TextStyle(color=ft.Colors.BLACK))
+    def validar_direccion_google(e):
+        """
+        Placeholder para la validación de dirección con una API externa como Google.
+        Se activa cuando el usuario sale de un campo de dirección.
+        """
+        # Solo procede si hay datos en los campos clave de dirección
+        if not all([calle_field.value, colonia_field.value, cp_field.value]):
+            return
 
-    total = user_cart.get_total()
-    dialog = ft.AlertDialog()
-
-    def _ir_a_seguimiento(e):
-        """Redirige a la pantalla de seguimiento y limpia el carrito."""
-        from views.seguimiento import seguimiento_view
-        user_cart.clear_cart()
-        dialog.open = False
-        page.controls[1].content = seguimiento_view(page) # Carga la vista de seguimiento
-        nav.selected_index = 2 # Actualiza el nav bar
+        address_validation_status.visible = True
+        address_validation_status.controls[1].value = "Verificando dirección..."
+        address_validation_status.controls[1].color = ft.colors.BLACK
+        address_validation_status.controls[0].visible = True # Muestra el anillo de progreso
         page.update()
 
+        # >>> INICIO DEL MARCADOR DE POSICIÓN <<<
+        # Aquí iría la llamada a la API de Google Address Validation.
+        # Se simulará una demora de 1.5 segundos.
+        time.sleep(1.5)
+        # Basado en la respuesta de la API, se actualizaría el estado.
+        # Simulamos una validación exitosa.
+        is_valid = True 
+        # >>> FIN DEL MARCADOR DE POSICIÓN <<<
+        
+        address_validation_status.controls[0].visible = False # Oculta el anillo de progreso
+        if is_valid:
+            address_validation_status.controls[1].value = "Dirección verificada (simulado) ✔"
+            address_validation_status.controls[1].color = ft.colors.GREEN_700
+        else:
+            address_validation_status.controls[1].value = "No se pudo verificar la dirección."
+            address_validation_status.controls[1].color = ft.colors.RED_700
+        page.update()
+
+    # --- CAMPOS DEL FORMULARIO ---
+    nombre_field = ft.TextField(label="Nombre completo", autofocus=True, border_radius=10)
+    telefono_field = ft.TextField(label="Teléfono de contacto", keyboard_type=ft.KeyboardType.PHONE, border_radius=10)
+    calle_field = ft.TextField(label="Calle y número", border_radius=10, on_blur=validar_direccion_google)
+    colonia_field = ft.TextField(label="Colonia", border_radius=10, on_blur=validar_direccion_google)
+    cp_field = ft.TextField(label="Código Postal", keyboard_type=ft.KeyboardType.NUMBER, max_length=5, border_radius=10, on_blur=validar_direccion_google)
+    referencias_field = ft.TextField(label="Referencias adicionales", multiline=True, max_lines=2, border_radius=10)
+
+    total = user_cart.get_total()
+
+    def _ir_a_seguimiento(codigo):
+        user_cart.clear_cart()
+        page.session.telefono_cliente = telefono_field.value.strip()
+        page.session.codigo_seguimiento = codigo
+        page.go("/seguimiento")
+
     def validar_campos():
-        """Valida todos los campos obligatorios y sus formatos."""
         campos = {
             "Nombre": nombre_field, "Teléfono": telefono_field,
-            "Calle": calle_field, "Número": numero_field,
-            "Ciudad": ciudad_field, "Código Postal": cp_field, "Estado": estado_field
+            "Calle y número": calle_field, "Colonia": colonia_field, 
+            "Código Postal": cp_field
         }
         for nombre, campo in campos.items():
             if not campo.value or not campo.value.strip():
-                show_snackbar(f"El campo '{nombre}' es obligatorio.")
+                show_snackbar(f"El campo '{nombre}' es obligatorio.", ft.colors.AMBER_800)
                 return False
-
-        # Validar CP
-        if not re.match(r"^\d{5}$", cp_field.value.strip()):
-            show_snackbar("El Código Postal debe tener 5 dígitos numéricos.")
+        if not re.match(r"^\d{10}$", telefono_field.value.strip()):
+            show_snackbar("El teléfono debe tener 10 dígitos.", ft.colors.AMBER_800)
             return False
-            
-        # Validar longitud y caracteres (ejemplo simple)
-        for nombre, campo in {"Calle": calle_field, "Ciudad": ciudad_field, "Estado": estado_field}.items():
-            if not re.match(r"^[a-zA-Z0-9\s.,-]*$", campo.value.strip()):
-                show_snackbar(f"El campo '{nombre}' contiene caracteres no permitidos.")
-                return False
-            if len(campo.value.strip()) > 100:
-                show_snackbar(f"El campo '{nombre}' es demasiado largo.")
-                return False
-
+        if not re.match(r"^\d{5}$", cp_field.value.strip()):
+            show_snackbar("El Código Postal debe tener 5 dígitos.", ft.colors.AMBER_800)
+            return False
         return True
 
+    def mostrar_dialogo_error_cp():
+        dlg = ft.AlertDialog(
+            modal=True, title=ft.Text("📍 Fuera de Zona de Reparto"),
+            content=ft.Text("Lo sentimos, tu código postal se encuentra fuera de nuestra área de servicio actual."),
+            actions=[ft.TextButton(content=ft.Text("Entendido"), on_click=lambda e: setattr(e.control.page.dialog, "open", False) or e.control.page.update())],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.dialog = dlg
+        dlg.open = True
+        page.update()
 
     def confirmar_pedido(e):
         if not validar_campos():
             return
 
-        # Unir dirección para guardarla
-        direccion_completa = (
-            f"{calle_field.value.strip()}, "
-            f"{numero_field.value.strip()}, "
-            f"{ciudad_field.value.strip()}, "
-            f"{estado_field.value.strip()}, "
-            f"C.P. {cp_field.value.strip()}"
-        )
-
-        nombre = nombre_field.value.strip()
-        telefono = telefono_field.value.strip()
-        referencias = referencias_field.value.strip()
-        items = user_cart.get_items()
+        config = get_configuracion()
+        codigos_permitidos = [cp.strip() for cp in config['codigos_postales'].split(',')] if config and config['codigos_postales'] else []
+        if cp_field.value.strip() not in codigos_permitidos:
+            mostrar_dialogo_error_cp()
+            return
         
-        setattr(page.session, "telefono_cliente", telefono)
+        direccion_completa = f"{calle_field.value.strip()}, {colonia_field.value.strip()}, C.P. {cp_field.value.strip()}"
+        nombre, telefono, referencias = nombre_field.value.strip(), telefono_field.value.strip(), referencias_field.value.strip()
+        items = user_cart.get_items()
         
         exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total, items)
 
-        if exito:
-            dialog.title = ft.Text("Pedido registrado ✅", color=ft.Colors.BLACK)
-            dialog.content = ft.Column([
-                ft.Text("Tu pedido ha sido enviado correctamente.", color=ft.Colors.BLACK),
-                ft.Text("Usa este código para darle seguimiento:", color=ft.Colors.BLACK),
-                ft.Text(f"{codigo_seguimiento}", weight="bold", size=20, selectable=True, color=ft.Colors.BLACK),
-                ft.Text("Guárdalo bien, lo necesitarás para consultar el estado.", color=ft.Colors.BLACK, italic=True)
-            ])
-            dialog.actions = [ft.TextButton("Aceptar", on_click=_ir_a_seguimiento)]
-        else:
-            dialog.title = ft.Text("Error ❌", color=ft.Colors.BLACK)
-            dialog.content = ft.Text("Ocurrió un error al guardar el pedido. Intenta nuevamente.", color=ft.Colors.BLACK)
-            dialog.actions = [ft.TextButton("Cerrar", on_click=lambda e: (setattr(dialog, 'open', False), page.update()))]
-
-        if dialog not in page.overlay:
-            page.overlay.append(dialog)
-        dialog.open = True
+        dlg_content = ft.Column([
+                ft.Text("Tu pedido ha sido enviado correctamente."),
+                ft.Text("Usa este código para darle seguimiento:"),
+                ft.Text(f"{codigo_seguimiento}", weight=ft.FontWeight.BOLD, size=20, selectable=True),
+            ]) if exito else ft.Text("Ocurrió un error al guardar tu pedido. Por favor, intenta de nuevo.")
+        
+        dlg = ft.AlertDialog(
+            modal=True, title=ft.Text("✅ Pedido Registrado" if exito else "❌ Error en el Pedido"),
+            content=dlg_content,
+            actions=[ft.FilledButton(content=ft.Text("Aceptar"), on_click=lambda e: _ir_a_seguimiento(codigo_seguimiento) if exito else setattr(e.control.page.dialog, "open", False) or e.control.page.update())],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.dialog = dlg
+        dlg.open = True
         page.update()
 
     return ft.Column(
-        [
-            ft.Text("Datos de entrega", size=24, weight="bold", color=ft.Colors.BLACK),
-            ft.Divider(),
+        controls=[
+            ft.Text("Datos de Entrega", size=24, weight="bold"),
+            ft.Divider(height=10),
             nombre_field,
             telefono_field,
             calle_field,
-            numero_field,
-            ciudad_field,
+            colonia_field,
             cp_field,
-            estado_field,
+            address_validation_status, # Indicador de validación de dirección
             referencias_field,
-            ft.Divider(),
-            ft.Text(f"Total a pagar: ${total:.2f}", size=20, weight="bold", color=ft.Colors.BLACK),
-            ft.Button("Confirmar pedido", on_click=confirmar_pedido)
+            ft.Divider(height=20),
+            ft.ListTile(
+                title=ft.Text("Total a Pagar:", weight=ft.FontWeight.BOLD),
+                trailing=ft.Text(f"${total:.2f}", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_700),
+            ),
+            ft.FilledButton(
+                content=ft.Text("Confirmar Pedido"), icon="check_circle_outline",
+                on_click=confirmar_pedido, width=float('inf')
+            )
         ],
-        scroll="auto",
-        expand=True
+        scroll=ft.ScrollMode.ADAPTIVE, spacing=15, expand=True,
     )

@@ -56,3 +56,15 @@ CREATE TABLE IF NOT EXISTS historial_estados (
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orden_id) REFERENCES ordenes(id)
 );
+
+-- TABLA DE CONFIGURACIÓN DE LA PLATAFORMA
+CREATE TABLE IF NOT EXISTS configuracion (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    horario TEXT,
+    codigos_postales TEXT
+);
+
+-- Inicializa la configuración con valores por defecto si la tabla está vacía
+INSERT INTO configuracion (id, horario, codigos_postales)
+SELECT 1, 'Lunes a Viernes de 9:00 a 22:00', '12345,54321'
+WHERE NOT EXISTS (SELECT 1 FROM configuracion WHERE id = 1);

@@ -98,7 +98,7 @@ def menu_admin_view(page: ft.Page):
                             content=ft.Column([
                                 ft.Row([
                                     ft.Image(
-                                        src=f"src/assets/{imagen}" if imagen else "",
+                                        src=f"/{imagen}" if imagen else "",
                                         width=50, height=50,
                                         fit="cover"
                                     ) if imagen else ft.Container(width=50, height=50),
@@ -197,7 +197,7 @@ def menu_admin_view(page: ft.Page):
         imagen_path.value = imagen or ""
 
         if imagen:
-            imagen_preview.src = f"src/assets/{imagen}"
+            imagen_preview.src = f"/{imagen}"
             imagen_preview.visible = True
         else:
             imagen_preview.visible = False

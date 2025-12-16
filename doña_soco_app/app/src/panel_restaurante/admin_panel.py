@@ -1,6 +1,7 @@
 import flet as ft
 from .views.menu_admin import menu_admin_view
 from .views.pedidos import pedidos_view
+from .views.configuracion import ConfiguracionView # Importar la nueva vista
 
 def create_admin_panel_view(page: ft.Page, logout_func):
     """
@@ -8,19 +9,28 @@ def create_admin_panel_view(page: ft.Page, logout_func):
     para cambiar entre las vistas de gestión.
     """
 
+    # Se crean las vistas de contenido una sola vez
+    menu_view = menu_admin_view(page)
+    pedidos_view_content = pedidos_view(page)
+    config_view = ConfiguracionView(page) # Instanciar la vista de configuración
+
     # Contenedor donde se mostrará la vista de menú o pedidos
     admin_content_area = ft.Container(
-        content=menu_admin_view(page), # Cargar vista de menú por defecto
+        content=menu_view, # Cargar vista de menú por defecto
         expand=True,
     )
 
     # Funciones para cambiar el contenido
     def show_menu_view(e):
-        admin_content_area.content = menu_admin_view(page)
+        admin_content_area.content = menu_view
         admin_content_area.update()
 
     def show_pedidos_view(e):
-        admin_content_area.content = pedidos_view(page)
+        admin_content_area.content = pedidos_view_content
+        admin_content_area.update()
+
+    def show_config_view(e): # Función para mostrar la vista de configuración
+        admin_content_area.content = config_view
         admin_content_area.update()
 
     # Layout de la vista del panel de administración
@@ -40,6 +50,7 @@ def create_admin_panel_view(page: ft.Page, logout_func):
                 [
                     ft.Button(content=ft.Text("Gestión de Menú"), on_click=show_menu_view, expand=True),
                     ft.Button(content=ft.Text("Gestión de Pedidos"), on_click=show_pedidos_view, expand=True),
+                    ft.Button(content=ft.Text("Configuración"), on_click=show_config_view, expand=True), # Nuevo botón
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
             ),

@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS menu (
     nombre TEXT NOT NULL,
     descripcion TEXT,
     precio REAL NOT NULL,
+    descuento REAL DEFAULT 0,
     imagen TEXT,
     is_active INTEGER DEFAULT 1,
     FOREIGN KEY(categoria_id) REFERENCES categorias(id)
@@ -33,6 +34,8 @@ CREATE TABLE IF NOT EXISTS ordenes (
     direccion TEXT NOT NULL,
     referencias TEXT,
     total REAL NOT NULL,
+    metodo_pago TEXT,
+    paga_con REAL,
     fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
     estado TEXT DEFAULT 'Nuevo',
     codigo_seguimiento TEXT UNIQUE
@@ -61,7 +64,10 @@ CREATE TABLE IF NOT EXISTS historial_estados (
 CREATE TABLE IF NOT EXISTS configuracion (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     horario TEXT,
-    codigos_postales TEXT
+    codigos_postales TEXT,
+    metodos_pago_activos TEXT,
+    tipos_tarjeta TEXT,
+    contactos TEXT
 );
 
 -- Inicializa la configuración con valores por defecto si la tabla está vacía

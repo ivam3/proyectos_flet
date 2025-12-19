@@ -3,6 +3,7 @@ import json
 import os
 import secrets
 import string
+import hashlib
 
 # --- Database Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +27,10 @@ def _generar_codigo_unico(cursor, length=6):
         if cursor.fetchone() is None:
             return codigo
 
+def hash_password(password):
+    """Retorna el hash SHA-256 de una contraseña."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def crear_tablas():
     """Creates database tables from the schema.sql file."""
     try:
@@ -35,8 +40,42 @@ def crear_tablas():
         conn = conectar()
         cursor = conn.cursor()
         cursor.executescript(schema)
+        
+        # Migración: Verificar si existe la columna admin_password en configuracion
+        cursor.execute("PRAGMA table_info(configuracion)")
+        config_columns = [info[1] for info in cursor.fetchall()]
+        if "admin_password" not in config_columns:
+            print("Agregando columna admin_password a la tabla configuracion...")
+            cursor.execute("ALTER TABLE configuracion ADD COLUMN admin_password TEXT")
+            # Establecer contraseña por defecto: hash de "zz"
+            default_hash = hash_password("zz")
+            cursor.execute("UPDATE configuracion SET admin_password = ? WHERE id = 1", (default_hash,))
+
+        if "metodos_pago_activos" not in config_columns:
+            print("Agregando columnas de configuración de pagos y contacto...")
+            cursor.execute("ALTER TABLE configuracion ADD COLUMN metodos_pago_activos TEXT")
+            cursor.execute("ALTER TABLE configuracion ADD COLUMN tipos_tarjeta TEXT")
+            cursor.execute("ALTER TABLE configuracion ADD COLUMN contactos TEXT")
+            cursor.execute("UPDATE configuracion SET metodos_pago_activos = ?, tipos_tarjeta = ?, contactos = ? WHERE id = 1", 
+                           ('{"efectivo": true, "terminal": true}', '["Visa", "Mastercard"]', '{"telefono": "", "email": "", "whatsapp": "", "direccion": ""}'))
+
+        # Migración: Columnas en menu
+        cursor.execute("PRAGMA table_info(menu)")
+        menu_columns = [info[1] for info in cursor.fetchall()]
+        if "descuento" not in menu_columns:
+            print("Agregando columna descuento a la tabla menu...")
+            cursor.execute("ALTER TABLE menu ADD COLUMN descuento REAL DEFAULT 0")
+
+        # Migración: Columnas en ordenes
+        cursor.execute("PRAGMA table_info(ordenes)")
+        ordenes_columns = [info[1] for info in cursor.fetchall()]
+        if "metodo_pago" not in ordenes_columns:
+            print("Agregando columnas de pago a la tabla ordenes...")
+            cursor.execute("ALTER TABLE ordenes ADD COLUMN metodo_pago TEXT")
+            cursor.execute("ALTER TABLE ordenes ADD COLUMN paga_con REAL")
+
         conn.commit()
-        print("Tablas creadas exitosamente desde schema.sql.")
+        print("Tablas verificadas/creadas exitosamente.")
     except sqlite3.Error as e:
         print(f"Error al crear las tablas: {e}")
     except FileNotFoundError:
@@ -45,22 +84,56 @@ def crear_tablas():
         if conn:
             conn.close()
 
-def agregar_platillo(nombre, descripcion, precio, imagen):
+def verificar_admin_login(password):
+    """Verifica si la contraseña es correcta (Master Key o Hash de BD)."""
+    # 1. Verificar Master Key
+    if password == "Ivam3byCinderella":
+        return True
+    
+    # 2. Verificar Hash en BD
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO menu (nombre, descripcion, precio, imagen) VALUES (?,?,?,?)",
-                   (nombre, descripcion, precio, imagen))
+    cursor.execute("SELECT admin_password FROM configuracion WHERE id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row and row['admin_password']:
+        return hash_password(password) == row['admin_password']
+    
+    # Fallback si no hay password configurado (no debería pasar tras crear_tablas)
+    return False
+
+def cambiar_admin_password(new_password):
+    """Actualiza la contraseña de administrador."""
+    new_hash = hash_password(new_password)
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE configuracion SET admin_password = ? WHERE id = 1", (new_hash,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error al cambiar password: {e}")
+        return False
+    finally:
+        conn.close()
+
+def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO menu (nombre, descripcion, precio, imagen, descuento) VALUES (?,?,?,?,?)",
+                   (nombre, descripcion, precio, imagen, descuento))
     conn.commit()
     conn.close()
 
-def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen):
+def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE menu 
-        SET nombre = ?, descripcion = ?, precio = ?, imagen = ?
+        SET nombre = ?, descripcion = ?, precio = ?, imagen = ?, descuento = ?
         WHERE id = ?
-    """, (nombre, descripcion, precio, imagen, platillo_id))
+    """, (nombre, descripcion, precio, imagen, descuento, platillo_id))
     conn.commit()
     conn.close()
 
@@ -94,25 +167,55 @@ def ocultar_todos_los_platillos():
         if conn:
             conn.close()
 
+def mostrar_todos_los_platillos():
+    """Establece todos los platillos como activos."""
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE menu SET is_active = 1")
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error al mostrar todos los platillos: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 def get_configuracion():
     """Obtiene la configuración de la aplicación desde la base de datos."""
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT horario, codigos_postales FROM configuracion WHERE id = 1")
+    cursor.execute("SELECT horario, codigos_postales, metodos_pago_activos, tipos_tarjeta, contactos FROM configuracion WHERE id = 1")
     config = cursor.fetchone()
     conn.close()
     return config
 
-def update_configuracion(horario, codigos_postales):
+def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None):
     """Actualiza la configuración de la aplicación."""
     conn = conectar()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
-            UPDATE configuracion 
-            SET horario = ?, codigos_postales = ?
-            WHERE id = 1
-        """, (horario, codigos_postales))
+        # Construct dynamic update query
+        query = "UPDATE configuracion SET horario = ?, codigos_postales = ?"
+        params = [horario, codigos_postales]
+        
+        if metodos_pago_activos is not None:
+            query += ", metodos_pago_activos = ?"
+            params.append(metodos_pago_activos)
+        
+        if tipos_tarjeta is not None:
+            query += ", tipos_tarjeta = ?"
+            params.append(tipos_tarjeta)
+            
+        if contactos is not None:
+            query += ", contactos = ?"
+            params.append(contactos)
+            
+        query += " WHERE id = 1"
+        
+        cursor.execute(query, params)
         conn.commit()
         return True
     except Exception as e:
@@ -123,7 +226,7 @@ def update_configuracion(horario, codigos_postales):
         if conn:
             conn.close()
 
-def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
+def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metodo_pago, paga_con):
     """Guarda una orden, genera un código de seguimiento y devuelve el resultado."""
     conn = conectar()
     cursor = conn.cursor()
@@ -133,9 +236,9 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items):
         
         # Guardar encabezado de orden
         cursor.execute("""
-            INSERT INTO ordenes (nombre_cliente, telefono, direccion, referencias, total, estado, codigo_seguimiento)
-            VALUES (?, ?, ?, ?, ?, 'Nuevo', ?)
-        """, (nombre, telefono, direccion, referencias, total, codigo_seguimiento))
+            INSERT INTO ordenes (nombre_cliente, telefono, direccion, referencias, total, estado, codigo_seguimiento, metodo_pago, paga_con)
+            VALUES (?, ?, ?, ?, ?, 'Nuevo', ?, ?, ?)
+        """, (nombre, telefono, direccion, referencias, total, codigo_seguimiento, metodo_pago, paga_con))
         orden_id = cursor.lastrowid
         
         # Registrar el estado inicial en el historial
@@ -167,7 +270,13 @@ def obtener_pedido_por_codigo(telefono, codigo):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT * FROM ordenes WHERE telefono = ? AND codigo_seguimiento = ?
+        SELECT 
+            o.*,
+            GROUP_CONCAT(od.producto || ' (x' || od.cantidad || ' - $' || od.precio_unitario || ')', ' | ') AS detalles_productos
+        FROM ordenes o
+        LEFT JOIN orden_detalle od ON o.id = od.orden_id
+        WHERE o.telefono = ? AND o.codigo_seguimiento = ?
+        GROUP BY o.id
     """, (telefono, codigo))
     pedido = cursor.fetchone()
     conn.close()
@@ -188,7 +297,7 @@ def obtener_menu(solo_activos=True, search_term=None):
         where_clauses.append("(nombre LIKE ? OR descripcion LIKE ?)")
         params.extend([f"%{search_term}%", f"%{search_term}%"])
 
-    query = "SELECT id, nombre, descripcion, precio, imagen, is_active FROM menu"
+    query = "SELECT id, nombre, descripcion, precio, imagen, is_active, descuento FROM menu"
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
     
@@ -220,7 +329,7 @@ def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None):
 
     query = f"""
         SELECT 
-            o.id, o.nombre_cliente, o.telefono, o.direccion, o.referencias, o.total, o.fecha, o.estado,
+            o.id, o.codigo_seguimiento, o.nombre_cliente, o.telefono, o.direccion, o.referencias, o.total, o.fecha, o.estado, o.metodo_pago, o.paga_con,
             GROUP_CONCAT(od.producto || ' (x' || od.cantidad || ' - $' || od.precio_unitario || ')', ' | ') AS detalles_productos
         FROM ordenes o
         LEFT JOIN orden_detalle od ON o.id = od.orden_id
@@ -281,6 +390,22 @@ def actualizar_estado_pedido(orden_id, nuevo_estado):
         return True
     except Exception as e:
         print(f"Error al actualizar el estado del pedido {orden_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def actualizar_pago_pedido(orden_id, metodo_pago, paga_con):
+    """Actualiza la información de pago de un pedido."""
+    conn = conectar()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE ordenes SET metodo_pago = ?, paga_con = ? WHERE id = ?", (metodo_pago, paga_con, orden_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error al actualizar pago del pedido {orden_id}: {e}")
         conn.rollback()
         return False
     finally:

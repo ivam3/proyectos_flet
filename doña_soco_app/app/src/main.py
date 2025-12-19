@@ -1,6 +1,6 @@
 import flet as ft
 import os
-from database import crear_tablas
+from database import crear_tablas, verificar_admin_login
 from views.carrito import create_carrito_view
 from views.seguimiento import seguimiento_view
 from views.menu import cargar_menu
@@ -66,12 +66,51 @@ def main(page: ft.Page):
     # Área central de contenido
     content_area = ft.Container(expand=True)
     
+    # ------- DIÁLOGO DE ADMIN & FILE PICKER GLOBAL -------
+    admin_field = ft.TextField(password=True, hint_text="Clave")
+    
+    # Global FilePicker for the whole app session
+    global_file_picker = ft.FilePicker()
+    # We use a hidden container instead of overlay to avoid the "red stripe" bug on Android
+    picker_shield = ft.Container(content=global_file_picker, visible=False)
+
+    def activar_admin(e):
+        dialog.open = True
+        page.update()
+
+    def validar_clave(e=None):
+        nonlocal admin_mode
+        clave = admin_field.value.strip()
+        if verificar_admin_login(clave):
+            admin_mode = True
+            close_dialog()
+            show_snackbar("Modo administrador activado")
+            # Pass global_file_picker to admin view
+            content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
+        else:
+            admin_field.value = ""
+            show_snackbar("Acceso restringido")
+        page.update()
+
+    dialog = ft.AlertDialog(
+        title=ft.Text("Ingrese clave de administrador"),
+        content=admin_field,
+        actions=[
+            ft.TextButton("Cancelar", on_click=lambda _: close_dialog()),
+            ft.TextButton("Aceptar", on_click=validar_clave),
+        ],
+    )
+    page.overlay.append(dialog)
+
     # ------- LOGOUT -------
     def logout(e=None):
         nonlocal admin_mode
         admin_mode = False
         content_area.content = cargar_menu(page)
         show_snackbar("Sesión de administrador cerrada")
+        # Restore overlay state (dialog only, picker is in main controls)
+        page.overlay.clear()
+        page.overlay.append(dialog)
         page.update()
 
     # ------- CAMBIAR PANTALLAS -------
@@ -85,39 +124,19 @@ def main(page: ft.Page):
             content_area.content = seguimiento_view(page)
         elif selected == 3:
             if admin_mode:
-                content_area.content = create_admin_panel_view(page, logout_func=logout)
+                content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
             else:
                 show_snackbar("Acceso restringido")
         page.update()
 
-    # ------- DIÁLOGO DE ADMIN -------
-    admin_field = ft.TextField(password=True, hint_text="Clave")
+    # ------- ROUTING -------
+    def handle_route_change(e):
+        if page.route == "/seguimiento":
+            nav.selected_index = 2
+            content_area.content = seguimiento_view(page)
+            page.update()
 
-    def activar_admin(e):
-        dialog.open = True
-        page.update()
-
-    def validar_clave(e=None):
-        nonlocal admin_mode
-        if admin_field.value.strip() == "zz":
-            admin_mode = True
-            close_dialog()
-            show_snackbar("Modo administrador activado")
-            content_area.content = create_admin_panel_view(page, logout_func=logout)
-        else:
-            admin_field.value = ""
-            show_snackbar("Clave incorrecta")
-        page.update()
-
-    dialog = ft.AlertDialog(
-        title=ft.Text("Ingrese clave de administrador"),
-        content=admin_field,
-        actions=[
-            ft.TextButton("Cancelar", on_click=lambda _: close_dialog()),
-            ft.TextButton("Aceptar", on_click=validar_clave),
-        ],
-    )
-    page.overlay.append(dialog)
+    page.on_route_change = handle_route_change
 
     # ------- HEADER (doble clic para admin) -------
     top_bar = ft.Container(
@@ -152,7 +171,8 @@ def main(page: ft.Page):
     page.add(
         top_bar,
         content_area,
-        nav
+        nav,
+        picker_shield # FilePicker globally available but visually shielded
     )
 
 

@@ -28,6 +28,7 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
         nombre = it["nombre"]
         precio_unit = it["precio"]
         cantidad = it["cantidad"]
+        imagen = it.get("imagen")
         subtotal = precio_unit * cantidad
 
         controls.append(
@@ -36,6 +37,7 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
                     padding=8,
                     content=ft.Row(
                         [
+                            ft.Image(src=f"/{imagen}" if imagen else "", width=60, height=60, fit="cover", border_radius=5) if imagen else ft.Container(width=60),
                             ft.Column(
                                 [
                                     ft.Text(nombre, weight="bold", color=ft.Colors.BLACK),

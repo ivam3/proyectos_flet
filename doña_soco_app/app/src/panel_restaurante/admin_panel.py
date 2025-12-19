@@ -1,18 +1,18 @@
 import flet as ft
 from .views.menu_admin import menu_admin_view
 from .views.pedidos import pedidos_view
-from .views.configuracion import ConfiguracionView # Importar la nueva vista
+from .views.configuracion import configuracion_view # Importar la nueva vista
 
-def create_admin_panel_view(page: ft.Page, logout_func):
+def create_admin_panel_view(page: ft.Page, logout_func, file_picker):
     """
     Crea la vista del panel de administración utilizando una fila de botones
     para cambiar entre las vistas de gestión.
     """
 
     # Se crean las vistas de contenido una sola vez
-    menu_view = menu_admin_view(page)
-    pedidos_view_content = pedidos_view(page)
-    config_view = ConfiguracionView(page) # Instanciar la vista de configuración
+    menu_view = menu_admin_view(page, file_picker)
+    pedidos_view_content = pedidos_view(page, file_picker)
+    config_view = configuracion_view(page) # Instanciar la vista de configuración
 
     # Contenedor donde se mostrará la vista de menú o pedidos
     admin_content_area = ft.Container(

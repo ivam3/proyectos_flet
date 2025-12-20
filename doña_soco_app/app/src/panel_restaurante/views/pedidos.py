@@ -52,6 +52,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             ft.Text(f"Total: ${pedido['total']:.2f}", weight="bold", size=16),
             ft.Text(f"Fecha: {pedido['fecha']}"),
             ft.Text(f"Estado Actual: {pedido['estado']}", weight="bold"),
+            ft.Text(f"Motivo Cancelación: {pedido['motivo_cancelacion']}", color=ft.Colors.RED, visible=(pedido['estado'] == "Cancelado" and bool(pedido['motivo_cancelacion']))),
         ]
         details_dialog.open = True
         page.update()
@@ -169,14 +170,31 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         
         pedidos_data_table.rows.clear()
         
-        def confirm_and_update(e, order_id, new_status):
+        def confirm_and_update(e, order_id, new_status, motivo=None):
             close_dialog()
-            if actualizar_estado_pedido(order_id, new_status):
+            if actualizar_estado_pedido(order_id, new_status, motivo):
                 show_snackbar(f"Pedido #{order_id} actualizado a '{new_status}'.")
                 cargar_pedidos()
             else:
                 show_snackbar(f"Error al actualizar pedido #{order_id}.")
                 cargar_pedidos() 
+
+        # Dialog for cancellation reason
+        motivo_field = ft.TextField(label="Motivo de cancelación", multiline=True)
+        cancellation_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Cancelar Pedido"),
+            content=ft.Column([
+                ft.Text("Por favor, ingrese el motivo de la cancelación:"),
+                motivo_field
+            ], tight=True),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda e: setattr(cancellation_dialog, "open", False) or page.update()),
+                ft.TextButton("Confirmar Cancelación", style=ft.ButtonStyle(color=ft.Colors.RED)), # on_click set dynamically
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.overlay.append(cancellation_dialog)
 
         def open_confirmation(e, order_id, old_status):
             new_status = e.control.value
@@ -187,11 +205,27 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 close_dialog()
                 cargar_pedidos()
 
-            confirmation_dialog.content = ft.Text(f"¿Desea cambiar el estado del pedido #{order_id} de '{old_status}' a '{new_status}'?")
-            confirmation_dialog.actions[0].on_click = on_cancel
-            confirmation_dialog.actions[1].on_click = lambda ev: confirm_and_update(ev, order_id, new_status)
-            confirmation_dialog.open = True
-            page.update()
+            if new_status == "Cancelado":
+                motivo_field.value = ""
+                
+                def on_confirm_cancel(ev):
+                    if not motivo_field.value.strip():
+                        motivo_field.error_text = "El motivo es obligatorio"
+                        page.update()
+                        return
+                    cancellation_dialog.open = False
+                    page.update() # Update page to close dialog visually
+                    confirm_and_update(ev, order_id, new_status, motivo_field.value.strip())
+
+                cancellation_dialog.actions[1].on_click = on_confirm_cancel
+                cancellation_dialog.open = True
+                page.update()
+            else:
+                confirmation_dialog.content = ft.Text(f"¿Desea cambiar el estado del pedido #{order_id} de '{old_status}' a '{new_status}'?")
+                confirmation_dialog.actions[0].on_click = on_cancel
+                confirmation_dialog.actions[1].on_click = lambda ev: confirm_and_update(ev, order_id, new_status)
+                confirmation_dialog.open = True
+                page.update()
 
         if not pedidos:
             pedidos_data_table.rows.append(ft.DataRow(cells=[ft.DataCell(ft.Text("No se encontraron pedidos.", color=ft.Colors.BLACK), colspan=9)]))

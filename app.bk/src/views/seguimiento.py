@@ -269,8 +269,8 @@ def seguimiento_view(page: ft.Page):
         telefono_field,
         codigo_field,
         ft.Row([
-            ft.Button(content=ft.Text("Buscar pedido"), on_click=buscar_pedidos, expand=True),
-            ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: buscar_pedidos(None), tooltip="Actualizar estado", icon_color=ft.Colors.ORANGE_700)
+            ft.Button("Buscar pedido", on_click=buscar_pedidos, expand=True),
+            ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: buscar_pedidos(None), tooltip="Actualizar estado")
         ]),
         ft.Divider(),
         resultado_container

@@ -52,7 +52,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             ft.Text(f"Total: ${pedido['total']:.2f}", weight="bold", size=16),
             ft.Text(f"Fecha: {pedido['fecha']}"),
             ft.Text(f"Estado Actual: {pedido['estado']}", weight="bold"),
-            ft.Text(f"Motivo Cancelación: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700, weight="bold", visible=(pedido['estado'] == "Cancelado" and bool(pedido['motivo_cancelacion']))),
+            ft.Text(f"Motivo Cancelación: {pedido['motivo_cancelacion']}", color=ft.Colors.RED, visible=(pedido['estado'] == "Cancelado" and bool(pedido['motivo_cancelacion']))),
         ]
         details_dialog.open = True
         page.update()

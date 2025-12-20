@@ -190,4 +190,4 @@ def main(page: ft.Page):
 
 
 # Ruta correcta del assets_dir
-ft.run(main, assets_dir="src/assets", view=ft.AppView.WEB_BROWSER) #, secret_key="ads2025")
+ft.run(main, assets_dir="src/assets", view=ft.AppView.FLET_APP) #, secret_key="ads2025")

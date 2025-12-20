@@ -6,68 +6,54 @@ def cargar_menu(page: ft.Page):
     """Carga y muestra los platillos del menú con una barra de búsqueda."""
     
     user_cart = page.session.cart
-
-    # CAMBIO: Usamos GridView para mostrar 2 columnas
-    menu_list = ft.GridView(
-        expand=True,
-        runs_count=2,          # Dos columnas
-        max_extent=200,        # Ancho máximo aproximado de cada item
-        child_aspect_ratio=0.7, # Relación de aspecto (Alto vs Ancho) para que quepa la info
-        spacing=10,
-        run_spacing=10,
-        padding=10
-    )
+    
+    # Contenedor principal que alternará entre el Grid y el Mensaje de Vacío
+    main_content = ft.Container(expand=True)
 
     def update_menu_list(search_term=""):
         """Limpia y recarga la lista de platillos según el término de búsqueda."""
-        menu_list.controls.clear()
         platillos = obtener_menu(solo_activos=True, search_term=search_term)
 
         # Ordenar: primero los que tienen descuento (descendente), luego el resto
         platillos.sort(key=lambda x: x[6] if x[6] else 0, reverse=True)
 
         if not platillos:
-            # Si no hay platillos, mostramos un aviso que ocupe todo el ancho
-            # Para esto, usamos un Column temporal o cambiamos la vista, 
-            # pero GridView acepta controles. Lo ideal es mostrar un solo item grande
-            # pero en grid se verá pequeño.
-            # Mejor opción: Si no hay platillos, mostramos una columna simple en lugar del grid.
-            # Pero como la variable menu_list ya es GridView, insertaremos un Container que abarque todo (span) si fuera posible.
-            # Alternativa simple: Mostrar la info en un card.
-            
             config = get_configuracion()
             horario = config['horario'] if config else "No disponible"
             
-            # Nota: En GridView, este item ocupará solo una celda si no se maneja span.
-            # Para evitar complicación visual, si está vacío podríamos reemplazar el contenido del padre,
-            # pero aquí insertaremos un Card informativo.
-            
-            menu_list.controls.append(
-                ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Icon(ft.Icons.INFO_OUTLINED, size=40, color=ft.Colors.GREY_500),
-                            ft.Text("Sin servicio", weight="bold"),
-                            ft.Text(horario, size=12, text_align="center"),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    padding=20,
-                    alignment=ft.Alignment(0, 0),
-                    bgcolor=ft.Colors.GREY_100,
-                    border_radius=10
-                )
+            main_content.content = ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Icon(ft.Icons.INFO_OUTLINED, size=40, color=ft.Colors.GREY_500),
+                        ft.Text("Sin servicio", weight="bold"),
+                        ft.Text(horario, size=12, text_align="center"),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                alignment=ft.Alignment(0, 0),
+                expand=True
             )
         else:
+            menu_grid = ft.GridView(
+                expand=True,
+                runs_count=2,          # Dos columnas
+                max_extent=200,        # Ancho máximo aproximado de cada item
+                child_aspect_ratio=0.7, # Relación de aspecto (Alto vs Ancho) para que quepa la info
+                spacing=10,
+                run_spacing=10,
+                padding=10
+            )
+
             for platillo in platillos:
-                pid, nombre, descripcion, precio, imagen, _, descuento = platillo
+                pid, nombre, descripcion, precio, imagen, _, descuento, is_configurable = platillo
                 
                 precio_final = precio
                 if descuento > 0:
                     precio_final = precio * (1 - descuento / 100)
 
-                def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen):
-                    user_cart.add_item(item_id, name, price, img)
+                def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable):
+                    user_cart.add_item(item_id, name, price, img, is_configurable=is_conf)
                     page.snack_bar = ft.SnackBar(
                         content=ft.Text(f"'{name}' agregado al carrito"),
                         bgcolor=ft.Colors.GREEN_700,
@@ -85,7 +71,7 @@ def cargar_menu(page: ft.Page):
                     precio_display = ft.Text(f"${precio:.0f}", weight="bold", size=15, color=ft.Colors.ORANGE_800)
 
                 # Tarjeta de platillo optimizada para Grid
-                menu_list.controls.append(
+                menu_grid.controls.append(
                     ft.Card(
                         elevation=2,
                         content=ft.Container(
@@ -121,7 +107,7 @@ def cargar_menu(page: ft.Page):
                                         spacing=2,
                                         controls=[
                                             ft.Text(nombre, weight=ft.FontWeight.BOLD, size=14, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                                            ft.Text(descripcion or "", size=11, color=ft.Colors.GREY_700, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                                            ft.Text(descripcion or "", size=11, color=ft.Colors.GREY_700, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
                                         ]
                                     ),
                                     # Precio y Botón
@@ -142,6 +128,8 @@ def cargar_menu(page: ft.Page):
                         )
                     )
                 )
+            main_content.content = menu_grid
+        
         page.update()
 
     def handle_search_change(e):
@@ -168,6 +156,6 @@ def cargar_menu(page: ft.Page):
                 content=search_bar,
                 padding=ft.Padding.only(left=15, right=15, top=10, bottom=5)
             ),
-            menu_list
+            main_content
         ]
     )

@@ -204,6 +204,7 @@ def seguimiento_view(page: ft.Page):
                         
                         ft.Text(f"Fecha: {fecha}", color=ft.Colors.BLACK),
                         ft.Text(f"Estado actual: {estado.upper()}", color=color_estado_actual, size=16, weight="bold"),
+                        ft.Text(f"Motivo: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700, visible=(estado == "Cancelado" and bool(pedido['motivo_cancelacion']))),
                         ft.Divider(),
                         ft.Text("Productos:", weight="bold", color=ft.Colors.BLACK),
                         productos_info,
@@ -267,7 +268,10 @@ def seguimiento_view(page: ft.Page):
         ft.Divider(),
         telefono_field,
         codigo_field,
-        ft.Button("Buscar pedido", on_click=buscar_pedidos),
+        ft.Row([
+            ft.Button("Buscar pedido", on_click=buscar_pedidos, expand=True),
+            ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: buscar_pedidos(None), tooltip="Actualizar estado")
+        ]),
         ft.Divider(),
         resultado_container
     ], scroll="auto", expand=True)

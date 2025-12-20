@@ -50,10 +50,8 @@ def main(page: ft.Page):
     # ------- UTILIDADES -------
     def show_snackbar(message: str, color=ft.Colors.BLACK):
         page.snack_bar = ft.SnackBar(
-            content=ft.Text(
-                message,
-                color=color,
-            ),
+            content=ft.Text(message, color=ft.Colors.WHITE),
+            bgcolor=color,
             behavior=ft.SnackBarBehavior.FLOATING,
         )
         page.snack_bar.open = True
@@ -85,8 +83,11 @@ def main(page: ft.Page):
             admin_mode = True
             close_dialog()
             show_snackbar("Modo administrador activado")
-            # Pass global_file_picker to admin view
+            
+            # Abrir panel admin y sincronizar navegación
+            nav.selected_index = 3
             content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
+            page.update()
         else:
             admin_field.value = ""
             show_snackbar("Acceso restringido")
@@ -111,6 +112,7 @@ def main(page: ft.Page):
         # Restore overlay state (dialog only, picker is in main controls)
         page.overlay.clear()
         page.overlay.append(dialog)
+        nav.selected_index = 0 # Volver al menú
         page.update()
 
     # ------- CAMBIAR PANTALLAS -------
@@ -127,14 +129,24 @@ def main(page: ft.Page):
                 content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
             else:
                 show_snackbar("Acceso restringido")
+                # Opcional: podrías resetear nav.selected_index al anterior, 
+                # pero por ahora solo mostramos el aviso según lo solicitado.
         page.update()
 
     # ------- ROUTING -------
     def handle_route_change(e):
-        if page.route == "/seguimiento":
+        route = e.route
+        if route.startswith("/seguimiento"):
             nav.selected_index = 2
             content_area.content = seguimiento_view(page)
-            page.update()
+        elif route.startswith("/carrito"):
+            nav.selected_index = 1
+            content_area.content = create_carrito_view(page, show_snackbar, nav)
+        elif route == "/" or route.startswith("/menu"):
+            nav.selected_index = 0
+            content_area.content = cargar_menu(page)
+        
+        page.update()
 
     page.on_route_change = handle_route_change
 
@@ -149,6 +161,7 @@ def main(page: ft.Page):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
         on_click=activar_admin,
+        ink=True,
         padding=15,
         bgcolor=ft.Colors.ORANGE_100,
         border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.BLACK_12))

@@ -3,6 +3,7 @@ from database import guardar_pedido, get_configuracion
 from views.menu import cargar_menu
 import asyncio
 import re
+import httpx
 
 def create_checkout_view(page: ft.Page, show_snackbar, nav):
     """Pantalla donde el usuario ingresa sus datos de envío antes de confirmar el pedido."""
@@ -30,40 +31,38 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         except:
             pass
 
-    # --- Placeholder para Validación de Dirección ---
-    address_validation_status = ft.Row(
-        visible=False,
-        controls=[
-            ft.ProgressRing(width=16, height=16, stroke_width=2),
-            ft.Text("Verificando dirección...", style=ft.TextThemeStyle.BODY_SMALL),
-        ]
-    )
-
+    # --- Función de Validación ---
     async def validar_direccion_google(e):
-        """Simula validación de dirección."""
-        if not all([calle_field.value, colonia_field.value, cp_field.value]):
+        """Valida la dirección usando OpenStreetMap (Gratis)."""
+        if not calle_field.value or not cp_field.value:
             return
 
-        address_validation_status.visible = True
-        address_validation_status.controls[1].value = "Verificando cobertura..."
-        address_validation_status.controls[1].color = ft.Colors.BLACK
-        address_validation_status.controls[0].visible = True
+        calle_field.helper = "Verificando dirección..."
+        calle_field.helper_style = ft.TextStyle(color=ft.Colors.BLUE_GREY_700)
         page.update()
 
-        await asyncio.sleep(1.0)
+        try:
+            query = f"{calle_field.value}, {cp_field.value}, Mexico"
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={"q": query, "format": "json", "limit": 1},
+                    headers={"User-Agent": "DonaSocoApp/1.0"}
+                )
+                data = response.json()
+
+            if data and len(data) > 0:
+                calle_field.helper = "Dirección localizada ✔"
+                calle_field.helper_style = ft.TextStyle(color=ft.Colors.GREEN_700)
+                show_snackbar("Dirección localizada correctamente ✔", ft.Colors.GREEN_700)
+            else:
+                calle_field.helper = "No se encontró la ubicación exacta."
+                calle_field.helper_style = ft.TextStyle(color=ft.Colors.ORANGE_800)
+                show_snackbar("No pudimos localizar la dirección exacta, por favor verifica.", ft.Colors.ORANGE_800)
         
-        is_valid = True 
-        
-        address_validation_status.controls[0].visible = False
-        if is_valid:
-            address_validation_status.controls[1].value = "Dirección válida ✔"
-            address_validation_status.controls[1].color = ft.Colors.GREEN_700
-            page.update()
-            await asyncio.sleep(2.0)
-            address_validation_status.visible = False
-        else:
-            address_validation_status.controls[1].value = "No se pudo verificar la dirección."
-            address_validation_status.controls[1].color = ft.Colors.RED_700
+        except Exception as ex:
+            calle_field.helper = "Error al conectar con el servicio de mapas."
+            calle_field.helper_style = ft.TextStyle(color=ft.Colors.RED_700)
         
         page.update()
     
@@ -93,7 +92,12 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
     nombre_field = ft.TextField(label="Nombre completo", autofocus=True, border_radius=10)
     telefono_field = ft.TextField(label="Teléfono de contacto", keyboard_type=ft.KeyboardType.PHONE, border_radius=10)
     
-    calle_field = ft.TextField(label="Calle y número", border_radius=10, on_blur=validar_direccion_google)
+    calle_field = ft.TextField(
+        label="Calle y número", 
+        border_radius=10, 
+        on_blur=validar_direccion_google,
+        helper="Ingresa calle y número para validar"
+    )
     colonia_field = ft.TextField(label="Colonia", border_radius=10, on_blur=validar_direccion_google)
     
     cp_field = ft.Dropdown(
@@ -101,23 +105,24 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         options=[ft.dropdown.Option(cp) for cp in lista_cps],
         border_radius=10,
         hint_text="Selecciona tu CP",
+        on_select=validar_direccion_google
     )
-    cp_field.on_change = validar_direccion_google
 
     referencias_field = ft.TextField(label="Referencias adicionales", multiline=True, max_lines=2, border_radius=10)
 
     async def _ir_a_seguimiento(e, codigo, dialog_instance):
-        # 1. Cerrar el diálogo usando la instancia específica
+        # 1. Guardar datos en sesión y limpiar carrito
+        page.session.telefono_cliente = telefono_field.value.strip()
+        page.session.codigo_seguimiento = codigo
+        user_cart.clear_cart()
+        
+        # 2. Cerrar el diálogo
         dialog_instance.open = False
         page.update()
         
-        # 2. Guardar datos en sesión y limpiar carrito
-        user_cart.clear_cart()
-        page.session.telefono_cliente = telefono_field.value.strip()
-        page.session.codigo_seguimiento = codigo
-        
         # 3. Navegar a seguimiento
         await page.push_route("/seguimiento")
+        # page.update() # No llamar update aquí, dejar que el router lo maneje
 
     def validar_campos():
         campos_texto = {
@@ -156,13 +161,25 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             
         return True
 
-    def confirmar_pedido(e):
+    async def confirmar_pedido(e):
+        btn_confirmar.disabled = True
+        page.update()
+
         if not validar_campos():
+            btn_confirmar.disabled = False
+            page.update()
+            return
+
+        items = user_cart.get_items()
+        if not items:
+            show_snackbar("El carrito está vacío.", ft.Colors.RED)
+            # Volver al carrito o navegar
+            nav.selected_index = 1
+            await page.push_route("/carrito") 
             return
 
         direccion_completa = f"{calle_field.value.strip()}, {colonia_field.value.strip()}, C.P. {cp_field.value}"
         nombre, telefono, referencias = nombre_field.value.strip(), telefono_field.value.strip(), referencias_field.value.strip()
-        items = user_cart.get_items()
         
         metodo = metodo_pago_group.value
         paga_con = float(paga_con_field.value) if metodo == "efectivo" else 0.0
@@ -172,15 +189,16 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         dlg_content = ft.Column([
                 ft.Text("Tu pedido ha sido enviado correctamente."),
                 ft.Text("Usa este código para darle seguimiento:"),
-                ft.Text(f"{codigo_seguimiento}", weight=ft.FontWeight.BOLD, size=20, selectable=True),
-            ]) if exito else ft.Text("Ocurrió un error al guardar tu pedido. Por favor, intenta de nuevo.")
+                ft.Text(f"{codigo_seguimiento}", weight=ft.FontWeight.BOLD, size=20, selectable=True, text_align=ft.TextAlign.CENTER),
+            ], tight=True, alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER) if exito else ft.Text("Ocurrió un error al guardar tu pedido. Por favor, intenta de nuevo.")
         
         # Definimos el diálogo
         dlg = ft.AlertDialog(
             modal=True,
             title=ft.Text("✅ Pedido Registrado" if exito else "❌ Error en el Pedido"),
-            content=dlg_content,
+            content=ft.Container(content=dlg_content, width=300, padding=10),
             actions_alignment=ft.MainAxisAlignment.END,
+            shape=ft.RoundedRectangleBorder(radius=10),
         )
 
         # Definimos la acción del botón Aceptar
@@ -189,6 +207,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
                 await _ir_a_seguimiento(ev, codigo_seguimiento, dlg)
             else:
                 dlg.open = False
+                btn_confirmar.disabled = False # Re-enable if error
                 page.update()
 
         dlg.actions = [ft.FilledButton(content=ft.Text("Aceptar"), on_click=on_accept)]
@@ -203,6 +222,11 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         cp_field.label = "No hay zonas de reparto configuradas"
         cp_field.error_text = "Contacte al administrador"
 
+    btn_confirmar = ft.FilledButton(
+        content=ft.Text("Confirmar Pedido"), icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
+        on_click=confirmar_pedido, width=float('inf')
+    )
+
     return ft.Column(
         controls=[
             ft.Text("Datos de Entrega", size=24, weight="bold"),
@@ -212,7 +236,6 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             calle_field,
             colonia_field,
             cp_field,
-            address_validation_status,
             referencias_field,
             
             ft.Divider(height=20),
@@ -226,10 +249,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
                 title=ft.Text("Total a Pagar:", weight=ft.FontWeight.BOLD),
                 trailing=ft.Text(f"${total:.2f}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700),
             ),
-            ft.FilledButton(
-                content=ft.Text("Confirmar Pedido"), icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
-                on_click=confirmar_pedido, width=float('inf')
-            )
+            btn_confirmar
         ],
         scroll=ft.ScrollMode.ADAPTIVE, spacing=15, expand=True,
     )

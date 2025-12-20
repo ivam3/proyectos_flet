@@ -8,13 +8,23 @@ class Cart:
     def get_items(self) -> List[Dict]:
         return self.items
 
-    def add_item(self, item_id: int, nombre: str, precio: float, imagen: str = None, cantidad: int = 1):
+    def add_item(self, item_id: int, nombre: str, precio: float, imagen: str = None, cantidad: int = 1, is_configurable: bool = False):
         # Si ya existe el item, aumentamos cantidad
         for it in self.items:
             if it["id"] == item_id:
                 it["cantidad"] += cantidad
+                # Update configurable status just in case
+                it["is_configurable"] = is_configurable
                 return
-        self.items.append({"id": item_id, "nombre": nombre, "precio": float(precio), "cantidad": cantidad, "imagen": imagen})
+        self.items.append({
+            "id": item_id, 
+            "nombre": nombre, 
+            "precio": float(precio), 
+            "cantidad": cantidad, 
+            "imagen": imagen,
+            "is_configurable": is_configurable,
+            "details": "" 
+        })
 
     def remove_item_at(self, index: int):
         if 0 <= index < len(self.items):

@@ -39,6 +39,24 @@ def configuracion_view(page: ft.Page):
     whatsapp_field = ft.TextField(label="Whatsapp", border_radius=10)
     direccion_field = ft.TextField(label="Dirección del Negocio", border_radius=10)
 
+    # --- Configuración de Guisos ---
+    ft.Text("Guisos Disponibles", size=18, weight=ft.FontWeight.BOLD)
+    
+    guisos_chk = {
+        "Deshebrada": ft.Checkbox(label="Deshebrada", value=True),
+        "Nopalitos": ft.Checkbox(label="Nopalitos", value=True),
+        "Queso": ft.Checkbox(label="Queso", value=True),
+        "Picadillo": ft.Checkbox(label="Picadillo", value=True),
+        "Chicharrón": ft.Checkbox(label="Chicharrón", value=True),
+    }
+
+    guisos_container = ft.Column(
+        [
+            ft.Text("Gestionar Disponibilidad de Guisos:", size=14),
+            ft.Column(list(guisos_chk.values()))
+        ]
+    )
+
     # --- Controles de Cambio de Password ---
     new_password_field = ft.TextField(label="Nueva Contraseña", password=True, can_reveal_password=True, border_radius=10)
     confirm_password_field = ft.TextField(label="Confirmar Contraseña", password=True, can_reveal_password=True, border_radius=10)
@@ -81,7 +99,9 @@ def configuracion_view(page: ft.Page):
             "direccion": direccion_field.value.strip()
         })
 
-        if update_configuracion(horario, codigos, metodos_pago, tipos_tarjeta, contactos):
+        guisos_disponibles = json.dumps({k: v.value for k, v in guisos_chk.items()})
+
+        if update_configuracion(horario, codigos, metodos_pago, tipos_tarjeta, contactos, guisos_disponibles):
             mostrar_notificacion("Configuración guardada exitosamente.", ft.Colors.GREEN_700)
         else:
             mostrar_notificacion("Error al guardar la configuración.", ft.Colors.ERROR)
@@ -155,6 +175,16 @@ def configuracion_view(page: ft.Page):
                 except json.JSONDecodeError:
                     pass
 
+            # Cargar guisos
+            if 'guisos_disponibles' in config.keys() and config['guisos_disponibles']:
+                try:
+                    guisos = json.loads(config['guisos_disponibles'])
+                    for k, v in guisos.items():
+                        if k in guisos_chk:
+                            guisos_chk[k].value = v
+                except json.JSONDecodeError:
+                    pass
+
             page.update()
 
     guardar_button = ft.Button(
@@ -192,6 +222,10 @@ def configuracion_view(page: ft.Page):
                 ft.Row([pago_efectivo_chk, pago_terminal_chk]),
                 tarjetas_container,
                 
+                ft.Divider(height=20),
+                ft.Text("Guisos Disponibles", size=18, weight=ft.FontWeight.BOLD),
+                guisos_container,
+
                 ft.Divider(height=20),
                 ft.Text("Información de Contacto", size=18, weight=ft.FontWeight.BOLD),
                 telefono_field,

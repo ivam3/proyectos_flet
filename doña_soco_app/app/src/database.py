@@ -81,7 +81,7 @@ def crear_tablas():
         if "guisos_disponibles" not in config_columns_check:
              print("Agregando columna guisos_disponibles a la tabla configuracion...")
              cursor.execute("ALTER TABLE configuracion ADD COLUMN guisos_disponibles TEXT")
-             default_guisos = '{"Deshebrada": true, "Nopalitos": true, "Queso": true, "Picadillo": true, "Chicharrón": true}'
+             default_guisos = '{"Asado": true, "Deshebrada": true, "Nopalitos": true, "Queso": true, "Picadillo": true, "Chicharrón": true}'
              cursor.execute("UPDATE configuracion SET guisos_disponibles = ? WHERE id = 1", (default_guisos,))
         
         if "salsas_disponibles" not in config_columns_check:

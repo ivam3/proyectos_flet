@@ -42,38 +42,32 @@ def configuracion_view(page: ft.Page):
     # --- Configuración de Guisos ---
     ft.Text("Guisos Disponibles", size=18, weight=ft.FontWeight.BOLD)
     
-    guisos_chk = {
-        "Deshebrada": ft.Checkbox(label="Deshebrada", value=True),
-        "Nopalitos": ft.Checkbox(label="Nopalitos", value=True),
-        "Queso": ft.Checkbox(label="Queso", value=True),
-        "Picadillo": ft.Checkbox(label="Picadillo", value=True),
-        "Chicharrón": ft.Checkbox(label="Chicharrón", value=True),
-    }
+    # Diccionarios dinámicos para controles
+    guisos_chk = {}
+    
+    # Contenedor para la lista de guisos
+    guisos_list_col = ft.Column()
 
     guisos_container = ft.Column(
         [
             ft.Text("Gestionar Disponibilidad de Guisos:", size=14),
-            ft.Column(list(guisos_chk.values()))
+            guisos_list_col
         ]
     )
 
     # --- Configuración de Salsas ---
     ft.Text("Salsas Disponibles", size=18, weight=ft.FontWeight.BOLD)
     
-    salsas_chk = {
-        "BBQ": ft.Checkbox(label="BBQ", value=True),
-        "Búfalo": ft.Checkbox(label="Búfalo", value=True),
-        "Chipotle": ft.Checkbox(label="Chipotle", value=True),
-        "Habanero": ft.Checkbox(label="Habanero", value=True),
-        "Mango Habanero": ft.Checkbox(label="Mango Habanero", value=True),
-        "BBQ Hot": ft.Checkbox(label="BBQ Hot", value=True),
-        "Piquín Limón": ft.Checkbox(label="Piquín Limón", value=True),
-    }
+    # Diccionarios dinámicos para controles
+    salsas_chk = {}
+
+    # Contenedor para la lista de salsas
+    salsas_list_col = ft.Column()
 
     salsas_container = ft.Column(
         [
             ft.Text("Gestionar Disponibilidad de Salsas:", size=14),
-            ft.Column(list(salsas_chk.values()))
+            salsas_list_col
         ]
     )
 
@@ -196,25 +190,52 @@ def configuracion_view(page: ft.Page):
                 except json.JSONDecodeError:
                     pass
 
-            # Cargar guisos
+            # --- Cargar guisos dinámicamente ---
+            guisos_data = {}
+            # Defaults históricos para asegurar consistencia si la BD está vacía o incompleta
+            defaults_guisos = ["Deshebrada", "Nopalitos", "Queso", "Picadillo", "Chicharrón"]
+            
             if 'guisos_disponibles' in config.keys() and config['guisos_disponibles']:
                 try:
-                    guisos = json.loads(config['guisos_disponibles'])
-                    for k, v in guisos.items():
-                        if k in guisos_chk:
-                            guisos_chk[k].value = v
+                    guisos_data = json.loads(config['guisos_disponibles'])
                 except json.JSONDecodeError:
                     pass
+            
+            # Asegurar que los defaults estén presentes
+            for d in defaults_guisos:
+                if d not in guisos_data:
+                    guisos_data[d] = True
 
-            # Cargar salsas
+            # Reconstruir UI de guisos
+            guisos_chk.clear()
+            guisos_list_col.controls.clear()
+            for nombre, activo in guisos_data.items():
+                chk = ft.Checkbox(label=nombre, value=activo)
+                guisos_chk[nombre] = chk
+                guisos_list_col.controls.append(chk)
+
+
+            # --- Cargar salsas dinámicamente ---
+            salsas_data = {}
+            defaults_salsas = ["BBQ", "Búfalo", "Chipotle", "Habanero", "Mango Habanero", "BBQ Hot", "Piquín Limón"]
+
             if 'salsas_disponibles' in config.keys() and config['salsas_disponibles']:
                 try:
-                    salsas = json.loads(config['salsas_disponibles'])
-                    for k, v in salsas.items():
-                        if k in salsas_chk:
-                            salsas_chk[k].value = v
+                    salsas_data = json.loads(config['salsas_disponibles'])
                 except json.JSONDecodeError:
                     pass
+            
+            for d in defaults_salsas:
+                if d not in salsas_data:
+                    salsas_data[d] = True
+
+            # Reconstruir UI de salsas
+            salsas_chk.clear()
+            salsas_list_col.controls.clear()
+            for nombre, activo in salsas_data.items():
+                chk = ft.Checkbox(label=nombre, value=activo)
+                salsas_chk[nombre] = chk
+                salsas_list_col.controls.append(chk)
 
             page.update()
 

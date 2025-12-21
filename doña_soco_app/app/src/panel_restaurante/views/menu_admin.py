@@ -53,7 +53,16 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     descripcion_field = ft.TextField(label="Descripción", multiline=True)
     precio_field = ft.TextField(label="Precio", keyboard_type=ft.KeyboardType.NUMBER)
     descuento_field = ft.TextField(label="Descuento (%)", keyboard_type=ft.KeyboardType.NUMBER, value="0")
+    piezas_field = ft.TextField(label="Piezas por Orden", keyboard_type=ft.KeyboardType.NUMBER, value="1", hint_text="Ej: 3 para orden de 3 gorditas")
+    
     is_configurable_chk = ft.Checkbox(label="¿Platillo Configurable (Guisos)?", value=False)
+    is_configurable_salsa_chk = ft.Checkbox(label="¿Platillo Configurable (Salsas)?", value=False)
+
+    search_field = ft.TextField(
+        label="Buscar platillo...",
+        prefix_icon=ft.Icons.SEARCH,
+        on_change=lambda e: cargar_menu_admin(e.control.value)
+    )
 
     imagen_path = ft.Text(visible=False)
     imagen_preview = ft.Image(src="", width=100, height=100, fit="cover", visible=False)
@@ -118,14 +127,14 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     # ===========================
     # MOSTRAR LISTA DEL MENÚ
     # ===========================
-    def cargar_menu_admin():
+    def cargar_menu_admin(search_term=None):
         lista.controls.clear()
-        platillos = obtener_menu(solo_activos=False)
+        platillos = obtener_menu(solo_activos=False, search_term=search_term)
 
         if not platillos:
-            lista.controls.append(ft.Text("No hay platillos registrados 🍽️"))
+            lista.controls.append(ft.Text("No hay platillos que coincidan 🍽️"))
         else:
-            for pid, nombre, desc, precio, imagen, activo, descuento, is_conf in platillos:
+            for pid, nombre, desc, precio, imagen, activo, descuento, is_conf, is_conf_salsa, piezas in platillos:
                 def toggle_vis(e, id=pid):
                     actualizar_visibilidad_platillo(id, e.control.value)
 
@@ -134,7 +143,12 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                     precio_final = precio * (1 - descuento / 100)
                     precio_texto = f"${precio:.2f} -> ${precio_final:.2f} (-{descuento}%)"
                 
-                conf_text = " (Configurable)" if is_conf else ""
+                conf_labels = []
+                if is_conf: conf_labels.append("Guisos")
+                if is_conf_salsa: conf_labels.append("Salsas")
+                conf_text = f" ({', '.join(conf_labels)})" if conf_labels else ""
+                
+                piezas_text = f" | {piezas} pz/orden" if piezas > 1 else ""
 
                 lista.controls.append(
                     ft.Card(
@@ -149,7 +163,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                                     ) if imagen else ft.Container(width=50, height=50),
                                     ft.Column([
                                         ft.Text(f"{nombre}{conf_text}", size=18, weight="bold"),
-                                        ft.Text(precio_texto),
+                                        ft.Text(f"{precio_texto}{piezas_text}"),
                                     ]),
                                 ]),
                                 ft.Text(desc or "Sin descripción"),
@@ -159,8 +173,8 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                                         ft.DataRow(cells=[
                                             ft.DataCell(ft.IconButton(
                                                 icon=ft.Icons.EDIT,
-                                                on_click=lambda e, id=pid, n=nombre, d=desc, p=precio, img=imagen, desc_val=descuento, ic=is_conf:
-                                                    preparar_edicion(id, n, d, p, img, desc_val, ic)
+                                                on_click=lambda e, id=pid, n=nombre, d=desc, p=precio, img=imagen, desc_val=descuento, ic=is_conf, ics=is_conf_salsa, pz=piezas:
+                                                    preparar_edicion(id, n, d, p, img, desc_val, ic, ics, pz)
                                             )),
                                             ft.DataCell(ft.IconButton(
                                                 icon=ft.Icons.DELETE,
@@ -190,21 +204,25 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         descripcion_field.value = ""
         precio_field.value = ""
         descuento_field.value = "0"
+        piezas_field.value = "1"
         is_configurable_chk.value = False
+        is_configurable_salsa_chk.value = False
         imagen_path.value = ""
         imagen_preview.visible = False
         upload_status.value = ""
         btn_guardar.text = "Guardar nuevo platillo"
         page.update()
 
-    def preparar_edicion(pid, nombre, desc, precio, imagen, descuento, is_conf):
+    def preparar_edicion(pid, nombre, desc, precio, imagen, descuento, is_conf, is_conf_salsa, piezas):
         nonlocal editing_id
         editing_id = pid
         nombre_field.value = nombre
         descripcion_field.value = desc
         precio_field.value = str(precio)
         descuento_field.value = str(descuento)
+        piezas_field.value = str(piezas)
         is_configurable_chk.value = bool(is_conf)
+        is_configurable_salsa_chk.value = bool(is_conf_salsa)
         imagen_path.value = imagen or ""
         if imagen:
             imagen_preview.src = f"/{imagen}"
@@ -216,23 +234,26 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
 
     def guardar_o_actualizar(e):
         nonlocal editing_id
-        n, d, precio_str, descuento_str = nombre_field.value.strip(), descripcion_field.value.strip(), precio_field.value.strip(), descuento_field.value.strip()
+        n, d, precio_str, descuento_str, piezas_str = nombre_field.value.strip(), descripcion_field.value.strip(), precio_field.value.strip(), descuento_field.value.strip(), piezas_field.value.strip()
         img = imagen_path.value
         is_conf = 1 if is_configurable_chk.value else 0
+        is_conf_salsa = 1 if is_configurable_salsa_chk.value else 0
 
         if not n or not precio_str:
             show_snackbar("Nombre y precio son obligatorios")
             return
         try:
             precio, descuento = float(precio_str), float(descuento_str) if descuento_str else 0
+            piezas = int(piezas_str) if piezas_str else 1
+            if piezas < 1: piezas = 1
         except:
-            show_snackbar("Precio o descuento inválido")
+            show_snackbar("Valores numéricos inválidos")
             return
         if editing_id:
-            actualizar_platillo(editing_id, n, d, precio, img, descuento, is_conf)
+            actualizar_platillo(editing_id, n, d, precio, img, descuento, is_conf, is_conf_salsa, piezas)
             show_snackbar("Platillo actualizado ✔")
         else:
-            agregar_platillo(n, d, precio, img, descuento, is_conf)
+            agregar_platillo(n, d, precio, img, descuento, is_conf, is_conf_salsa, piezas)
             show_snackbar("Platillo agregado ✔")
         limpiar()
         cargar_menu_admin()
@@ -300,13 +321,14 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         scroll="auto",
         controls=[
             ft.Text("Gestión del menú", size=20, weight="bold"),
-            nombre_field, descripcion_field, precio_field, descuento_field,
-            is_configurable_chk,
+            nombre_field, descripcion_field, precio_field, descuento_field, piezas_field,
+            ft.Row([is_configurable_chk, is_configurable_salsa_chk]),
             ft.Row([ft.Button(content=ft.Text("Seleccionar imagen"), icon=ft.Icons.UPLOAD_FILE, on_click=pick_image_file), imagen_preview]),
             upload_status,
             ft.Row([btn_guardar, ft.Button(content=ft.Text("Cancelar"), on_click=lambda e: limpiar())]),
             ft.Divider(),
-            ft.Row([ft.Text("Platillos registrados:", size=18, weight="bold")]),
+            ft.Text("Platillos registrados:", size=18, weight="bold"),
+            search_field,
             ft.Row([btn_mostrar_todos, btn_ocultar_todos], alignment=ft.MainAxisAlignment.END),
             ft.Container(content=lista, expand=True) 
         ]

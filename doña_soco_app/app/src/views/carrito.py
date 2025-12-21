@@ -141,44 +141,51 @@ def _decrement(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
 
 def _iniciar_proceso_checkout(e, page: ft.Page, show_snackbar_func, nav):
     """
-    Inicia el flujo de checkout. Primero verifica si hay items configurables sin configurar.
+    Inicia el flujo de checkout. Verifica items configurables (guisos y salsas).
     """
     user_cart = page.session.cart
     items = user_cart.get_items()
     
-    # 1. Obtener items configurables
-    configurable_items = [it for it in items if it.get("is_configurable")]
+    # Lista de items que necesitan configuración (guisos o salsas)
+    to_configure_guisos = [it for it in items if it.get("is_configurable")]
+    to_configure_salsas = [it for it in items if it.get("is_configurable_salsa")]
     
-    if not configurable_items:
-        _abrir_checkout(page, show_snackbar_func, nav)
-        return
-
-    # 2. Cargar guisos disponibles
+    # 2. Cargar disponibilidades
     config = get_configuracion()
-    guisos_activos = []
-    if config and config['guisos_disponibles']:
-        try:
-            guisos_map = json.loads(config['guisos_disponibles'])
-            guisos_activos = [k for k, v in guisos_map.items() if v]
-        except:
-            pass
     
-    if not guisos_activos:
-         # Si no hay guisos configurados pero hay items configurables, advertir o dejar pasar?
-         # Dejamos pasar con advertencia o asumimos "sin guiso"
-         _abrir_checkout(page, show_snackbar_func, nav)
-         return
+    def get_activos(key):
+        if config and config[key]:
+            try:
+                mapping = json.loads(config[key])
+                return [k for k, v in mapping.items() if v]
+            except: pass
+        return []
 
-    # 3. Iniciar Wizard de Selección
-    _mostrar_dialogo_guisos(page, configurable_items, 0, guisos_activos, show_snackbar_func, nav)
+    guisos_activos = get_activos('guisos_disponibles')
+    salsas_activas = get_activos('salsas_disponibles')
 
-def _mostrar_dialogo_guisos(page, items_to_configure, current_index, guisos_disponibles, show_snackbar_func, nav):
+    # Iniciamos la cadena de diálogos
+    # Primero guisos, luego salsas, luego checkout
+    def step_salsas():
+        if to_configure_salsas and salsas_activas:
+            _mostrar_dialogo_salsas(page, to_configure_salsas, 0, salsas_activas, show_snackbar_func, nav, final_callback=lambda: _abrir_checkout(page, show_snackbar_func, nav))
+        else:
+            _abrir_checkout(page, show_snackbar_func, nav)
+
+    if to_configure_guisos and guisos_activos:
+        _mostrar_dialogo_guisos(page, to_configure_guisos, 0, guisos_activos, show_snackbar_func, nav, final_callback=step_salsas)
+    else:
+        step_salsas()
+
+def _mostrar_dialogo_guisos(page, items_to_configure, current_index, guisos_disponibles, show_snackbar_func, nav, final_callback):
     if current_index >= len(items_to_configure):
-        _abrir_checkout(page, show_snackbar_func, nav)
+        final_callback()
         return
 
     item = items_to_configure[current_index]
-    cantidad_total = item["cantidad"]
+    # MULTIPLICAMOS POR PIEZAS PARA PERMITIR SELECCIÓN INDIVIDUAL
+    piezas_por_orden = item.get("piezas", 1)
+    cantidad_total = item["cantidad"] * piezas_por_orden
     
     # Contadores para cada guiso
     counters = {guiso: 0 for guiso in guisos_disponibles}
@@ -220,17 +227,15 @@ def _mostrar_dialogo_guisos(page, items_to_configure, current_index, guisos_disp
     guiso_controls = [create_guiso_row(g) for g in guisos_disponibles]
 
     def confirmar_seleccion(e):
-        # Generar string de detalles
         detalles_list = []
         for g, c in counters.items():
-            if c > 0:
-                detalles_list.append(f"{g} x{c}")
+            if c > 0: detalles_list.append(f"{g} x{c}")
         
+        # Guardar en details (limpiando previo si es necesario o acumulando)
         item["details"] = ", ".join(detalles_list)
         dlg.open = False
         page.update()
-        # Siguiente item
-        _mostrar_dialogo_guisos(page, items_to_configure, current_index + 1, guisos_disponibles, show_snackbar_func, nav)
+        _mostrar_dialogo_guisos(page, items_to_configure, current_index + 1, guisos_disponibles, show_snackbar_func, nav, final_callback)
     
     def cancelar_seleccion(e):
         dlg.open = False
@@ -243,7 +248,7 @@ def _mostrar_dialogo_guisos(page, items_to_configure, current_index, guisos_disp
         title=ft.Text(f"Elige guisos para: {item['nombre']}"),
         content=ft.Column(
             [
-                ft.Text(f"Cantidad a elegir: {cantidad_total}"),
+                ft.Text(f"Cantidad a elegir: {cantidad_total} (Ordenes: {item['cantidad']} x {piezas_por_orden} pz)"),
                 remaining_text,
                 ft.Divider(),
                 ft.Column(guiso_controls, height=300, scroll="auto")
@@ -256,6 +261,81 @@ def _mostrar_dialogo_guisos(page, items_to_configure, current_index, guisos_disp
         modal=True
     )
 
+    page.overlay.append(dlg)
+    dlg.open = True
+    page.update()
+
+def _mostrar_dialogo_salsas(page, items_to_configure, current_index, salsas_disponibles, show_snackbar_func, nav, final_callback):
+    if current_index >= len(items_to_configure):
+        final_callback()
+        return
+
+    item = items_to_configure[current_index]
+    # Salsas también se multiplican por piezas? Asumiremos que sí, para personalización máxima
+    piezas_por_orden = item.get("piezas", 1)
+    cantidad_total = item["cantidad"] * piezas_por_orden
+    
+    counters = {salsa: 0 for salsa in salsas_disponibles}
+    remaining_text = ft.Text(f"Faltan por elegir: {cantidad_total}")
+
+    def update_remaining():
+        selected = sum(counters.values())
+        rem = cantidad_total - selected
+        remaining_text.value = f"Faltan por elegir: {rem}"
+        remaining_text.color = ft.Colors.RED if rem > 0 else ft.Colors.GREEN
+        btn_confirmar.disabled = (rem != 0)
+        page.update()
+
+    def create_salsa_row(salsa):
+        count_text = ft.Text("0", width=20, text_align="center")
+        def change_count(e, delta):
+            if delta > 0 and sum(counters.values()) >= cantidad_total: return 
+            if counters[salsa] + delta < 0: return
+            counters[salsa] += delta
+            count_text.value = str(counters[salsa])
+            update_remaining()
+        return ft.Row([
+            ft.Text(salsa, expand=True),
+            ft.IconButton(ft.Icons.REMOVE, on_click=lambda e: change_count(e, -1)),
+            count_text,
+            ft.IconButton(ft.Icons.ADD, on_click=lambda e: change_count(e, 1)),
+        ])
+
+    salsa_controls = [create_salsa_row(s) for s in salsas_disponibles]
+
+    def confirmar_seleccion(e):
+        detalles_list = []
+        for s, c in counters.items():
+            if c > 0: detalles_list.append(f"{s} x{c}")
+        
+        # Acumular con guisos si ya existen detalles
+        salsa_str = "Salsas: " + ", ".join(detalles_list)
+        if item.get("details"):
+            item["details"] = f"{item['details']} | {salsa_str}"
+        else:
+            item["details"] = salsa_str
+            
+        dlg.open = False
+        page.update()
+        _mostrar_dialogo_salsas(page, items_to_configure, current_index + 1, salsas_disponibles, show_snackbar_func, nav, final_callback)
+    
+    btn_confirmar = ft.Button(content=ft.Text("Confirmar"), on_click=confirmar_seleccion, disabled=True)
+    btn_cancelar = ft.TextButton("Cancelar", on_click=lambda _: setattr(dlg, "open", False) or page.update())
+
+    dlg = ft.AlertDialog(
+        title=ft.Text(f"Elige salsas para: {item['nombre']}"),
+        content=ft.Column(
+            [
+                ft.Text(f"Cantidad a elegir: {cantidad_total} (Ordenes: {item['cantidad']} x {piezas_por_orden} pz)"), 
+                remaining_text, 
+                ft.Divider(), 
+                ft.Column(salsa_controls, height=300, scroll="auto")
+            ],
+            width=400, height=400, tight=True
+        ),
+        actions=[btn_cancelar, btn_confirmar],
+        modal=True
+    )
     page.overlay.append(dlg)
     dlg.open = True
     page.update()

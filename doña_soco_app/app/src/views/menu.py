@@ -38,22 +38,22 @@ def cargar_menu(page: ft.Page):
             menu_grid = ft.GridView(
                 expand=True,
                 runs_count=2,          # Dos columnas
-                max_extent=200,        # Ancho máximo aproximado de cada item
-                child_aspect_ratio=0.7, # Relación de aspecto (Alto vs Ancho) para que quepa la info
+                max_extent=230,        # Ancho máximo aproximado de cada item
+                child_aspect_ratio=0.9, # Relación de aspecto (Alto vs Ancho) para que quepa la info
                 spacing=10,
                 run_spacing=10,
                 padding=10
             )
 
             for platillo in platillos:
-                pid, nombre, descripcion, precio, imagen, _, descuento, is_configurable = platillo
+                pid, nombre, descripcion, precio, imagen, _, descuento, is_configurable, is_configurable_salsa, piezas = platillo
                 
                 precio_final = precio
                 if descuento > 0:
                     precio_final = precio * (1 - descuento / 100)
 
-                def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable):
-                    user_cart.add_item(item_id, name, price, img, is_configurable=is_conf)
+                def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas):
+                    user_cart.add_item(item_id, name, price, img, is_configurable=is_conf, is_configurable_salsa=is_conf_salsa, piezas=pz)
                     page.snack_bar = ft.SnackBar(
                         content=ft.Text(f"'{name}' agregado al carrito"),
                         bgcolor=ft.Colors.GREEN_700,
@@ -106,8 +106,8 @@ def cargar_menu(page: ft.Page):
                                     ft.Column(
                                         spacing=2,
                                         controls=[
-                                            ft.Text(nombre, weight=ft.FontWeight.BOLD, size=14, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                                            ft.Text(descripcion or "", size=11, color=ft.Colors.GREY_700, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
+                                            ft.Text(nombre, weight=ft.FontWeight.BOLD, size=13, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                            ft.Text(descripcion or "", size=9, color=ft.Colors.GREY_700, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
                                         ]
                                     ),
                                     # Precio y Botón

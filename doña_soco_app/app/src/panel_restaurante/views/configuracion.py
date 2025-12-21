@@ -57,6 +57,26 @@ def configuracion_view(page: ft.Page):
         ]
     )
 
+    # --- Configuración de Salsas ---
+    ft.Text("Salsas Disponibles", size=18, weight=ft.FontWeight.BOLD)
+    
+    salsas_chk = {
+        "BBQ": ft.Checkbox(label="BBQ", value=True),
+        "Búfalo": ft.Checkbox(label="Búfalo", value=True),
+        "Chipotle": ft.Checkbox(label="Chipotle", value=True),
+        "Habanero": ft.Checkbox(label="Habanero", value=True),
+        "Mango Habanero": ft.Checkbox(label="Mango Habanero", value=True),
+        "BBQ Hot": ft.Checkbox(label="BBQ Hot", value=True),
+        "Piquín Limón": ft.Checkbox(label="Piquín Limón", value=True),
+    }
+
+    salsas_container = ft.Column(
+        [
+            ft.Text("Gestionar Disponibilidad de Salsas:", size=14),
+            ft.Column(list(salsas_chk.values()))
+        ]
+    )
+
     # --- Controles de Cambio de Password ---
     new_password_field = ft.TextField(label="Nueva Contraseña", password=True, can_reveal_password=True, border_radius=10)
     confirm_password_field = ft.TextField(label="Confirmar Contraseña", password=True, can_reveal_password=True, border_radius=10)
@@ -100,8 +120,9 @@ def configuracion_view(page: ft.Page):
         })
 
         guisos_disponibles = json.dumps({k: v.value for k, v in guisos_chk.items()})
+        salsas_disponibles = json.dumps({k: v.value for k, v in salsas_chk.items()})
 
-        if update_configuracion(horario, codigos, metodos_pago, tipos_tarjeta, contactos, guisos_disponibles):
+        if update_configuracion(horario, codigos, metodos_pago, tipos_tarjeta, contactos, guisos_disponibles, salsas_disponibles):
             mostrar_notificacion("Configuración guardada exitosamente.", ft.Colors.GREEN_700)
         else:
             mostrar_notificacion("Error al guardar la configuración.", ft.Colors.ERROR)
@@ -185,6 +206,16 @@ def configuracion_view(page: ft.Page):
                 except json.JSONDecodeError:
                     pass
 
+            # Cargar salsas
+            if 'salsas_disponibles' in config.keys() and config['salsas_disponibles']:
+                try:
+                    salsas = json.loads(config['salsas_disponibles'])
+                    for k, v in salsas.items():
+                        if k in salsas_chk:
+                            salsas_chk[k].value = v
+                except json.JSONDecodeError:
+                    pass
+
             page.update()
 
     guardar_button = ft.Button(
@@ -225,6 +256,10 @@ def configuracion_view(page: ft.Page):
                 ft.Divider(height=20),
                 ft.Text("Guisos Disponibles", size=18, weight=ft.FontWeight.BOLD),
                 guisos_container,
+
+                ft.Divider(height=20),
+                ft.Text("Salsas Disponibles", size=18, weight=ft.FontWeight.BOLD),
+                salsas_container,
 
                 ft.Divider(height=20),
                 ft.Text("Información de Contacto", size=18, weight=ft.FontWeight.BOLD),

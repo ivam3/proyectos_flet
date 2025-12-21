@@ -67,6 +67,8 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         page.update()
     
     total = user_cart.get_total()
+    COSTO_ENVIO = 20.0
+    total_final = total + COSTO_ENVIO
 
     # --- CAMPOS DE PAGO ---
     paga_con_field = ft.TextField(label="¿Con cuánto vas a pagar?", keyboard_type=ft.KeyboardType.NUMBER, prefix=ft.Text("$"), visible=False, border_radius=10)
@@ -162,7 +164,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
                 return False
             try:
                 monto = float(paga_con_field.value)
-                if monto < total:
+                if monto < total_final:
                     show_snackbar("El monto no cubre el total del pedido.", ft.Colors.AMBER_800)
                     return False
             except ValueError:
@@ -194,7 +196,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         metodo = metodo_pago_group.value
         paga_con = float(paga_con_field.value) if metodo == "efectivo" else 0.0
         
-        exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total, items, metodo, paga_con)
+        exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total_final, items, metodo, paga_con)
 
         dlg_content = ft.Column([
                 ft.Text("Tu pedido ha sido enviado correctamente."),
@@ -255,10 +257,14 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             info_tarjetas,
             
             ft.Divider(height=20),
-            ft.ListTile(
-                title=ft.Text("Total a Pagar:", weight=ft.FontWeight.BOLD),
-                trailing=ft.Text(f"${total:.2f}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700),
-            ),
+            ft.Column([
+                ft.Row([ft.Text("Subtotal:", weight=ft.FontWeight.BOLD), ft.Text(f"${total:.2f}")] , alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Row([ft.Text("Envío:", weight=ft.FontWeight.BOLD), ft.Text(f"${COSTO_ENVIO:.2f}")] , alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.ListTile(
+                    title=ft.Text("Total a Pagar:", weight=ft.FontWeight.BOLD, size=18),
+                    trailing=ft.Text(f"${total_final:.2f}", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700),
+                )
+            ]),
             btn_confirmar
         ],
         scroll=ft.ScrollMode.ADAPTIVE, spacing=15, expand=True,

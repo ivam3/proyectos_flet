@@ -68,8 +68,14 @@ def crear_tablas():
         if "is_configurable" not in menu_columns:
             print("Agregando columna is_configurable a la tabla menu...")
             cursor.execute("ALTER TABLE menu ADD COLUMN is_configurable INTEGER DEFAULT 0")
+        if "is_configurable_salsa" not in menu_columns:
+            print("Agregando columna is_configurable_salsa a la tabla menu...")
+            cursor.execute("ALTER TABLE menu ADD COLUMN is_configurable_salsa INTEGER DEFAULT 0")
+        if "piezas" not in menu_columns:
+            print("Agregando columna piezas a la tabla menu...")
+            cursor.execute("ALTER TABLE menu ADD COLUMN piezas INTEGER DEFAULT 1")
 
-        # Migración: Columnas en configuracion para guisos
+        # Migración: Columnas en configuracion para guisos y salsas
         cursor.execute("PRAGMA table_info(configuracion)")
         config_columns_check = [info[1] for info in cursor.fetchall()]
         if "guisos_disponibles" not in config_columns_check:
@@ -77,6 +83,12 @@ def crear_tablas():
              cursor.execute("ALTER TABLE configuracion ADD COLUMN guisos_disponibles TEXT")
              default_guisos = '{"Deshebrada": true, "Nopalitos": true, "Queso": true, "Picadillo": true, "Chicharrón": true}'
              cursor.execute("UPDATE configuracion SET guisos_disponibles = ? WHERE id = 1", (default_guisos,))
+        
+        if "salsas_disponibles" not in config_columns_check:
+             print("Agregando columna salsas_disponibles a la tabla configuracion...")
+             cursor.execute("ALTER TABLE configuracion ADD COLUMN salsas_disponibles TEXT")
+             default_salsas = '{"BBQ": true, "Búfalo": true, "Chipotle": true, "Habanero": true, "Mango Habanero": true, "BBQ Hot": true, "Piquín Limón": true}'
+             cursor.execute("UPDATE configuracion SET salsas_disponibles = ? WHERE id = 1", (default_salsas,))
 
         # Migración: Columnas en ordenes
         cursor.execute("PRAGMA table_info(ordenes)")
@@ -134,22 +146,22 @@ def cambiar_admin_password(new_password):
     finally:
         conn.close()
 
-def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0):
+def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO menu (nombre, descripcion, precio, imagen, descuento, is_configurable) VALUES (?,?,?,?,?,?)",
-                   (nombre, descripcion, precio, imagen, descuento, is_configurable))
+    cursor.execute("INSERT INTO menu (nombre, descripcion, precio, imagen, descuento, is_configurable, is_configurable_salsa, piezas) VALUES (?,?,?,?,?,?,?,?)",
+                   (nombre, descripcion, precio, imagen, descuento, is_configurable, is_configurable_salsa, piezas))
     conn.commit()
     conn.close()
 
-def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0):
+def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("""
         UPDATE menu 
-        SET nombre = ?, descripcion = ?, precio = ?, imagen = ?, descuento = ?, is_configurable = ?
+        SET nombre = ?, descripcion = ?, precio = ?, imagen = ?, descuento = ?, is_configurable = ?, is_configurable_salsa = ?, piezas = ?
         WHERE id = ?
-    """, (nombre, descripcion, precio, imagen, descuento, is_configurable, platillo_id))
+    """, (nombre, descripcion, precio, imagen, descuento, is_configurable, is_configurable_salsa, piezas, platillo_id))
     conn.commit()
     conn.close()
 
@@ -203,12 +215,12 @@ def get_configuracion():
     """Obtiene la configuración de la aplicación desde la base de datos."""
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT horario, codigos_postales, metodos_pago_activos, tipos_tarjeta, contactos, guisos_disponibles FROM configuracion WHERE id = 1")
+    cursor.execute("SELECT horario, codigos_postales, metodos_pago_activos, tipos_tarjeta, contactos, guisos_disponibles, salsas_disponibles FROM configuracion WHERE id = 1")
     config = cursor.fetchone()
     conn.close()
     return config
 
-def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None, guisos_disponibles=None):
+def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None, guisos_disponibles=None, salsas_disponibles=None):
     """Actualiza la configuración de la aplicación."""
     conn = conectar()
     cursor = conn.cursor()
@@ -232,6 +244,10 @@ def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, t
         if guisos_disponibles is not None:
             query += ", guisos_disponibles = ?"
             params.append(guisos_disponibles)
+
+        if salsas_disponibles is not None:
+            query += ", salsas_disponibles = ?"
+            params.append(salsas_disponibles)
             
         query += " WHERE id = 1"
         
@@ -324,7 +340,7 @@ def obtener_menu(solo_activos=True, search_term=None):
         where_clauses.append("(nombre LIKE ? OR descripcion LIKE ?)")
         params.extend([f"%{search_term}%", f"%{search_term}%"])
 
-    query = "SELECT id, nombre, descripcion, precio, imagen, is_active, descuento, is_configurable FROM menu"
+    query = "SELECT id, nombre, descripcion, precio, imagen, is_active, descuento, is_configurable, is_configurable_salsa, piezas FROM menu"
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
     

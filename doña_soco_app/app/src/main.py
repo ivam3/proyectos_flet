@@ -18,7 +18,7 @@ def main(page: ft.Page):
     # -------------------------------------------
 
     page.title = "Antojitos Doña Soco"
-    page.window_favicon_path = "icon.png"  # <- FAVICON
+    page.window_favicon_path = "logo.jpg"  # <- FAVICON
 
     # Directorio correcto para assets (Flet sirve desde aquí)
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
@@ -129,8 +129,6 @@ def main(page: ft.Page):
                 content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
             else:
                 show_snackbar("Acceso restringido")
-                # Opcional: podrías resetear nav.selected_index al anterior, 
-                # pero por ahora solo mostramos el aviso según lo solicitado.
         page.update()
 
     # ------- ROUTING -------
@@ -154,7 +152,7 @@ def main(page: ft.Page):
     top_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Image(src="icon.png", width=45, height=45),
+                ft.Image(src="icon.png", width=60, height=60),
                 ft.Text("Antojitos Doña Soco", size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
             ],
             alignment=ft.MainAxisAlignment.START,

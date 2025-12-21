@@ -36,24 +36,28 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             pago_info.append(ft.Text(f"Cambio: ${cambio:.2f}", color=ft.Colors.GREEN if cambio >= 0 else ft.Colors.RED))
 
         details_dialog.title = ft.Text(f"Pedido #{pedido['id']}")
-        details_dialog.content.controls = [
-            ft.Text(f"Código Seguimiento: {pedido['codigo_seguimiento']}", weight="bold", size=16, color=ft.Colors.BLUE_GREY_700),
-            ft.Divider(),
-            ft.Text(f"Cliente: {pedido['nombre_cliente']}", weight="bold"),
-            ft.Text(f"Teléfono: {pedido['telefono']}"),
-            ft.Text(f"Dirección: {pedido['direccion']}"),
-            ft.Text(f"Referencias: {pedido['referencias'] or 'N/A'}"),
-            ft.Divider(),
-            ft.Text("Productos:", weight="bold"),
-            ft.Column([ft.Text(f"- {item}") for item in detalles_productos_lista]),
-            ft.Divider(),
-            ft.Column(pago_info),
-            ft.Divider(),
-            ft.Text(f"Total: ${pedido['total']:.2f}", weight="bold", size=16),
-            ft.Text(f"Fecha: {pedido['fecha']}"),
-            ft.Text(f"Estado Actual: {pedido['estado']}", weight="bold"),
-            ft.Text(f"Motivo Cancelación: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700, weight="bold", visible=(pedido['estado'] == "Cancelado" and bool(pedido['motivo_cancelacion']))),
-        ]
+        details_dialog.content = ft.Container(
+            content=ft.Column([
+                ft.Text(f"Código Seguimiento: {pedido['codigo_seguimiento']}", weight="bold", size=16, color=ft.Colors.BLUE_GREY_700),
+                ft.Divider(),
+                ft.Text(f"Cliente: {pedido['nombre_cliente']}", weight="bold"),
+                ft.Text(f"Teléfono: {pedido['telefono']}"),
+                ft.Text(f"Dirección: {pedido['direccion']}"),
+                ft.Text(f"Referencias: {pedido['referencias'] or 'N/A'}"),
+                ft.Divider(),
+                ft.Text("Productos:", weight="bold"),
+                ft.Column([ft.Text(f"- {item}") for item in detalles_productos_lista]),
+                ft.Divider(),
+                ft.Column(pago_info),
+                ft.Divider(),
+                ft.Text(f"Total: ${pedido['total']:.2f}", weight="bold", size=16),
+                ft.Text(f"Fecha: {pedido['fecha']}"),
+                ft.Text(f"Estado Actual: {pedido['estado']}", weight="bold"),
+                ft.Text(f"Motivo Cancelación: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700, weight="bold", visible=(pedido['estado'] == "Cancelado" and bool(pedido['motivo_cancelacion']))),
+            ], scroll="auto"),
+            height=400, # Altura fija para evitar desbordamiento
+            width=350,
+        )
         details_dialog.open = True
         page.update()
 

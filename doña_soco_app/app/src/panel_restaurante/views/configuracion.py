@@ -264,7 +264,7 @@ def configuracion_view(page: ft.Page):
     content_container = ft.Container(
         content=ft.Column(
             controls=[
-                ft.Text("Configuración de la Plataforma", size=24, weight=ft.FontWeight.BOLD),
+                ft.Text("Configuración de la Plataforma", size=20, weight=ft.FontWeight.BOLD),
                 ft.Divider(height=20),
                 horario_field,
                 codigos_postales_field,

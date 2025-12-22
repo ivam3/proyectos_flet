@@ -18,7 +18,8 @@ def main(page: ft.Page):
     # -------------------------------------------
 
     page.title = "Antojitos Doña Soco"
-    page.window_favicon_path = "logo.jpg"  # <- FAVICON
+    page.window_favicon_path = "favicon.png"
+    page.favicon = "favicon.png"  # <- FAVICON WEB USANDO PNG CONVERTIDO
 
     # Directorio correcto para assets (Flet sirve desde aquí)
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
@@ -53,6 +54,8 @@ def main(page: ft.Page):
             content=ft.Text(message, color=ft.Colors.WHITE),
             bgcolor=color,
             behavior=ft.SnackBarBehavior.FLOATING,
+            margin=ft.Margin.only(bottom=50, left=10, right=10), # Margen reducido
+            duration=3000
         )
         page.snack_bar.open = True
         page.update()
@@ -187,5 +190,6 @@ def main(page: ft.Page):
     )
 
 
-# Ruta correcta del assets_dir
-ft.run(main, assets_dir="src/assets", view=ft.AppView.WEB_BROWSER) #, secret_key="ads2025")
+# Ruta absoluta segura para assets
+assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
+ft.run(main, assets_dir=assets_path, view=ft.AppView.WEB_BROWSER, web_renderer="canvaskit") #, secret_key="ads2025")

@@ -61,7 +61,9 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     search_field = ft.TextField(
         label="Buscar platillo...",
         prefix_icon=ft.Icons.SEARCH,
-        on_change=lambda e: cargar_menu_admin(e.control.value)
+        on_change=lambda e: cargar_menu_admin(e.control.value),
+        border_radius=20, height=40,
+        text_size=14, content_padding=10, filled=True,
     )
 
     imagen_path = ft.Text(visible=False)
@@ -316,20 +318,33 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         files = await file_picker.pick_files(allow_multiple=False)
         on_file_picked(files)
 
-    return ft.Column(
-        expand=True,
-        scroll="auto",
-        controls=[
-            ft.Text("Gestión del menú", size=20, weight="bold"),
-            nombre_field, descripcion_field, precio_field, descuento_field, piezas_field,
-            ft.Row([is_configurable_chk, is_configurable_salsa_chk]),
-            ft.Row([ft.Button(content=ft.Text("Seleccionar imagen"), icon=ft.Icons.UPLOAD_FILE, on_click=pick_image_file), imagen_preview]),
-            upload_status,
-            ft.Row([btn_guardar, ft.Button(content=ft.Text("Cancelar"), on_click=lambda e: limpiar())]),
-            ft.Divider(),
-            ft.Text("Platillos registrados:", size=18, weight="bold"),
-            search_field,
-            ft.Row([btn_mostrar_todos, btn_ocultar_todos], alignment=ft.MainAxisAlignment.END),
-            ft.Container(content=lista, expand=True) 
-        ]
+    content_container = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Text("Gestión del menú", size=20, weight="bold"),
+                nombre_field, descripcion_field, precio_field, descuento_field, piezas_field,
+                ft.Text("Opciones de configuración:", size=14, weight="bold"),
+                ft.Column([is_configurable_chk, is_configurable_salsa_chk], spacing=0), 
+                ft.Row([
+                    ft.Button(content=ft.Text("Imagen"), icon=ft.Icons.UPLOAD_FILE, on_click=pick_image_file, expand=True),
+                    imagen_preview
+                ], scroll="auto"),
+                upload_status,
+                ft.Row([
+                    ft.Button(content=ft.Text("Guardar"), on_click=guardar_o_actualizar, expand=True), 
+                    ft.Button(content=ft.Text("Cancelar"), on_click=lambda e: limpiar(), expand=True)
+                ], scroll="auto"),
+                ft.Divider(),
+                ft.Text("Platillos registrados:", size=18, weight="bold"),
+                search_field,
+                ft.Row([btn_mostrar_todos, btn_ocultar_todos], alignment=ft.MainAxisAlignment.END, scroll="auto"),
+                lista # La lista ya es un Column con expand=True
+            ],
+            spacing=15,
+        ),
+        padding=20,
+        border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
+        border_radius=15,
     )
+
+    return ft.Column([content_container], expand=True, scroll="auto")

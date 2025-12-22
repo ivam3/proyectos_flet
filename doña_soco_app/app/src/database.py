@@ -349,9 +349,9 @@ def obtener_menu(solo_activos=True, search_term=None):
     conn.close()
     return platillos
 
-def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None):
+def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None, search_term=None):
     """
-    Obtiene una lista de pedidos con detalles, con opciones de paginación y filtro por fecha.
+    Obtiene una lista de pedidos con detalles, con opciones de paginación y filtro por fecha/texto.
     """
     conn = conectar()
     cursor = conn.cursor()
@@ -365,6 +365,9 @@ def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None):
     if end_date:
         where_clauses.append("date(o.fecha) <= ?")
         params.append(end_date)
+    if search_term:
+        where_clauses.append("(o.nombre_cliente LIKE ? OR o.codigo_seguimiento LIKE ?)")
+        params.extend([f"%{search_term}%", f"%{search_term}%"])
 
     where_sql = ""
     if where_clauses:
@@ -390,9 +393,9 @@ def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None):
     conn.close()
     return pedidos
 
-def obtener_total_pedidos(start_date=None, end_date=None):
+def obtener_total_pedidos(start_date=None, end_date=None, search_term=None):
     """
-    Obtiene el número total de pedidos, con filtro opcional por fecha.
+    Obtiene el número total de pedidos, con filtro opcional por fecha o texto.
     """
     conn = conectar()
     cursor = conn.cursor()
@@ -406,6 +409,9 @@ def obtener_total_pedidos(start_date=None, end_date=None):
     if end_date:
         where_clauses.append("date(fecha) <= ?")
         params.append(end_date)
+    if search_term:
+        where_clauses.append("(nombre_cliente LIKE ? OR codigo_seguimiento LIKE ?)")
+        params.extend([f"%{search_term}%", f"%{search_term}%"])
 
     where_sql = ""
     if where_clauses:

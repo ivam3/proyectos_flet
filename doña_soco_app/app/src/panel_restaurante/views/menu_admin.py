@@ -59,7 +59,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     is_configurable_salsa_chk = ft.Checkbox(label="¿Platillo Configurable (Salsas)?", value=False)
 
     search_field = ft.TextField(
-        label="Buscar platillo...",
+        hint_text="Buscar platillo...",
         prefix_icon=ft.Icons.SEARCH,
         on_change=lambda e: cargar_menu_admin(e.control.value),
         border_radius=20, height=40,

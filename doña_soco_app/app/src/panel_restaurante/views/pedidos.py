@@ -14,17 +14,13 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     current_page = 1
     total_pages = 1
     
-    # Campo de búsqueda estándar (estilo unificado con menú usuario)
+    # Campo de búsqueda (estilo unificado con menú usuario)
     search_filter = ft.TextField(
-        label="Buscar por Cliente o Código",
-        expand=True,
+        hint_text="Buscar por Cliente o Código",
         prefix_icon=ft.Icons.SEARCH,
         border_radius=20, height=40,
         text_size=14, content_padding=10, filled=True,
     )
-
-    start_date_filter = ft.TextField(label="Inicio (AAAA-MM-DD)", expand=True, label_style=ft.TextStyle(color=ft.Colors.BLACK))
-    end_date_filter = ft.TextField(label="Fin (AAAA-MM-DD)", expand=True, label_style=ft.TextStyle(color=ft.Colors.BLACK))
 
     # --- Data Table Definition ---
     pedidos_data_table = ft.DataTable(
@@ -187,18 +183,16 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     # --- Cargar Pedidos ---
     def cargar_pedidos():
         nonlocal current_page, total_pages
-        start_date = start_date_filter.value if start_date_filter.value else None
-        end_date = end_date_filter.value if end_date_filter.value else None
         search_term = search_filter.value.strip() if search_filter.value else None
 
-        total_items = obtener_total_pedidos(start_date=start_date, end_date=end_date, search_term=search_term)
+        total_items = obtener_total_pedidos(search_term=search_term)
         total_pages = math.ceil(total_items / rows_per_page) if total_items > 0 else 1
         if current_page > total_pages:
             current_page = max(1, total_pages)
         if current_page < 1: current_page = 1
 
         offset = (current_page - 1) * rows_per_page
-        pedidos = obtener_pedidos(limit=rows_per_page, offset=offset, start_date=start_date, end_date=end_date, search_term=search_term)
+        pedidos = obtener_pedidos(limit=rows_per_page, offset=offset, search_term=search_term)
         
         pedidos_data_table.rows.clear()
         
@@ -234,11 +228,10 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
     filter_bar = ft.Container(
         content=ft.Column([
-            ft.Row([search_filter], scroll="auto"), # Fila dedicada a la búsqueda
-            ft.Row([start_date_filter, end_date_filter], scroll="auto", spacing=10),
+            search_filter, 
             ft.Row([
                 ft.Button(content=ft.Text("Filtrar"), on_click=apply_filters),
-                ft.Button(content=ft.Text("Limpiar"), on_click=lambda e: (setattr(start_date_filter, "value", ""), setattr(end_date_filter, "value", ""), setattr(search_filter, "value", ""), apply_filters(e))),
+                ft.Button(content=ft.Text("Limpiar"), on_click=lambda e: (setattr(search_filter, "value", ""), apply_filters(e))),
                 ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: cargar_pedidos()),
             ], scroll="auto", spacing=10),
             ft.Row([

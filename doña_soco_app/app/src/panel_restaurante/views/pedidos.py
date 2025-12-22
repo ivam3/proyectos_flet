@@ -32,6 +32,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             ft.DataColumn(ft.Text("Cliente", weight="bold", color=ft.Colors.BLUE_GREY_900)),
             ft.DataColumn(ft.Text("Fecha", weight="bold", color=ft.Colors.BLUE_GREY_900)),
             ft.DataColumn(ft.Text("Total", weight="bold", color=ft.Colors.BLUE_GREY_900)),
+            ft.DataColumn(ft.Text("Pago", weight="bold", color=ft.Colors.BLUE_GREY_900)),
             ft.DataColumn(ft.Text("Estado", weight="bold", color=ft.Colors.BLUE_GREY_900)),
             ft.DataColumn(ft.Text("Acciones", weight="bold", color=ft.Colors.BLUE_GREY_900)),
         ],
@@ -137,18 +138,22 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             ], height=150)
             confirmation_dialog.actions = [
                 ft.TextButton("Volver", on_click=lambda e: open_status_dialog(e, pedido)),
-                ft.FilledButton("Confirmar Cancelación", on_click=confirm_cancel, style=ft.ButtonStyle(bgcolor=ft.Colors.RED)),
+                ft.FilledButton(
+                    "Confirmar Cancelación", 
+                    on_click=confirm_cancel, 
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
+                ),
             ]
             confirmation_dialog.update()
 
         # Vista inicial del diálogo de selección de estado
         confirmation_dialog.title = ft.Text(f"Cambiar estado pedido #{pedido['id']}")
         confirmation_dialog.content = ft.Column([
-            ft.FilledButton("Pendiente", on_click=set_status("Pendiente"), width=200),
-            ft.FilledButton("Preparando", on_click=set_status("Preparando"), width=200),
-            ft.FilledButton("En Camino", on_click=set_status("En Camino"), width=200),
-            ft.FilledButton("Entregado", on_click=set_status("Entregado"), width=200),
-            ft.FilledButton("Cancelado", on_click=show_cancel_reason, style=ft.ButtonStyle(bgcolor=ft.Colors.RED), width=200),
+            ft.FilledButton("Pendiente", on_click=set_status("Pendiente"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("Preparando", on_click=set_status("Preparando"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("En Camino", on_click=set_status("En Camino"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("Entregado", on_click=set_status("Entregado"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("Cancelado", on_click=show_cancel_reason, width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)),
         ], height=300, alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
         
         confirmation_dialog.actions = [ft.TextButton("Cerrar", on_click=close_confirmation_dialog)]
@@ -205,10 +210,16 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                         ft.DataCell(ft.Text(p['nombre_cliente'])),
                         ft.DataCell(ft.Text(str(p['fecha']))),
                         ft.DataCell(ft.Text(f"${p['total']:.2f}")),
+                        ft.DataCell(ft.Text(str(p['metodo_pago']).capitalize())),
                         ft.DataCell(ft.Text(p['estado'])),
                         ft.DataCell(ft.Row([
                             ft.IconButton(ft.Icons.VISIBILITY, tooltip="Ver Detalles", on_click=lambda e, p=p: open_details_dialog(e, p)),
-                            ft.IconButton(ft.Icons.EDIT, tooltip="Cambiar Estado", on_click=lambda e, p=p: open_status_dialog(e, p)),
+                            ft.IconButton(
+                                ft.Icons.EDIT, 
+                                tooltip="Cambiar Estado", 
+                                on_click=lambda e, p=p: open_status_dialog(e, p),
+                                disabled=(p['estado'] == "Cancelado")
+                            ),
                         ])),
                     ]
                 )
@@ -230,8 +241,16 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         content=ft.Column([
             search_filter, 
             ft.Row([
-                ft.Button(content=ft.Text("Filtrar"), on_click=apply_filters),
-                ft.Button(content=ft.Text("Limpiar"), on_click=lambda e: (setattr(search_filter, "value", ""), apply_filters(e))),
+                ft.FilledButton(
+                    content=ft.Text("Filtrar"), 
+                    on_click=apply_filters,
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+                ),
+                ft.FilledButton(
+                    content=ft.Text("Limpiar"), 
+                    on_click=lambda e: (setattr(search_filter, "value", ""), apply_filters(e)),
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
+                ),
                 ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: cargar_pedidos()),
             ], scroll="auto", spacing=10),
             ft.Row([

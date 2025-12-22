@@ -46,17 +46,9 @@ def cargar_menu(page: ft.Page):
                 pid, nombre, descripcion, precio, imagen, _, descuento, is_configurable, is_configurable_salsa, piezas = platillo
                 precio_final = precio * (1 - descuento / 100) if descuento > 0 else precio
 
-                def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas):
+                async def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas):
                     user_cart.add_item(item_id, name, price, img, is_configurable=is_conf, is_configurable_salsa=is_conf_salsa, piezas=pz)
-                    snack = ft.SnackBar(
-                        content=ft.Text(f"'{name}' agregado al carrito", color=ft.Colors.WHITE),
-                        bgcolor=ft.Colors.GREEN_700,
-                        behavior=ft.SnackBarBehavior.FLOATING,
-                        margin=ft.Margin.only(bottom=50, left=10, right=10),
-                        duration=2000
-                    )
-                    page.snack_bar = snack
-                    page.snack_bar.open = True
+                    await page.push_route("/carrito") # Redirección directa al carrito
                     page.update()
 
                 p_display = ft.Column([

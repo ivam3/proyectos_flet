@@ -3,7 +3,7 @@ import sqlite3
 import os
 import json
 from components.notifier import init_pubsub
-from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido
+from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido, actualizar_estado_pedido
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "../../storage/data/dona_soco.db")
 
@@ -11,6 +11,45 @@ def seguimiento_view(page: ft.Page):
     """Pantalla donde el cliente ve y recibe actualizaciones de un pedido específico."""
 
     pubsub = init_pubsub(page)
+
+    # --- CANCELAR PEDIDO DIALOG ---
+    def show_cancel_order(e, pedido):
+        reason_field = ft.TextField(label="¿Por qué deseas cancelar?", multiline=True, hint_text="Ej: Me equivoqué de platillo...")
+
+        def confirm_cancel(e):
+            if not reason_field.value.strip():
+                reason_field.error_text = "Por favor, ingresa el motivo."
+                reason_field.update()
+                return
+            
+            if actualizar_estado_pedido(pedido['id'], "Cancelado", reason_field.value.strip()):
+                dlg_cancel.open = False
+                page.snack_bar = ft.SnackBar(ft.Text("Pedido cancelado exitosamente."))
+                page.snack_bar.open = True
+                buscar_pedidos(None)
+            else:
+                page.snack_bar = ft.SnackBar(ft.Text("Error al cancelar el pedido."))
+                page.snack_bar.open = True
+                page.update()
+
+        dlg_cancel = ft.AlertDialog(
+            title=ft.Text("Confirmar Cancelación"),
+            content=ft.Column([
+                ft.Text(f"¿Estás seguro de cancelar el pedido #{pedido['id']}?"),
+                reason_field
+            ], tight=True),
+            actions=[
+                ft.TextButton("Volver", on_click=lambda e: setattr(dlg_cancel, "open", False) or page.update()),
+                ft.FilledButton(
+                    "Confirmar Cancelación", 
+                    on_click=confirm_cancel, 
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
+                )
+            ]
+        )
+        page.overlay.append(dlg_cancel)
+        dlg_cancel.open = True
+        page.update()
 
     # --- CONFIGURACIÓN ---
     config = get_configuracion()
@@ -126,8 +165,12 @@ def seguimiento_view(page: ft.Page):
                 info_tarjetas
             ], tight=True),
             actions=[
-                ft.TextButton("Cancelar", on_click=lambda e: setattr(dlg_pay, "open", False) or page.update()),
-                ft.FilledButton("Guardar", on_click=save_payment)
+                ft.TextButton("Volver", on_click=lambda e: setattr(dlg_pay, "open", False) or page.update()),
+                ft.FilledButton(
+                    "Guardar", 
+                    on_click=save_payment,
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+                )
             ]
         )
         page.overlay.append(dlg_pay)
@@ -175,10 +218,10 @@ def seguimiento_view(page: ft.Page):
         productos_info = ft.Column([ft.Text(f"- {item}", size=13, color=ft.Colors.BLACK) for item in detalles_productos_lista])
 
         color_estado_actual = {
-            "Nuevo": ft.Colors.BLUE_GREY,
-            "En preparación": ft.Colors.ORANGE,
+            "Pendiente": ft.Colors.BLUE_GREY,
+            "Preparando": ft.Colors.ORANGE,
             "Listo para entregar": ft.Colors.AMBER,
-            "En camino": ft.Colors.TEAL_700,
+            "En Camino": ft.Colors.TEAL_700,
             "Entregado": ft.Colors.GREEN,
             "Cancelado": ft.Colors.RED_400,
         }.get(estado, ft.Colors.GREY)
@@ -189,8 +232,21 @@ def seguimiento_view(page: ft.Page):
             ft.Text(f"Paga con: ${paga_con:.2f}" if metodo_pago == "efectivo" else "", size=12, color=ft.Colors.BLACK)
         ])
         
-        can_change_payment = estado not in ["En camino", "Entregado", "Cancelado"]
-        btn_change_payment = ft.FilledButton("Cambiar forma de pago", on_click=lambda e: show_change_payment(e, pedido)) if can_change_payment else ft.Container()
+        # El cliente solo puede cambiar el pago en Pendiente o Preparando
+        can_change_payment = estado in ["Pendiente", "Preparando"]
+        btn_change_payment = ft.FilledButton(
+            "Cambiar forma de pago", 
+            on_click=lambda e: show_change_payment(e, pedido),
+            style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+        ) if can_change_payment else ft.Container()
+
+        # El cliente solo puede cancelar en estado Pendiente
+        can_cancel = estado == "Pendiente"
+        btn_cancel = ft.FilledButton(
+            "Cancelar pedido", 
+            on_click=lambda e: show_cancel_order(e, pedido), 
+            style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
+        ) if can_cancel else ft.Container()
 
         resultado_container.controls.append(
             ft.Card(
@@ -210,7 +266,7 @@ def seguimiento_view(page: ft.Page):
                         productos_info,
                         ft.Divider(),
                         pago_info,
-                        btn_change_payment,
+                        ft.Column([btn_change_payment, btn_cancel], spacing=10),
                         ft.Divider(),
                         ft.Text("Historial de estados:", size=14, weight="bold", color=ft.Colors.BLACK),
                         *pasos
@@ -269,7 +325,12 @@ def seguimiento_view(page: ft.Page):
         telefono_field,
         codigo_field,
         ft.Row([
-            ft.Button(content=ft.Text("Buscar pedido"), on_click=buscar_pedidos, expand=True),
+            ft.FilledButton(
+                content=ft.Text("Buscar pedido"), 
+                on_click=buscar_pedidos, 
+                expand=True,
+                style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+            ),
             ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: buscar_pedidos(None), tooltip="Actualizar estado", icon_color=ft.Colors.ORANGE_700)
         ]),
         ft.Divider(),

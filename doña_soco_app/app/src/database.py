@@ -285,12 +285,18 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metod
 
         # Guardar cada producto
         for item in items:
-            # Standarize retrieval of details
+            # Standarize retrieval of details and comments
             detalles = item.get("details") or item.get("detalles") or ""
+            comentario = item.get("comentario") or ""
             
             nombre_producto = item["nombre"]
-            if detalles:
-                 nombre_producto += f" ({detalles})"
+            
+            extras = []
+            if detalles: extras.append(detalles)
+            if comentario: extras.append(f"Nota: {comentario}")
+            
+            if extras:
+                 nombre_producto += f" ({' | '.join(extras)})"
 
             cursor.execute("""
                 INSERT INTO orden_detalle (orden_id, producto, cantidad, precio_unitario)
@@ -425,15 +431,21 @@ def obtener_total_pedidos(start_date=None, end_date=None, search_term=None):
     return total
 
 def actualizar_estado_pedido(orden_id, nuevo_estado, motivo=None):
-    """Actualiza el estado de un pedido y registra el cambio en el historial."""
+    """Actualiza el estado de un pedido y registra el cambio en el historial. Si se cancela, pone el total en 0."""
     conn = conectar()
     cursor = conn.cursor()
     try:
         # Actualizar el estado en la tabla de ordenes
-        if motivo:
-            cursor.execute("UPDATE ordenes SET estado = ?, motivo_cancelacion = ? WHERE id = ?", (nuevo_estado, motivo, orden_id))
+        if nuevo_estado == "Cancelado":
+            if motivo:
+                cursor.execute("UPDATE ordenes SET estado = ?, motivo_cancelacion = ?, total = 0.0 WHERE id = ?", (nuevo_estado, motivo, orden_id))
+            else:
+                cursor.execute("UPDATE ordenes SET estado = ?, total = 0.0 WHERE id = ?", (nuevo_estado, orden_id))
         else:
-            cursor.execute("UPDATE ordenes SET estado = ? WHERE id = ?", (nuevo_estado, orden_id))
+            if motivo:
+                cursor.execute("UPDATE ordenes SET estado = ?, motivo_cancelacion = ? WHERE id = ?", (nuevo_estado, motivo, orden_id))
+            else:
+                cursor.execute("UPDATE ordenes SET estado = ? WHERE id = ?", (nuevo_estado, orden_id))
         
         # Registrar el cambio en el historial de estados
         cursor.execute("INSERT INTO historial_estados (orden_id, nuevo_estado) VALUES (?, ?)", (orden_id, nuevo_estado))

@@ -49,6 +49,10 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
                                     ft.Text(nombre, weight="bold", color=ft.Colors.BLACK, size=14),
                                     ft.Text(f"${precio_unit:.2f} c/u", color=ft.Colors.BLACK),
                                     ft.Text(f"Subtotal: ${subtotal:.2f}", size=12, color=ft.Colors.BLACK),
+                                    ft.TextButton(
+                                        content=ft.Row([ft.Icon(ft.Icons.COMMENT, size=16), ft.Text("Especificaciones", size=12)]),
+                                        on_click=lambda e, item_id=it["id"]: _abrir_dialogo_comentario(e, item_id, page, show_snackbar_func, nav)
+                                    )
                                 ],
                                 expand=True
                             ),
@@ -89,8 +93,16 @@ def create_carrito_view(page: ft.Page, show_snackbar_func, nav):
     controls.append(
         ft.Row(
             [
-                ft.Button(content=ft.Text("Vaciar carrito"), on_click=lambda e: _vaciar(e, page, show_snackbar_func, nav)),
-                ft.Button(content=ft.Text("Continuar a checkout"), on_click=lambda e: _iniciar_proceso_checkout(e, page, show_snackbar_func, nav))
+                ft.FilledButton(
+                    content=ft.Text("Vaciar carrito"), 
+                    on_click=lambda e: _vaciar(e, page, show_snackbar_func, nav),
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
+                ),
+                ft.FilledButton(
+                    content=ft.Text("Continuar a checkout"), 
+                    on_click=lambda e: _iniciar_proceso_checkout(e, page, show_snackbar_func, nav),
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+                )
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
         )
@@ -138,6 +150,41 @@ def _decrement(e, item_id: int, page: ft.Page, show_snackbar_func, nav):
             user_cart.update_quantity(item_id, nueva)
             break
     _refrescar(page, show_snackbar_func, nav)
+
+def _abrir_dialogo_comentario(e, item_id, page, show_snackbar_func, nav):
+    user_cart = page.session.cart
+    item = next((it for it in user_cart.get_items() if it["id"] == item_id), None)
+    if not item: return
+
+    # Usamos un campo persistente para el comentario si no existe
+    comentario_actual = item.get("comentario", "")
+    text_field = ft.TextField(label="Ej: Sin mostaza, bien dorado...", value=comentario_actual, multiline=True)
+
+    def guardar_comentario(e):
+        item["comentario"] = text_field.value.strip()
+        # Actualizamos details para que se vea en el resumen
+        # Si ya hay detalles (guisos), lo concatenamos
+        # Pero mejor manejamos 'comentario' por separado en el backend al guardar el pedido
+        dlg.open = False
+        page.update()
+        show_snackbar_func("Especificación guardada")
+        _refrescar(page, show_snackbar_func, nav)
+
+    dlg = ft.AlertDialog(
+        title=ft.Text(f"Especificaciones para {item['nombre']}"),
+        content=text_field,
+        actions=[
+            ft.TextButton("Volver", on_click=lambda _: setattr(dlg, "open", False) or page.update()),
+            ft.FilledButton(
+                "Guardar", 
+                on_click=guardar_comentario,
+                style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+            )
+        ]
+    )
+    page.overlay.append(dlg)
+    dlg.open = True
+    page.update()
 
 def _iniciar_proceso_checkout(e, page: ft.Page, show_snackbar_func, nav):
     """

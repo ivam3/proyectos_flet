@@ -309,8 +309,18 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         page.update()
 
     btn_guardar = ft.Button(content=ft.Text("Guardar nuevo platillo"), on_click=guardar_o_actualizar)
-    btn_ocultar_todos = ft.Button(content=ft.Text("Ocultar Todos"), icon=ft.Icons.VISIBILITY_OFF, style=ft.ButtonStyle(color=ft.Colors.RED), on_click=confirmar_ocultar_todos)
-    btn_mostrar_todos = ft.Button(content=ft.Text("Mostrar Todos"), icon=ft.Icons.VISIBILITY, style=ft.ButtonStyle(color=ft.Colors.GREEN), on_click=confirmar_mostrar_todos)
+    btn_ocultar_todos = ft.FilledButton(
+        content=ft.Text("Ocultar Todos"), 
+        icon=ft.Icons.VISIBILITY_OFF, 
+        style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE), 
+        on_click=confirmar_ocultar_todos
+    )
+    btn_mostrar_todos = ft.FilledButton(
+        content=ft.Text("Mostrar Todos"), 
+        icon=ft.Icons.VISIBILITY, 
+        style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), 
+        on_click=confirmar_mostrar_todos
+    )
 
     cargar_menu_admin()
 
@@ -330,11 +340,20 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                     imagen_preview
                 ], scroll="auto"),
                 upload_status,
-                ft.Row([
-                    ft.Button(content=ft.Text("Guardar"), on_click=guardar_o_actualizar, expand=True), 
-                    ft.Button(content=ft.Text("Cancelar"), on_click=lambda e: limpiar(), expand=True)
-                ], scroll="auto"),
-                ft.Divider(),
+                            ft.Row([
+                                ft.FilledButton(
+                                    content=ft.Text("Guardar"), 
+                                    on_click=guardar_o_actualizar, 
+                                    expand=True,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
+                                ), 
+                                ft.FilledButton(
+                                    content=ft.Text("Cancelar"), 
+                                    on_click=lambda e: limpiar(), 
+                                    expand=True,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
+                                )
+                            ], scroll="auto"),                ft.Divider(),
                 ft.Text("Platillos registrados:", size=18, weight="bold"),
                 search_field,
                 ft.Row([btn_mostrar_todos, btn_ocultar_todos], alignment=ft.MainAxisAlignment.END, scroll="auto"),

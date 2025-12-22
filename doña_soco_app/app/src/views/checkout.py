@@ -136,6 +136,20 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         await page.push_route("/seguimiento")
         page.update()
 
+    # --- Función de Alerta Popup ---
+    def mostrar_alerta(mensaje):
+        dlg_alert = ft.AlertDialog(
+            title=ft.Text("Dato faltante o erróneo"),
+            content=ft.Text(mensaje),
+            actions=[
+                ft.TextButton("Entendido", on_click=lambda e: setattr(dlg_alert, "open", False) or page.update())
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        page.overlay.append(dlg_alert)
+        dlg_alert.open = True
+        page.update()
+
     def validar_campos():
         campos_texto = {
             "Nombre": nombre_field, "Teléfono": telefono_field,
@@ -143,32 +157,32 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         }
         for nombre, campo in campos_texto.items():
             if not campo.value or not campo.value.strip():
-                show_snackbar(f"El campo '{nombre}' es obligatorio.", ft.Colors.AMBER_800)
+                mostrar_alerta(f"El campo '{nombre}' es obligatorio.")
                 return False
         
         if not cp_field.value:
-             show_snackbar("Debes seleccionar un Código Postal válido.", ft.Colors.AMBER_800)
+             mostrar_alerta("Debes seleccionar un Código Postal válido.")
              return False
 
         if not re.match(r"^\d{10}$", telefono_field.value.strip()):
-            show_snackbar("El teléfono debe tener 10 dígitos.", ft.Colors.AMBER_800)
+            mostrar_alerta("El teléfono debe tener 10 dígitos.")
             return False
         
         if not metodo_pago_group.value:
-            show_snackbar("Selecciona un método de pago.", ft.Colors.AMBER_800)
+            mostrar_alerta("Selecciona un método de pago.")
             return False
             
         if metodo_pago_group.value == "efectivo":
             if not paga_con_field.value:
-                show_snackbar("Ingresa con cuánto vas a pagar.", ft.Colors.AMBER_800)
+                mostrar_alerta("Ingresa con cuánto vas a pagar.")
                 return False
             try:
                 monto = float(paga_con_field.value)
                 if monto < total_final:
-                    show_snackbar("El monto no cubre el total del pedido.", ft.Colors.AMBER_800)
+                    mostrar_alerta("El monto no cubre el total del pedido.")
                     return False
             except ValueError:
-                show_snackbar("Monto inválido.", ft.Colors.AMBER_800)
+                mostrar_alerta("Monto inválido.")
                 return False
             
         return True
@@ -235,8 +249,11 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         cp_field.error_text = "Contacte al administrador"
 
     btn_confirmar = ft.FilledButton(
-        content=ft.Text("Confirmar Pedido"), icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
-        on_click=confirmar_pedido, width=float('inf')
+        content=ft.Text("Confirmar Pedido"), 
+        icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
+        on_click=confirmar_pedido, 
+        width=float('inf'),
+        style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
     )
 
     return ft.Column(

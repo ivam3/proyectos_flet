@@ -239,23 +239,25 @@ def configuracion_view(page: ft.Page):
 
             page.update()
 
-    guardar_button = ft.Button(
+    guardar_button = ft.FilledButton(
         content=ft.Text("Guardar Configuración"),
         on_click=guardar_cambios,
         icon=ft.Icons.SAVE_OUTLINED,
         style=ft.ButtonStyle(
+            bgcolor=ft.Colors.BROWN_700,
+            color=ft.Colors.WHITE,
             shape=ft.RoundedRectangleBorder(radius=10),
             padding=15
         )
     )
 
-    cambiar_pass_button = ft.Button(
+    cambiar_pass_button = ft.FilledButton(
         content=ft.Text("Actualizar Contraseña"),
         on_click=cambiar_password,
         icon=ft.Icons.LOCK_RESET,
         style=ft.ButtonStyle(
             color=ft.Colors.WHITE,
-            bgcolor=ft.Colors.ORANGE_700,
+            bgcolor=ft.Colors.BROWN_700,
             shape=ft.RoundedRectangleBorder(radius=10),
             padding=15
         )

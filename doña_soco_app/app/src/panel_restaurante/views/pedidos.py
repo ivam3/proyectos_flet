@@ -1,9 +1,11 @@
 import flet as ft
-from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido
+from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion
 import math
 import csv
 import datetime
 import io
+import os
+from fpdf import FPDF
 
 def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     """
@@ -21,6 +23,164 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         border_radius=20, height=40,
         text_size=14, content_padding=10, filled=True,
     )
+
+    # --- Lógica de Mensajería Post-Guardado ---
+    pending_save_content = {"data": None}
+    
+    # Crear un FilePicker local para evitar conflictos con el global
+    file_picker = ft.FilePicker()
+    # page.overlay.append(file_picker) # REMOVED: Causes Red Stripe bug on Android
+
+    def on_file_picker_result(e):
+        # print(f"DEBUG: on_file_picker_result triggered. Path: {e.path}")
+        if e.path:
+            if pending_save_content["data"]:
+                # print(f"DEBUG: Data found in pending_save_content. Bytes: {len(pending_save_content['data'])}")
+                try:
+                    with open(e.path, "wb") as f:
+                        f.write(pending_save_content["data"])
+                    # print(f"DEBUG: File written successfully to {e.path}")
+                    page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado correctamente en: {os.path.basename(e.path)}"), bgcolor=ft.Colors.GREEN)
+                except Exception as ex:
+                    # print(f"DEBUG: Error writing file: {ex}")
+                    page.snack_bar = ft.SnackBar(ft.Text(f"Error al guardar: {ex}"), bgcolor=ft.Colors.RED)
+                finally:
+                    pending_save_content["data"] = None
+            else:
+                 # print("DEBUG: No data in pending_save_content")
+                 page.snack_bar = ft.SnackBar(ft.Text(f"Seleccionado: {e.path}"))
+            
+            page.snack_bar.open = True
+            page.update()
+        else:
+            # print("DEBUG: No path selected (cancelled?)")
+
+    file_picker.on_result = on_file_picker_result
+
+    # --- Lógica de Exportación (CSV/Excel) ---
+    async def iniciar_exportacion(extension="csv"):
+        # print(f"DEBUG: Iniciar exportacion {extension}")
+        # Mensaje de feedback inmediato
+        page.snack_bar = ft.SnackBar(ft.Text(f"Generando reporte {extension.upper()}..."))
+        page.snack_bar.open = True
+        page.update()
+
+        try:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            ext = "csv" if extension == "csv" else "xlsm" 
+            
+            # 1. Generar datos desde la DB
+            search_term = search_filter.value.strip() if search_filter.value else None
+            datos = obtener_datos_exportacion(search_term=search_term)
+            # print(f"DEBUG: Datos obtenidos: {len(datos)} filas")
+            
+            headers = [
+                "Orden ID", "Código", "Fecha", "Cliente", "Teléfono", "Dirección", "Referencias", 
+                "Estado", "Método Pago", "Paga Con", "Total Orden", "Motivo Cancelación",
+                "Producto", "Cantidad", "Precio Unitario", "Subtotal Producto"
+            ]
+            
+            # 2. Escribir a memoria
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(headers)
+            for row in datos:
+                writer.writerow(list(row))
+            
+            # 3. Obtener bytes
+            csv_content = output.getvalue()
+            src_bytes = csv_content.encode('utf-8')
+            output.close()
+            
+            pending_save_content["data"] = src_bytes
+            # print("DEBUG: Data saved to pending_save_content")
+
+            # 4. Abrir diálogo de guardado
+            # print("DEBUG: Calling save_file...")
+            await file_picker.save_file(
+                dialog_title=f"Guardar reporte ({ext.upper()})",
+                file_name=f"reporte_pedidos_{timestamp}.{ext}",
+                allowed_extensions=[ext],
+                src_bytes=src_bytes
+            )
+            # print("DEBUG: save_file called.")
+
+        except Exception as ex:
+            # print(f"DEBUG: Exception in iniciar_exportacion: {ex}")
+            page.snack_bar = ft.SnackBar(ft.Text(f"Error: {str(ex)}"), bgcolor=ft.Colors.RED)
+            page.snack_bar.open = True
+            page.update()
+
+    # --- Lógica de PDF Individual ---
+    async def generar_y_guardar_pdf(pedido):
+        page.snack_bar = ft.SnackBar(ft.Text("Generando PDF..."))
+        page.snack_bar.open = True
+        page.update()
+
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(200, 10, txt=f"Detalle del Pedido #{pedido['id']}", ln=True, align='C')
+            pdf.ln(10)
+            
+            pdf.set_font("Arial", size=12)
+            pdf.cell(0, 10, txt=f"Fecha: {pedido['fecha']}", ln=True)
+            pdf.cell(0, 10, txt=f"Código: {pedido['codigo_seguimiento']}", ln=True)
+            pdf.cell(0, 10, txt=f"Estado: {pedido['estado']}", ln=True)
+            pdf.ln(5)
+            
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(0, 10, txt="Datos del Cliente", ln=True)
+            pdf.set_font("Arial", size=12)
+            pdf.cell(0, 8, txt=f"Nombre: {pedido['nombre_cliente']}", ln=True)
+            pdf.cell(0, 8, txt=f"Teléfono: {pedido['telefono']}", ln=True)
+            pdf.multi_cell(0, 8, txt=f"Dirección: {pedido['direccion']}")
+            pdf.ln(5)
+            
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(0, 10, txt="Productos", ln=True)
+            pdf.set_font("Arial", size=12)
+            
+            detalles_lista = pedido["detalles_productos"].split(" | ") if pedido["detalles_productos"] else []
+            for item in detalles_lista:
+                safe_item = item.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 8, txt=f"- {safe_item}")
+            
+            pdf.ln(5)
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, txt=f"Total: ${pedido['total']:.2f}", ln=True, align='R')
+
+            # Obtener bytes del PDF
+            pdf_str = pdf.output(dest='S')
+            pdf_bytes = pdf_str.encode('latin-1')
+
+            pending_save_content["data"] = pdf_bytes
+
+            await file_picker.save_file(
+                dialog_title=f"Guardar PDF Pedido #{pedido['id']}",
+                file_name=f"pedido_{pedido['id']}.pdf",
+                allowed_extensions=["pdf"],
+                src_bytes=pdf_bytes
+            )
+            
+        except Exception as ex:
+             page.snack_bar = ft.SnackBar(ft.Text(f"Error PDF: {ex}"), bgcolor=ft.Colors.RED)
+             page.snack_bar.open = True
+             page.update()
+
+    def create_pdf_handler(pedido):
+        async def handler(e):
+            await generar_y_guardar_pdf(pedido)
+        return handler
+
+    async def export_csv_click(e):
+        await iniciar_exportacion("csv")
+
+    async def export_xlsm_click(e):
+        await iniciar_exportacion("xlsm")
 
     # --- Data Table Definition ---
     pedidos_data_table = ft.DataTable(
@@ -50,7 +210,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     details_dialog = ft.AlertDialog(
         modal=True,
         title=ft.Text("Detalles del Pedido"),
-        content=ft.Column(), # El contenido se llenará dinámicamente
+        content=ft.Column(), 
         actions=[ft.TextButton("Cerrar", on_click=close_details_dialog)],
         actions_alignment=ft.MainAxisAlignment.END,
     )
@@ -88,8 +248,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 ft.Text(f"Estado Actual: {pedido['estado']}", weight="bold"),
                 ft.Text(f"Motivo Cancelación: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700, weight="bold", visible=(pedido['estado'] == "Cancelado" and bool(pedido['motivo_cancelacion']))),
             ], scroll="auto"),
-            height=400, # Altura fija para evitar desbordamiento
-            width=350,
+            height=400, width=350,
         )
         details_dialog.open = True
         page.update()
@@ -116,11 +275,9 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     page.overlay.append(confirmation_dialog)
 
     def open_status_dialog(e, pedido):
-        # Función para configurar el estado directamente
         def set_status(status):
             return lambda e: confirm_status_change(e, pedido['id'], status)
 
-        # Función para mostrar la entrada de motivo de cancelación
         def show_cancel_reason(e):
             reason_field = ft.TextField(label="Motivo de cancelación", multiline=True)
             
@@ -146,7 +303,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             ]
             confirmation_dialog.update()
 
-        # Vista inicial del diálogo de selección de estado
         confirmation_dialog.title = ft.Text(f"Cambiar estado pedido #{pedido['id']}")
         confirmation_dialog.content = ft.Column([
             ft.FilledButton("Pendiente", on_click=set_status("Pendiente"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
@@ -177,13 +333,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         [btn_prev, txt_page_info, btn_next],
         alignment=ft.MainAxisAlignment.CENTER
     )
-
-    # --- Export CSV ---
-    def exportar_csv(e):
-        # Placeholder functionality
-        page.snack_bar = ft.SnackBar(ft.Text("Exportar CSV no implementado en esta versión."))
-        page.snack_bar.open = True
-        page.update()
 
     # --- Cargar Pedidos ---
     def cargar_pedidos():
@@ -220,6 +369,12 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                                 on_click=lambda e, p=p: open_status_dialog(e, p),
                                 disabled=(p['estado'] == "Cancelado")
                             ),
+                            ft.IconButton(
+                                ft.Icons.PICTURE_AS_PDF,
+                                tooltip="Descargar PDF",
+                                icon_color=ft.Colors.RED_700,
+                                on_click=create_pdf_handler(p)
+                            )
                         ])),
                     ]
                 )
@@ -254,8 +409,8 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: cargar_pedidos()),
             ], scroll="auto", spacing=10),
             ft.Row([
-                ft.Button(content=ft.Text("CSV"), icon=ft.Icons.DOWNLOAD, on_click=exportar_csv, expand=True),
-                ft.Button(content=ft.Text("XLSM"), icon=ft.Icons.TABLE_VIEW, on_click=exportar_csv, expand=True)
+                ft.FilledButton(content=ft.Text("CSV"), icon=ft.Icons.DOWNLOAD, on_click=export_csv_click, expand=True, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+                ft.FilledButton(content=ft.Text("XLSM"), icon=ft.Icons.TABLE_VIEW, on_click=export_xlsm_click, expand=True, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
             ], spacing=10)
         ], spacing=10),
         padding=10
@@ -277,4 +432,4 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         expand=True,
     )
 
-    return ft.Column([content_container], expand=True, scroll="auto")
+    return ft.Column([content_container, ft.Container(content=file_picker, visible=False)], expand=True, scroll="auto")

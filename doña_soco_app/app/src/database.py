@@ -399,6 +399,93 @@ def obtener_pedidos(limit=None, offset=None, start_date=None, end_date=None, sea
     conn.close()
     return pedidos
 
+def obtener_datos_exportacion(search_term=None):
+    """
+    Obtiene todos los datos de ordenes y sus detalles (una fila por producto) para exportación completa.
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    
+    params = []
+    where_clauses = []
+
+    if search_term:
+        where_clauses.append("(o.nombre_cliente LIKE ? OR o.codigo_seguimiento LIKE ?)")
+        params.extend([f"%{search_term}%", f"%{search_term}%"])
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT 
+            o.id AS orden_id, 
+            o.codigo_seguimiento, 
+            o.fecha, 
+            o.nombre_cliente, 
+            o.telefono, 
+            o.direccion, 
+            o.referencias, 
+            o.estado, 
+            o.metodo_pago, 
+            o.paga_con, 
+            o.total AS total_orden,
+            o.motivo_cancelacion,
+            od.producto, 
+            od.cantidad, 
+            od.precio_unitario,
+            (od.cantidad * od.precio_unitario) AS subtotal_producto
+        FROM ordenes o
+        LEFT JOIN orden_detalle od ON o.id = od.orden_id
+        {where_sql}
+        ORDER BY o.fecha DESC, o.id DESC
+    """
+    
+    cursor.execute(query, params)
+    datos = cursor.fetchall()
+    conn.close()
+    return datos
+
+def obtener_pedidos_sin_paginacion(start_date=None, end_date=None, search_term=None):
+    """
+    Obtiene TODOS los pedidos que coinciden con los filtros, sin paginación, para exportación.
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    
+    params = []
+    where_clauses = []
+
+    if start_date:
+        where_clauses.append("date(o.fecha) >= ?")
+        params.append(start_date)
+    if end_date:
+        where_clauses.append("date(o.fecha) <= ?")
+        params.append(end_date)
+    if search_term:
+        where_clauses.append("(o.nombre_cliente LIKE ? OR o.codigo_seguimiento LIKE ?)")
+        params.extend([f"%{search_term}%", f"%{search_term}%"])
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT 
+            o.id, o.codigo_seguimiento, o.nombre_cliente, o.telefono, o.direccion, o.referencias, o.total, o.fecha, o.estado, o.metodo_pago, o.paga_con, o.motivo_cancelacion,
+            GROUP_CONCAT(od.producto || ' (x' || od.cantidad || ' - $' || od.precio_unitario || ')', ' | ') AS detalles_productos
+        FROM ordenes o
+        LEFT JOIN orden_detalle od ON o.id = od.orden_id
+        {where_sql}
+        GROUP BY o.id
+        ORDER BY o.fecha DESC
+    """
+    
+    cursor.execute(query, params)
+    pedidos = cursor.fetchall()
+    conn.close()
+    return pedidos
+
 def obtener_total_pedidos(start_date=None, end_date=None, search_term=None):
     """
     Obtiene el número total de pedidos, con filtro opcional por fecha o texto.

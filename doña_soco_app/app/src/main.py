@@ -79,7 +79,7 @@ def main(page: ft.Page):
         dialog.open = True
         page.update()
 
-    def validar_clave(e=None):
+    async def validar_clave(e=None):
         nonlocal admin_mode
         clave = admin_field.value.strip()
         if verificar_admin_login(clave):
@@ -87,10 +87,8 @@ def main(page: ft.Page):
             close_dialog()
             show_snackbar("Modo administrador activado")
             
-            # Abrir panel admin y sincronizar navegación
-            nav.selected_index = 3
-            content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
-            page.update()
+            # Sincronizar vía ruteo
+            await page.push_route("/admin")
         else:
             admin_field.value = ""
             show_snackbar("Acceso restringido")
@@ -107,35 +105,41 @@ def main(page: ft.Page):
     page.overlay.append(dialog)
 
     # ------- LOGOUT -------
-    def logout(e=None):
+    async def logout(e=None):
         nonlocal admin_mode
         admin_mode = False
-        content_area.content = cargar_menu(page)
         show_snackbar("Sesión de administrador cerrada")
         # Restore overlay state (dialog only, picker is in main controls)
         page.overlay.clear()
         page.overlay.append(dialog)
-        nav.selected_index = 0 # Volver al menú
+        await page.push_route("/menu")
         page.update()
 
     # ------- CAMBIAR PANTALLAS -------
-    def change_page(e):
+    async def change_page(e):
         selected = e.control.selected_index
         if selected == 0:
-            content_area.content = cargar_menu(page)
+            await page.push_route("/menu")
         elif selected == 1:
-            content_area.content = create_carrito_view(page, show_snackbar, nav)
+            await page.push_route("/carrito")
         elif selected == 2:
-            content_area.content = seguimiento_view(page)
+            await page.push_route("/seguimiento")
         elif selected == 3:
             if admin_mode:
-                content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
+                await page.push_route("/admin")
             else:
+                # Si no es admin, forzar el índice a la vista actual
+                if page.route.startswith("/carrito"):
+                    nav.selected_index = 1
+                elif page.route.startswith("/seguimiento"):
+                    nav.selected_index = 2
+                else:
+                    nav.selected_index = 0
                 show_snackbar("Acceso restringido")
         page.update()
 
     # ------- ROUTING -------
-    def handle_route_change(e):
+    async def handle_route_change(e):
         route = e.route
         if route.startswith("/seguimiento"):
             nav.selected_index = 2
@@ -143,6 +147,12 @@ def main(page: ft.Page):
         elif route.startswith("/carrito"):
             nav.selected_index = 1
             content_area.content = create_carrito_view(page, show_snackbar, nav)
+        elif route.startswith("/admin"):
+            if admin_mode:
+                nav.selected_index = 3
+                content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
+            else:
+                await page.push_route("/menu")
         elif route == "/" or route.startswith("/menu"):
             nav.selected_index = 0
             content_area.content = cargar_menu(page)

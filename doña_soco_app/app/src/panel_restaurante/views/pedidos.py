@@ -32,34 +32,26 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     # page.overlay.append(file_picker) # REMOVED: Causes Red Stripe bug on Android
 
     def on_file_picker_result(e):
-        # print(f"DEBUG: on_file_picker_result triggered. Path: {e.path}")
         if e.path:
             if pending_save_content["data"]:
-                # print(f"DEBUG: Data found in pending_save_content. Bytes: {len(pending_save_content['data'])}")
                 try:
                     with open(e.path, "wb") as f:
                         f.write(pending_save_content["data"])
-                    # print(f"DEBUG: File written successfully to {e.path}")
                     page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado correctamente en: {os.path.basename(e.path)}"), bgcolor=ft.Colors.GREEN)
                 except Exception as ex:
-                    # print(f"DEBUG: Error writing file: {ex}")
                     page.snack_bar = ft.SnackBar(ft.Text(f"Error al guardar: {ex}"), bgcolor=ft.Colors.RED)
                 finally:
                     pending_save_content["data"] = None
             else:
-                 # print("DEBUG: No data in pending_save_content")
                  page.snack_bar = ft.SnackBar(ft.Text(f"Seleccionado: {e.path}"))
             
             page.snack_bar.open = True
             page.update()
-        else:
-            # print("DEBUG: No path selected (cancelled?)")
 
     file_picker.on_result = on_file_picker_result
 
     # --- Lógica de Exportación (CSV/Excel) ---
     async def iniciar_exportacion(extension="csv"):
-        # print(f"DEBUG: Iniciar exportacion {extension}")
         # Mensaje de feedback inmediato
         page.snack_bar = ft.SnackBar(ft.Text(f"Generando reporte {extension.upper()}..."))
         page.snack_bar.open = True
@@ -72,7 +64,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             # 1. Generar datos desde la DB
             search_term = search_filter.value.strip() if search_filter.value else None
             datos = obtener_datos_exportacion(search_term=search_term)
-            # print(f"DEBUG: Datos obtenidos: {len(datos)} filas")
             
             headers = [
                 "Orden ID", "Código", "Fecha", "Cliente", "Teléfono", "Dirección", "Referencias", 
@@ -93,20 +84,16 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             output.close()
             
             pending_save_content["data"] = src_bytes
-            # print("DEBUG: Data saved to pending_save_content")
 
             # 4. Abrir diálogo de guardado
-            # print("DEBUG: Calling save_file...")
             await file_picker.save_file(
                 dialog_title=f"Guardar reporte ({ext.upper()})",
                 file_name=f"reporte_pedidos_{timestamp}.{ext}",
                 allowed_extensions=[ext],
                 src_bytes=src_bytes
             )
-            # print("DEBUG: save_file called.")
 
         except Exception as ex:
-            # print(f"DEBUG: Exception in iniciar_exportacion: {ex}")
             page.snack_bar = ft.SnackBar(ft.Text(f"Error: {str(ex)}"), bgcolor=ft.Colors.RED)
             page.snack_bar.open = True
             page.update()

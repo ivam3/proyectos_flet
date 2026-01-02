@@ -18,14 +18,13 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     # Aumentamos el área de scroll y la definimos como expandible para que ocupe todo el alto posible
     lista = ft.Column(scroll="auto", expand=True)
     
-    # Vinculamos el evento de subida al picker global
     def on_upload_progress(e):
-        """Maneja la finalización de la subida (Estrategia 2)."""
+        """Maneja la finalización de la subida."""
+        print(f"DEBUG: on_upload_progress: {e.progress}, Error: {e.error}")
         if e.error:
             upload_status.value = f"Error en la subida: {e.error}"
         elif e.progress == 1.0: 
             try:
-                # Recuperar y guardar
                 temp_url = page.get_upload_url(e.file_name)
                 response = httpx.get(temp_url)
                 response.raise_for_status()
@@ -43,11 +42,9 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                 finalizar_guardado(nuevo_nombre)
                 
             except Exception as ex:
-                upload_status.value = f"Error al guardar desde buffer: {ex}"
+                upload_status.value = f"Error al guardar: {ex}"
         
         page.update()
-
-    file_picker.on_upload = on_upload_progress
 
     nombre_field = ft.TextField(label="Nombre del platillo")
     descripcion_field = ft.TextField(label="Descripción", multiline=True)
@@ -73,20 +70,17 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     # =====================================================
     #   MANEJADOR MEJORADO PARA GUARDADO DE IMÁGENES
     # =====================================================
-    def on_file_picked(files):
+    async def on_file_picked(files):
         """Procesa los archivos seleccionados."""
         if files:
             archivo = files[0]
-            upload_status.value = "Procesando imagen..."
+            upload_status.value = f"Procesando {archivo.name}..."
             page.update()
 
             try:
-                assets_dir = os.path.abspath(os.path.join(os.getcwd(), "app/src/assets"))
-                if not os.path.exists(assets_dir):
-                    assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../assets"))
-                
+                # 1. Intentar copia directa (solo si hay path y permisos)
+                assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../assets"))
                 os.makedirs(assets_dir, exist_ok=True)
-
                 ext = os.path.splitext(archivo.name)[1]
                 nuevo_nombre = f"{uuid.uuid4()}{ext}"
                 destino = os.path.join(assets_dir, nuevo_nombre)
@@ -96,19 +90,37 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                         shutil.copy(archivo.path, destino)
                         finalizar_guardado(nuevo_nombre)
                         return
-                    except Exception:
-                        pass
+                    except: pass
 
+                # 2. Si no, usar subida HTTP (Obligatorio para Web y Android/Termux sin path)
                 upload_url = page.get_upload_url(archivo.name, 600)
-                file_picker.upload([ft.FilePickerUploadFile(archivo.name, upload_url=upload_url)])
-                upload_status.value = "Subiendo imagen (método web)..."
+                await file_picker.upload([ft.FilePickerUploadFile(name=archivo.name, upload_url=upload_url, method="PUT")])
+                upload_status.value = "Subiendo imagen al servidor..."
                 page.update()
 
             except Exception as ex:
-                upload_status.value = f"Error general: {ex}"
+                upload_status.value = f"Error: {ex}"
                 page.update()
+
+    def on_dialog_result(e):
+        if e.files:
+            page.run_task(on_file_picked, e.files)
         else:
-            upload_status.value = "Selección cancelada."
+            upload_status.value = "Selección cancelada"
+            page.update()
+
+    async def pick_image_file(e):
+        # CONEXIÓN CRÍTICA: Vinculamos los eventos justo antes de abrir
+        file_picker.on_result = on_dialog_result
+        file_picker.on_upload = on_upload_progress
+        
+        upload_status.value = "Abriendo selector..."
+        page.update()
+        
+        try:
+            await file_picker.pick_files(allow_multiple=False, file_type=ft.FilePickerFileType.IMAGE)
+        except Exception as ex:
+            upload_status.value = f"Error: {ex}"
             page.update()
 
     def finalizar_guardado(nombre_archivo):
@@ -324,9 +336,14 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
 
     cargar_menu_admin()
 
-    async def pick_image_file(e):
-        files = await file_picker.pick_files(allow_multiple=False)
-        on_file_picked(files)
+    def finalizar_guardado(nombre_archivo):
+        """Actualiza la UI una vez que la imagen está en assets."""
+        imagen_path.value = nombre_archivo
+        import time
+        imagen_preview.src = f"src/assets/{nombre_archivo}?{time.time()}"
+        imagen_preview.visible = True
+        upload_status.value = "Imagen guardada correctamente ✔"
+        page.update()
 
     content_container = ft.Container(
         content=ft.Column(

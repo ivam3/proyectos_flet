@@ -18,7 +18,7 @@ def cargar_menu(page: ft.Page):
             columns = 2
             img_height = 80       # Imagen más pequeña en móvil
         else:
-            current_ratio = 1.1   # Estándar para Web
+            current_ratio = 0.8   # Ajustado para evitar superposición en Web/PC
             columns = 0           # Auto
             img_height = 110      # Imagen normal en web
 

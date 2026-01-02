@@ -68,12 +68,33 @@ def main(page: ft.Page):
     content_area = ft.Container(expand=True)
     
     # ------- DIÁLOGO DE ADMIN & FILE PICKER GLOBAL -------
-    admin_field = ft.TextField(password=True, hint_text="Clave")
-    
-    # Global FilePicker for the whole app session
+    # --- SELECTOR GLOBAL ESTABLE (SOLUCIÓN CICLO DE VIDA) ---
+    def global_file_picker_handler(e):
+        print(f"GLOBAL PICKER RESULT: {e.files}")
+        if not e.files:
+            return
+
+        # Recuperamos datos persistentes de forma segura
+        ctx = getattr(page.session, "file_picker_ctx", None)
+        if not ctx:
+            print("No picker context found in session")
+            return
+
+        # Ejecutamos callback seguro
+        try:
+            # El callback espera el objeto file directo, según el snippet del usuario
+            ctx["callback"](e.files[0])
+        except Exception as ex:
+            print(f"Error executing picker callback: {ex}")
+
     global_file_picker = ft.FilePicker()
-    # We use a hidden container instead of overlay to avoid the "red stripe" bug on Android
-    picker_shield = ft.Container(content=global_file_picker, visible=False)
+    global_file_picker.on_result = global_file_picker_handler
+    # Wrap in invisible container to hide visual glitches in Android
+    page.overlay.append(ft.Container(content=global_file_picker, width=0, height=0))
+    page.session.file_picker = global_file_picker
+
+    # ------- DIÁLOGO DE ADMIN -------
+    admin_field = ft.TextField(password=True, hint_text="Clave")
 
     def activar_admin(e):
         dialog.open = True
@@ -196,10 +217,10 @@ def main(page: ft.Page):
         top_bar,
         content_area,
         nav,
-        picker_shield # FilePicker globally available but visually shielded
     )
 
 
 # Ruta absoluta segura para assets
 assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
-ft.run(main, assets_dir=assets_path, view=ft.AppView.WEB_BROWSER, web_renderer="canvaskit") #, secret_key="ads2025")
+os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
+ft.run(main, assets_dir=assets_path, view=ft.AppView.WEB_BROWSER, web_renderer="canvaskit")

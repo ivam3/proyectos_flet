@@ -5,15 +5,43 @@ import secrets
 import string
 import hashlib
 
+import shutil
+import platform
+
 # --- Database Configuration ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STORAGE_DIR = os.path.join(BASE_DIR, "..", "storage")
+# Detectar entorno para definir rutas de escritura vs lectura
+if "ANDROID_ARGUMENT" in os.environ:
+    # En Android, __file__ es read-only. Escribimos en el directorio de usuario.
+    WRITE_ROOT = os.path.expanduser("~")
+    # El schema ahora vive junto al código fuente para asegurar su empaquetado en el APK
+    SCHEMA_PATH = os.path.join(READ_ROOT, "schema.sql")
+    INITIAL_DB_ASSET = os.path.join(READ_ROOT, "assets", "initial_data.db")
+else:
+    # En PC, mantenemos la estructura relativa original
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    STORAGE_DIR = os.path.join(BASE_DIR, "..", "storage")
+    # Para consistencia, preferimos el archivo local en src si existe, sino el original
+    local_schema = os.path.join(BASE_DIR, "schema.sql")
+    if os.path.exists(local_schema):
+        SCHEMA_PATH = local_schema
+    else:
+        SCHEMA_PATH = os.path.join(STORAGE_DIR, "database", "schema.sql")
+    INITIAL_DB_ASSET = os.path.join(BASE_DIR, "assets", "initial_data.db")
+
 DB_PATH = os.path.join(STORAGE_DIR, "data", "dona_soco.db")
-SCHEMA_PATH = os.path.join(STORAGE_DIR, "database", "schema.sql")
 
 def conectar():
     """Establishes a connection to the database, ensuring the data directory exists."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
+    # Lógica de primer arranque: Si no existe la BD y tenemos una plantilla en assets, copiarla
+    if not os.path.exists(DB_PATH) and os.path.exists(INITIAL_DB_ASSET):
+        try:
+            print(f"Primera ejecución: Copiando base de datos inicial desde {INITIAL_DB_ASSET} a {DB_PATH}")
+            shutil.copy(INITIAL_DB_ASSET, DB_PATH)
+        except Exception as e:
+            print(f"Error copiando base de datos inicial: {e}")
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row # Allows accessing columns by name
     return conn

@@ -142,7 +142,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             title=ft.Text("Dato faltante o erróneo"),
             content=ft.Text(mensaje),
             actions=[
-                ft.TextButton("Entendido", on_click=lambda e: setattr(dlg_alert, "open", False) or page.update())
+                ft.TextButton("Entendido", on_click=lambda e: setattr(dlg_alert, "open", False) or page.update(), style=ft.ButtonStyle(color=ft.Colors.BROWN_700))
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
@@ -236,7 +236,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
                 btn_confirmar.disabled = False # Re-enable if error
                 page.update()
 
-        dlg.actions = [ft.FilledButton(content=ft.Text("Aceptar"), on_click=on_accept)]
+        dlg.actions = [ft.FilledButton(content=ft.Text("Aceptar"), on_click=on_accept, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))]
 
         # USAMOS OVERLAY PARA ASEGURAR VISIBILIDAD
         page.overlay.append(dlg)

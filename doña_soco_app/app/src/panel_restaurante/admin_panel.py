@@ -39,7 +39,7 @@ def create_admin_panel_view(page: ft.Page, logout_func, file_picker):
             # Header
             ft.Row(
                 [
-                    ft.Text("Centro de Administración", size=18, weight="bold", expand=True, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Centro de Administración", size=18, weight="bold", expand=True, text_align=ft.TextAlign.CENTER, color=ft.Colors.BLACK),
                     ft.TextButton(content=ft.Text("Salir"), on_click=logout_func, tooltip="Cerrar Sesión")
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN
@@ -48,9 +48,9 @@ def create_admin_panel_view(page: ft.Page, logout_func, file_picker):
             # Botones de navegación
             ft.Row(
                 [
-                    ft.Button(content=ft.Text("Gestión de Menú"), on_click=show_menu_view, expand=True),
-                    ft.Button(content=ft.Text("Gestión de Pedidos"), on_click=show_pedidos_view, expand=True),
-                    ft.Button(content=ft.Text("Configuración"), on_click=show_config_view, expand=True), # Nuevo botón
+                    ft.Button(content=ft.Text("Gestión de Menú"), on_click=show_menu_view, color=ft.Colors.BROWN, expand=True),
+                    ft.Button(content=ft.Text("Gestión de Pedidos"), on_click=show_pedidos_view, color=ft.Colors.BROWN, expand=True),
+                    ft.Button(content=ft.Text("Configuración"), on_click=show_config_view, color=ft.Colors.BROWN, expand=True), # Nuevo botón
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
             ),

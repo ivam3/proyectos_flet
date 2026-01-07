@@ -1,7 +1,6 @@
 import flet as ft
 import os
 import uuid
-import httpx
 import shutil
 from database import (
     obtener_menu,
@@ -13,374 +12,286 @@ from database import (
     mostrar_todos_los_platillos,
 )
 
-def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
+# Definimos menu_admin_view sin usar el file_picker global
+def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
+    
+    # --- SELECTOR DE ARCHIVOS LOCAL (Estrategia probada en Pedidos) ---
+    # Creamos una instancia local del FilePicker para esta vista
+    file_picker = ft.FilePicker()
 
-    # Aumentamos el área de scroll y la definimos como expandible para que ocupe todo el alto posible
     lista = ft.Column(scroll="auto", expand=True)
     
-    def on_upload_progress(e):
-        """Maneja la finalización de la subida."""
-        print(f"DEBUG: on_upload_progress: {e.progress}, Error: {e.error}")
-        if e.error:
-            upload_status.value = f"Error en la subida: {e.error}"
-        elif e.progress == 1.0: 
-            try:
-                temp_url = page.get_upload_url(e.file_name)
-                response = httpx.get(temp_url)
-                response.raise_for_status()
+    upload_status = ft.Text("", color=ft.Colors.BLACK, size=12)
+    imagen_path_guardado = ft.Text(visible=False) 
 
-                assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../assets"))
-                os.makedirs(assets_dir, exist_ok=True)
-                
-                ext = os.path.splitext(e.file_name)[1]
-                nuevo_nombre = f"{uuid.uuid4()}{ext}"
-                destino = os.path.join(assets_dir, nuevo_nombre)
-                
-                with open(destino, "wb") as f:
-                    f.write(response.content)
-
-                finalizar_guardado(nuevo_nombre)
-                
-            except Exception as ex:
-                upload_status.value = f"Error al guardar: {ex}"
-        
-        page.update()
-
-    nombre_field = ft.TextField(label="Nombre del platillo")
-    descripcion_field = ft.TextField(label="Descripción", multiline=True)
-    precio_field = ft.TextField(label="Precio", keyboard_type=ft.KeyboardType.NUMBER)
-    descuento_field = ft.TextField(label="Descuento (%)", keyboard_type=ft.KeyboardType.NUMBER, value="0")
-    piezas_field = ft.TextField(label="Piezas por Orden", keyboard_type=ft.KeyboardType.NUMBER, value="1", hint_text="Ej: 3 para orden de 3 gorditas")
+    # --- CAMPOS DE EDICIÓN ---
+    nombre_field = ft.TextField(label="Nombre del platillo", text_style=ft.TextStyle(color=ft.Colors.BLACK), label_style=ft.TextStyle(color=ft.Colors.BLACK))
+    descripcion_field = ft.TextField(label="Descripción", multiline=True, text_style=ft.TextStyle(color=ft.Colors.BLACK), label_style=ft.TextStyle(color=ft.Colors.BLACK))
     
-    is_configurable_chk = ft.Checkbox(label="¿Platillo Configurable (Guisos)?", value=False)
-    is_configurable_salsa_chk = ft.Checkbox(label="¿Platillo Configurable (Salsas)?", value=False)
+    precio_field = ft.TextField(label="Precio", keyboard_type=ft.KeyboardType.NUMBER, prefix=ft.Text("$", color=ft.Colors.BLACK), text_style=ft.TextStyle(color=ft.Colors.BLACK))
+    descuento_field = ft.TextField(label="Descuento %", keyboard_type=ft.KeyboardType.NUMBER, value="0", text_style=ft.TextStyle(color=ft.Colors.BLACK))
+    piezas_field = ft.TextField(label="Piezas por orden", keyboard_type=ft.KeyboardType.NUMBER, value="1", text_style=ft.TextStyle(color=ft.Colors.BLACK))
 
-    search_field = ft.TextField(
-        hint_text="Buscar platillo...",
-        prefix_icon=ft.Icons.SEARCH,
-        on_change=lambda e: cargar_menu_admin(e.control.value),
-        border_radius=20, height=40,
-        text_size=14, content_padding=10, filled=True,
-    )
+    def sync_checkbox_color(chk: ft.Checkbox):
+        chk.fill_color = ft.Colors.BROWN_700 if chk.value else ft.Colors.WHITE
+    
+    def config_chk(tipo): 
+        is_config_chk = ft.Checkbox(
+            label=f"Configurable ({tipo})",
+            value=True,
+            label_style=ft.TextStyle(color=ft.Colors.BLACK),
+            fill_color=ft.Colors.BROWN_700,
+            check_color=ft.Colors.WHITE,
+            on_change=lambda e: (sync_checkbox_color(e.control), page.update())
+        )
+        return is_config_chk
 
-    imagen_path = ft.Text(visible=False)
-    imagen_preview = ft.Image(src="", width=100, height=100, fit="cover", visible=False)
-    upload_status = ft.Text()
+    is_config_chk = config_chk("Guisos")
+    is_config_salsa_chk = config_chk("Salsas")
 
-    # =====================================================
-    #   MANEJADOR MEJORADO PARA GUARDADO DE IMÁGENES
-    # =====================================================
-    async def on_file_picked(files):
-        """Procesa los archivos seleccionados."""
-        if files:
-            archivo = files[0]
-            upload_status.value = f"Procesando {archivo.name}..."
-            page.update()
+    imagen_preview = ft.Image(src="/icon.png", width=80, height=80, fit="cover", visible=False, border_radius=10)
+    btn_subir_imagen = ft.FilledButton("Imagen", icon=ft.Icons.IMAGE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREY_700, color=ft.Colors.WHITE))
 
-            try:
-                # 1. Intentar copia directa (solo si hay path y permisos)
-                assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../assets"))
-                os.makedirs(assets_dir, exist_ok=True)
-                ext = os.path.splitext(archivo.name)[1]
-                nuevo_nombre = f"{uuid.uuid4()}{ext}"
-                destino = os.path.join(assets_dir, nuevo_nombre)
+    edit_mode_id = ft.Text(visible=False)
 
-                if hasattr(archivo, "path") and archivo.path:
-                    try:
-                        shutil.copy(archivo.path, destino)
-                        finalizar_guardado(nuevo_nombre)
-                        return
-                    except: pass
-
-                # 2. Si no, usar subida HTTP (Obligatorio para Web y Android/Termux sin path)
-                upload_url = page.get_upload_url(archivo.name, 600)
-                await file_picker.upload([ft.FilePickerUploadFile(name=archivo.name, upload_url=upload_url, method="PUT")])
-                upload_status.value = "Subiendo imagen al servidor..."
-                page.update()
-
-            except Exception as ex:
-                upload_status.value = f"Error: {ex}"
-                page.update()
-
-    def on_dialog_result(e):
-        if e.files:
-            page.run_task(on_file_picked, e.files)
-        else:
-            upload_status.value = "Selección cancelada"
-            page.update()
-
-    async def pick_image_file(e):
-        # CONEXIÓN CRÍTICA: Vinculamos los eventos justo antes de abrir
-        file_picker.on_result = on_dialog_result
-        file_picker.on_upload = on_upload_progress
-        
-        upload_status.value = "Abriendo selector..."
-        page.update()
-        
-        try:
-            await file_picker.pick_files(allow_multiple=False, file_type=ft.FilePickerFileType.IMAGE)
-        except Exception as ex:
-            upload_status.value = f"Error: {ex}"
-            page.update()
-
-    def finalizar_guardado(nombre_archivo):
-        """Actualiza la UI una vez que la imagen está en assets."""
-        imagen_path.value = nombre_archivo
-        import time
-        imagen_preview.src = f"src/assets/{nombre_archivo}?{time.time()}"
-        imagen_preview.visible = True
-        upload_status.value = "Imagen guardada correctamente ✔"
-        page.update()
-
-    def show_snackbar(text):
-        b = ft.SnackBar(ft.Text(text))
-        page.overlay.append(b)
-        b.open = True
-        page.update()
-
-    # ===========================
-    # MOSTRAR LISTA DEL MENÚ
-    # ===========================
-    def cargar_menu_admin(search_term=None):
-        lista.controls.clear()
-        platillos = obtener_menu(solo_activos=False, search_term=search_term)
-
-        if not platillos:
-            lista.controls.append(ft.Text("No hay platillos que coincidan 🍽️"))
-        else:
-            for pid, nombre, desc, precio, imagen, activo, descuento, is_conf, is_conf_salsa, piezas in platillos:
-                def toggle_vis(e, id=pid):
-                    actualizar_visibilidad_platillo(id, e.control.value)
-
-                precio_texto = f"${precio:.2f}"
-                if descuento > 0:
-                    precio_final = precio * (1 - descuento / 100)
-                    precio_texto = f"${precio:.2f} -> ${precio_final:.2f} (-{descuento}%)"
-                
-                conf_labels = []
-                if is_conf: conf_labels.append("Guisos")
-                if is_conf_salsa: conf_labels.append("Salsas")
-                conf_text = f" ({', '.join(conf_labels)})" if conf_labels else ""
-                
-                piezas_text = f" | {piezas} pz/orden" if piezas > 1 else ""
-
-                lista.controls.append(
-                    ft.Card(
-                        content=ft.Container(
-                            padding=10,
-                            content=ft.Column([
-                                ft.Row([
-                                    ft.Image(
-                                        src=f"/{imagen}" if imagen else "",
-                                        width=50, height=50,
-                                        fit="cover"
-                                    ) if imagen else ft.Container(width=50, height=50),
-                                    ft.Column([
-                                        ft.Text(f"{nombre}{conf_text}", size=18, weight="bold"),
-                                        ft.Text(f"{precio_texto}{piezas_text}"),
-                                    ]),
-                                ]),
-                                ft.Text(desc or "Sin descripción"),
-                                ft.DataTable(
-                                    columns=[ft.DataColumn(ft.Text("")), ft.DataColumn(ft.Text("")), ft.DataColumn(ft.Text(""))],
-                                    rows=[
-                                        ft.DataRow(cells=[
-                                            ft.DataCell(ft.IconButton(
-                                                icon=ft.Icons.EDIT,
-                                                on_click=lambda e, id=pid, n=nombre, d=desc, p=precio, img=imagen, desc_val=descuento, ic=is_conf, ics=is_conf_salsa, pz=piezas:
-                                                    preparar_edicion(id, n, d, p, img, desc_val, ic, ics, pz)
-                                            )),
-                                            ft.DataCell(ft.IconButton(
-                                                icon=ft.Icons.DELETE,
-                                                icon_color=ft.Colors.RED,
-                                                on_click=lambda e, id=pid: confirmar_eliminacion(id)
-                                            )),
-                                            ft.DataCell(ft.Switch(
-                                                value=bool(activo),
-                                                on_change=toggle_vis,
-                                                active_color=ft.Colors.GREEN_700,
-                                            )),
-                                        ])
-                                    ]
-                                )
-                            ])
-                        )
-                    )
-                )
-        page.update()
-
-    editing_id = None
-
-    def limpiar():
-        nonlocal editing_id
-        editing_id = None
+    def limpiar_campos():
         nombre_field.value = ""
         descripcion_field.value = ""
         precio_field.value = ""
         descuento_field.value = "0"
         piezas_field.value = "1"
-        is_configurable_chk.value = False
-        is_configurable_salsa_chk.value = False
-        imagen_path.value = ""
+        is_config_chk.value = False
+        is_config_salsa_chk.value = False
+        imagen_path_guardado.value = ""
+        imagen_preview.src = "/icon.png"
         imagen_preview.visible = False
+        edit_mode_id.value = ""
         upload_status.value = ""
-        btn_guardar.text = "Guardar nuevo platillo"
+        
+        btn_accion.text = "Guardar"
+        btn_accion.icon = ft.Icons.SAVE
+        btn_accion.on_click = agregar_click
         page.update()
 
-    def preparar_edicion(pid, nombre, desc, precio, imagen, descuento, is_conf, is_conf_salsa, piezas):
-        nonlocal editing_id
-        editing_id = pid
-        nombre_field.value = nombre
+    def llenar_campos(platillo):
+        pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = platillo
+        nombre_field.value = nom
         descripcion_field.value = desc
-        precio_field.value = str(precio)
-        descuento_field.value = str(descuento)
+        precio_field.value = str(pre)
+        descuento_field.value = str(desc_val)
         piezas_field.value = str(piezas)
-        is_configurable_chk.value = bool(is_conf)
-        is_configurable_salsa_chk.value = bool(is_conf_salsa)
-        imagen_path.value = imagen or ""
-        if imagen:
-            imagen_preview.src = f"/{imagen}"
+        is_config_chk.value = bool(is_conf)
+        is_config_salsa_chk.value = bool(is_conf_salsa)
+        
+        imagen_path_guardado.value = img
+        if img:
+            imagen_preview.src = f"/{img}?v={uuid.uuid4()}" 
             imagen_preview.visible = True
         else:
+            imagen_preview.src = "/icon.png"
             imagen_preview.visible = False
-        btn_guardar.text = "Actualizar platillo"
+            
+        edit_mode_id.value = str(pid)
+        btn_accion.text = "Actualizar"
+        btn_accion.icon = ft.Icons.EDIT
+        btn_accion.on_click = guardar_cambios_click
         page.update()
 
-    def guardar_o_actualizar(e):
-        nonlocal editing_id
-        n, d, precio_str, descuento_str, piezas_str = nombre_field.value.strip(), descripcion_field.value.strip(), precio_field.value.strip(), descuento_field.value.strip(), piezas_field.value.strip()
-        img = imagen_path.value
-        is_conf = 1 if is_configurable_chk.value else 0
-        is_conf_salsa = 1 if is_configurable_salsa_chk.value else 0
+    # Cálculo de la ruta de assets
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    assets_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "assets"))
 
-        if not n or not precio_str:
-            show_snackbar("Nombre y precio son obligatorios")
+    def on_upload_completed(e: ft.FilePickerUploadEvent):
+        print(f"DEBUG: Upload completed for {e.file_name}, error={e.error}")
+        if e.error:
+            upload_status.value = f"Error upload: {e.error}"
+            page.update()
             return
+
         try:
-            precio, descuento = float(precio_str), float(descuento_str) if descuento_str else 0
-            piezas = int(piezas_str) if piezas_str else 1
-            if piezas < 1: piezas = 1
-        except:
-            show_snackbar("Valores numéricos inválidos")
-            return
-        if editing_id:
-            actualizar_platillo(editing_id, n, d, precio, img, descuento, is_conf, is_conf_salsa, piezas)
-            show_snackbar("Platillo actualizado ✔")
+            source_path = os.path.join(page.upload_dir, e.file_name)
+            ext = os.path.splitext(e.file_name)[1]
+            nuevo_nombre = f"{uuid.uuid4()}{ext}"
+            destino = os.path.join(assets_dir, nuevo_nombre)
+            
+            print(f"DEBUG: Moviendo de {source_path} a {destino}")
+            shutil.move(source_path, destino)
+            
+            imagen_path_guardado.value = nuevo_nombre
+            imagen_preview.src = f"/{nuevo_nombre}?v={uuid.uuid4()}"
+            imagen_preview.visible = True
+            upload_status.value = "Carga completa"
+            print("DEBUG: Imagen procesada tras subida")
+        except Exception as ex:
+            print(f"DEBUG ERROR post-upload: {ex}")
+            upload_status.value = f"Error procesando: {ex}"
+        
+        page.update()
+
+    # Asignar handlers al picker LOCAL
+    file_picker.on_upload = on_upload_completed
+
+    def imagen_seleccionada(e):
+        print(f"DEBUG: imagen_seleccionada invocado. Files: {e.files}")
+        if e.files:
+            file = e.files[0]
+            # Si tiene path local (Desktop)
+            if file.path:
+                try:
+                    print(f"DEBUG: Modo Local - Guardando en {assets_dir}")
+                    os.makedirs(assets_dir, exist_ok=True)
+                    ext = os.path.splitext(file.name)[1]
+                    nuevo_nombre = f"{uuid.uuid4()}{ext}"
+                    destino = os.path.join(assets_dir, nuevo_nombre)
+                    print(f"DEBUG: Copiando de {file.path} a {destino}")
+                    shutil.copy(file.path, destino)
+                    imagen_path_guardado.value = nuevo_nombre
+                    imagen_preview.src = f"/{nuevo_nombre}?v={uuid.uuid4()}" 
+                    imagen_preview.visible = True
+                    upload_status.value = "Lista"
+                    print("DEBUG: Imagen guardada correctamente (Local)")
+                except Exception as ex:
+                    print(f"DEBUG ERROR: {ex}")
+                    upload_status.value = f"Error: {ex}"
+                page.update()
+            else:
+                # Si NO tiene path (Web/Mobile), hay que subirlo
+                print("DEBUG: Modo Upload - Iniciando subida...")
+                upload_status.value = "Subiendo..."
+                page.update()
+                try:
+                    os.makedirs(page.upload_dir, exist_ok=True)
+                    upload_list = [
+                        ft.FilePickerUploadFile(
+                            file.name,
+                            upload_url=page.get_upload_url(file.name, 600)
+                        )
+                    ]
+                    file_picker.upload(upload_list)
+                except Exception as ex:
+                    print(f"DEBUG ERROR Upload Init: {ex}")
+                    upload_status.value = f"Error inicio subida: {ex}"
+                    page.update()
         else:
-            agregar_platillo(n, d, precio, img, descuento, is_conf, is_conf_salsa, piezas)
-            show_snackbar("Platillo agregado ✔")
-        limpiar()
-        cargar_menu_admin()
+            print("DEBUG: No files selected")
 
-    def confirmar_eliminacion(pid):
-        def _ok(e):
-            eliminar_platillo(pid)
-            dlg.open = False
-            cargar_menu_admin()
-            show_snackbar("Platillo eliminado 🗑️")
+    file_picker.on_result = imagen_seleccionada
+
+    async def on_pick_files(e):
+         await file_picker.pick_files(allow_multiple=False, file_type=ft.FilePickerFileType.IMAGE)
+
+    btn_subir_imagen.on_click = on_pick_files
+
+    def agregar_click(e):
+        data = validar_datos()
+        if data:
+            agregar_platillo(*data)
+            limpiar_campos()
+            cargar_lista()
+            page.snack_bar = ft.SnackBar(ft.Text("Agregado"))
+            page.snack_bar.open = True
             page.update()
-        dlg = ft.AlertDialog(
-            title=ft.Text("Eliminar"),
-            content=ft.Text("¿Seguro que deseas eliminar este platillo?"),
-            actions=[ft.TextButton("Cancelar", on_click=lambda e: setattr(dlg, "open", False) or page.update()), ft.TextButton("Eliminar", on_click=_ok)]
-        )
-        page.overlay.append(dlg)
-        dlg.open = True
+
+    def guardar_cambios_click(e):
+        data = validar_datos()
+        if data and edit_mode_id.value:
+            actualizar_platillo(int(edit_mode_id.value), *data)
+            limpiar_campos()
+            cargar_lista()
+            page.snack_bar = ft.SnackBar(ft.Text("Actualizado"))
+            page.snack_bar.open = True
+            page.update()
+
+    btn_accion = ft.FilledButton("Guardar", icon=ft.Icons.SAVE, on_click=agregar_click, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
+    btn_cancelar = ft.FilledButton("Cancelar", icon=ft.Icons.CANCEL, on_click=lambda _: limpiar_campos(), style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE))
+
+    # --- LISTA DE PLATILLOS ---
+    def cargar_lista(search_term=""):
+        lista.controls.clear()
+        platillos = obtener_menu(solo_activos=False, search_term=search_term)
+        for p in platillos:
+            pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = p
+            extras = []
+            if is_conf: extras.append("Guisos")
+            if is_conf_salsa: extras.append("Salsas")
+            desc_final = f"{desc or ''} ({', '.join(extras)})" if extras else (desc or "")
+
+            item_row = ft.Container(
+                padding=10,
+                bgcolor=ft.Colors.ORANGE_50,
+                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+                content=ft.Row([
+                    ft.Image(src=f"/{img}" if img else "/icon.png", width=60, height=60, fit="cover", border_radius=8),
+                    ft.Column([
+                        ft.Text(nom, weight="bold", size=14, color=ft.Colors.BLACK),
+                        ft.Text(desc_final, size=12, color=ft.Colors.GREY_700, max_lines=2, overflow="ellipsis"),
+                        ft.Text(f"${pre:.2f}", weight="bold", color=ft.Colors.BROWN_700),
+                        ft.Row([
+                            ft.IconButton(ft.Icons.EDIT, icon_color=ft.Colors.BROWN_700, icon_size=20, tooltip="Editar", on_click=lambda e, pl=p: llenar_campos(pl)),
+                            ft.IconButton(ft.Icons.DELETE, icon_color=ft.Colors.RED, icon_size=20, tooltip="Eliminar", on_click=lambda e, id=pid: [eliminar_platillo(id), cargar_lista()]),
+                            ft.Switch(value=bool(active), scale=0.8, active_color=ft.Colors.GREEN, on_change=lambda e, id=pid: [actualizar_visibilidad_platillo(id, 1 if e.control.value else 0)]),
+                        ], spacing=10, alignment=ft.MainAxisAlignment.START)
+                    ], expand=True, spacing=2)
+                ], vertical_alignment=ft.CrossAxisAlignment.START)
+            )
+            lista.controls.append(item_row)
         page.update()
 
-    def confirmar_ocultar_todos(e):
-        def _ok_ocultar(e):
-            ocultar_todos_los_platillos()
-            dlg_hide.open = False
-            cargar_menu_admin()
-            show_snackbar("Todos los platillos han sido ocultados.")
+    def validar_datos():
+        if not nombre_field.value:
+            nombre_field.error_text = "Requerido"
             page.update()
-        dlg_hide = ft.AlertDialog(
-            title=ft.Text("Ocultar Todos"),
-            content=ft.Text("¿Seguro que deseas ocultar TODOS los platillos del menú público?"),
-            actions=[ft.TextButton("Cancelar", on_click=lambda e: setattr(dlg_hide, "open", False) or page.update()), ft.TextButton("Ocultar Todos", on_click=_ok_ocultar, style=ft.ButtonStyle(color=ft.Colors.RED))]
-        )
-        page.overlay.append(dlg_hide)
-        dlg_hide.open = True
-        page.update()
+            return None
+        try:
+            p = float(precio_field.value)
+            d = float(descuento_field.value)
+            pz = int(piezas_field.value)
+        except: return None
+        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz
 
-    def confirmar_mostrar_todos(e):
-        def _ok_mostrar(e):
-            mostrar_todos_los_platillos()
-            dlg_show.open = False
-            cargar_menu_admin()
-            show_snackbar("Todos los platillos ahora están visibles.")
-            page.update()
-        dlg_show = ft.AlertDialog(
-            title=ft.Text("Mostrar Todos"),
-            content=ft.Text("¿Deseas hacer visibles TODOS los platillos en el menú público?"),
-            actions=[ft.TextButton("Cancelar", on_click=lambda e: setattr(dlg_show, "open", False) or page.update()), ft.TextButton("Mostrar Todos", on_click=_ok_mostrar, style=ft.ButtonStyle(color=ft.Colors.GREEN))]
-        )
-        page.overlay.append(dlg_show)
-        dlg_show.open = True
-        page.update()
-
-    btn_guardar = ft.Button(content=ft.Text("Guardar nuevo platillo"), on_click=guardar_o_actualizar)
-    btn_ocultar_todos = ft.FilledButton(
-        content=ft.Text("Ocultar Todos"), 
-        icon=ft.Icons.VISIBILITY_OFF, 
-        style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE), 
-        on_click=confirmar_ocultar_todos
+    search_bar = ft.TextField(
+        hint_text="Buscar platillo...",
+        prefix_icon=ft.Icons.SEARCH,
+        border_radius=20, height=40,
+        text_size=14, content_padding=10, filled=True,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        on_change=lambda e: cargar_lista(e.control.value)
     )
-    btn_mostrar_todos = ft.FilledButton(
-        content=ft.Text("Mostrar Todos"), 
-        icon=ft.Icons.VISIBILITY, 
-        style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE), 
-        on_click=confirmar_mostrar_todos
-    )
 
-    cargar_menu_admin()
-
-    def finalizar_guardado(nombre_archivo):
-        """Actualiza la UI una vez que la imagen está en assets."""
-        imagen_path.value = nombre_archivo
-        import time
-        imagen_preview.src = f"src/assets/{nombre_archivo}?{time.time()}"
-        imagen_preview.visible = True
-        upload_status.value = "Imagen guardada correctamente ✔"
-        page.update()
+    cargar_lista()
 
     content_container = ft.Container(
-        content=ft.Column(
-            controls=[
-                ft.Text("Gestión del menú", size=20, weight="bold"),
-                nombre_field, descripcion_field, precio_field, descuento_field, piezas_field,
-                ft.Text("Opciones de configuración:", size=14, weight="bold"),
-                ft.Column([is_configurable_chk, is_configurable_salsa_chk], spacing=0), 
-                ft.Row([
-                    ft.Button(content=ft.Text("Imagen"), icon=ft.Icons.UPLOAD_FILE, on_click=pick_image_file, expand=True),
-                    imagen_preview
-                ], scroll="auto"),
-                upload_status,
-                            ft.Row([
-                                ft.FilledButton(
-                                    content=ft.Text("Guardar"), 
-                                    on_click=guardar_o_actualizar, 
-                                    expand=True,
-                                    style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
-                                ), 
-                                ft.FilledButton(
-                                    content=ft.Text("Cancelar"), 
-                                    on_click=lambda e: limpiar(), 
-                                    expand=True,
-                                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)
-                                )
-                            ], scroll="auto"),                ft.Divider(),
-                ft.Text("Platillos registrados:", size=18, weight="bold"),
-                search_field,
-                ft.Row([btn_mostrar_todos, btn_ocultar_todos], alignment=ft.MainAxisAlignment.END, scroll="auto"),
-                lista # La lista ya es un Column con expand=True
-            ],
-            spacing=15,
-        ),
         padding=20,
         border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
         border_radius=15,
+        expand=True,
+        content=ft.Column(
+            controls=[
+                ft.Text("Gestión de Menú", size=20, weight="bold", color=ft.Colors.BLACK),
+                ft.Divider(),
+                nombre_field,
+                descripcion_field,
+                precio_field,
+                descuento_field,
+                piezas_field,
+                ft.Column([is_config_chk, is_config_salsa_chk], spacing=0),
+                ft.Row([btn_subir_imagen, imagen_preview, upload_status], alignment="start", spacing=10),
+                # BOTONES ALINEADOS A LA IZQUIERDA (START)
+                ft.Row([btn_accion, btn_cancelar], alignment=ft.MainAxisAlignment.START, spacing=10),
+                ft.Divider(),
+                search_bar,
+                ft.Row([
+                    ft.FilledButton("Mostrar Todo", icon=ft.Icons.VISIBILITY, on_click=lambda _: [mostrar_todos_los_platillos(), cargar_lista()], style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN, color=ft.Colors.WHITE), expand=True),
+                    ft.FilledButton("Ocultar Todo", icon=ft.Icons.VISIBILITY_OFF, on_click=lambda _: [ocultar_todos_los_platillos(), cargar_lista()], style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE), expand=True),
+                ], spacing=10),
+                lista
+            ],
+            scroll="auto",
+            expand=True,
+            spacing=15
+        )
     )
 
-    return ft.Column([content_container], expand=True, scroll="auto")
+    # Añadir el FilePicker LOCAL al árbol de controles (invisible pero activo)
+    # IMPORTANTE: Esto lo integra en la página y permite que se abra el selector nativo
+    return ft.Column([content_container, ft.Container(content=file_picker, width=0, height=0)], expand=True)

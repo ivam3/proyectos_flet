@@ -28,8 +28,8 @@ def cargar_menu(page: ft.Page):
             main_content.content = ft.Container(
                 content=ft.Column([
                     ft.Icon(ft.Icons.INFO_OUTLINED, size=40, color=ft.Colors.GREY_500),
-                    ft.Text("Sin servicio", weight="bold"),
-                    ft.Text(horario, size=12, text_align="center"),
+                    ft.Text("Sin servicio", weight="bold", color=ft.Colors.BLACK),
+                    ft.Text(horario, size=12, text_align="center", color=ft.Colors.BLACK),
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER),
                 alignment=ft.Alignment(0, 0), expand=True
             )
@@ -69,7 +69,7 @@ def cargar_menu(page: ft.Page):
                                 controls=[
                                     ft.Container(
                                         content=ft.Stack([
-                                            ft.Image(src=f"/{imagen}" if imagen else "", fit="cover", width=1000, height=img_height),
+                                            ft.Image(src=f"/{imagen}" if imagen else "/icon.png", fit="cover", width=1000, height=img_height),
                                             ft.Container(
                                                 content=ft.Text(f"-{descuento:.0f}%", color="white", size=9, weight="bold"),
                                                 bgcolor=ft.Colors.RED, padding=4, border_radius=ft.BorderRadius.only(top_left=8, bottom_right=8),
@@ -78,7 +78,7 @@ def cargar_menu(page: ft.Page):
                                         ]),
                                         height=img_height, border_radius=8, clip_behavior=ft.ClipBehavior.HARD_EDGE,
                                     ),
-                                    ft.Text(nombre, weight=ft.FontWeight.BOLD, size=13, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                                    ft.Text(nombre, weight=ft.FontWeight.BOLD, size=13, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS, color=ft.Colors.BLACK),
                                     ft.Text(descripcion or "", size=10, color=ft.Colors.GREY_700, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
                                     ft.Container(expand=True),
                                     ft.Row(
@@ -113,6 +113,8 @@ def cargar_menu(page: ft.Page):
         label="Buscar...", prefix_icon=ft.Icons.SEARCH,
         on_change=handle_search_change, border_radius=20, height=40,
         text_size=14, content_padding=10, filled=True,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.GREY_700)
     )
 
     update_menu_list()

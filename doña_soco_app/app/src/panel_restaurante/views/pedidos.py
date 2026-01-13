@@ -25,29 +25,86 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         hint_style=ft.TextStyle(color=ft.Colors.GREY_600)
     )
     
-    # Usamos el FilePicker pasado por parámetro (el que ya está en el overlay de la página)
-    file_picker = export_file_picker
+    # --- LÓGICA HÍBRIDA DE EXPORTACIÓN ---
+    # 1. Web/Escritorio: Usamos FilePicker (Descarga estándar/Diálogo SO)
+    # 2. Android: Usamos Escritura Directa (FilePicker crashea en APK 0.80.0)
 
+    # Configuración para Web/Escritorio
+    file_picker = export_file_picker
+    
     def on_file_picker_result(e):
         if e.path:
-             page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado: {e.path}", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+             page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado exitosamente.", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
         else:
-             page.snack_bar = ft.SnackBar(ft.Text("Operación finalizada.", color=ft.Colors.WHITE))
-        
+             page.snack_bar = ft.SnackBar(ft.Text("Operación cancelada.", color=ft.Colors.WHITE))
         page.snack_bar.open = True
         page.update()
 
-    # Sobrescribimos el evento para esta vista
     file_picker.on_result = on_file_picker_result
 
+    # Dialogos para Android
+    error_dialog = ft.AlertDialog(title=ft.Text("Error"), content=ft.Text(""))
+    success_dialog = ft.AlertDialog(
+        title=ft.Text("Descarga Exitosa", color=ft.Colors.GREEN), 
+        content=ft.Text(""),
+        actions=[ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogos())]
+    )
+    page.overlay.extend([error_dialog, success_dialog])
+
+    def cerrar_dialogos():
+        error_dialog.open = False
+        success_dialog.open = False
+        page.update()
+
+    def mostrar_error(msg):
+        error_dialog.content.value = str(msg)
+        error_dialog.open = True
+        page.update()
+
+    def mostrar_exito_android(ruta):
+        success_dialog.content.value = f"El archivo se ha guardado correctamente en:\n\n{ruta}"
+        success_dialog.open = True
+        page.update()
+
+    def guardar_archivo_android(filename, content_bytes):
+        rutas_a_probar = []
+        # 1. Ruta estándar de Descargas
+        rutas_a_probar.append(os.path.join("/storage/emulated/0/Download", filename))
+        # 2. Ruta interna (Fallback)
+        rutas_a_probar.append(os.path.join(os.getcwd(), filename))
+
+        guardado = False
+        ruta_final = ""
+
+        for ruta in rutas_a_probar:
+            try:
+                print(f"DEBUG: Intentando guardar en {ruta}")
+                os.makedirs(os.path.dirname(ruta), exist_ok=True)
+                with open(ruta, "wb") as f:
+                    f.write(content_bytes)
+                guardado = True
+                ruta_final = ruta
+                break
+            except Exception as e:
+                print(f"DEBUG: Fallo al escribir en {ruta}: {e}")
+                continue
+
+        if guardado:
+            mostrar_exito_android(ruta_final)
+        else:
+            mostrar_error("No se pudo guardar el archivo. Verifique permisos de almacenamiento.")
+
     async def iniciar_exportacion(extension="csv"):
-        page.snack_bar = ft.SnackBar(ft.Text(f"Generando reporte {extension.upper()}...", color=ft.Colors.WHITE))
+        print(f"DEBUG: Iniciando exportación {extension}")
+        page.snack_bar = ft.SnackBar(ft.Text(f"Generando datos {extension.upper()}...", color=ft.Colors.WHITE))
         page.snack_bar.open = True
         page.update()
 
         try:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             search_term = search_filter.value.strip() if search_filter.value else None
+            
+            print("DEBUG: Consultando base de datos...")
             datos = obtener_datos_exportacion(search_term=search_term)
             
             headers = [
@@ -82,21 +139,33 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 file_ext = "xlsx" 
             
             if content_bytes:
-                # En Flet 0.80.x para Android, a veces el parámetro es 'data' o 'src_bytes'
-                # Intentamos con src_bytes que es el estándar moderno para Web/Mobile
-                await file_picker.save_file(
-                    dialog_title=f"Guardar {file_ext.upper()}",
-                    file_name=f"reporte_{timestamp}.{file_ext}",
-                    allowed_extensions=[file_ext],
-                    src_bytes=content_bytes
-                )
+                filename = f"reporte_{timestamp}.{file_ext}"
+                
+                # --- SELECTOR DE ESTRATEGIA ---
+                plat = str(page.platform).lower() if page.platform else ""
+                es_escritorio_o_web = page.web or plat in ["windows", "macos", "linux"]
+                
+                if es_escritorio_o_web:
+                    print("DEBUG: Modo Web/Escritorio detectado. Usando FilePicker.")
+                    page.snack_bar = ft.SnackBar(ft.Text(f"Abriendo selector...", color=ft.Colors.WHITE))
+                    page.snack_bar.open = True
+                    page.update()
+                    
+                    await file_picker.save_file(
+                        dialog_title=f"Guardar {file_ext.upper()}",
+                        file_name=filename,
+                        allowed_extensions=[file_ext],
+                        src_bytes=content_bytes
+                    )
+                else:
+                    print("DEBUG: Modo Móvil detectado. Usando Escritura Directa.")
+                    guardar_archivo_android(filename, content_bytes)
             else:
-                raise Exception("Sin datos")
+                raise Exception("No se encontraron datos")
 
         except Exception as ex:
-            page.snack_bar = ft.SnackBar(ft.Text(f"Error: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-            page.snack_bar.open = True
-            page.update()
+            print(f"DEBUG ERROR: {ex}")
+            mostrar_error(f"Error: {ex}")
 
     async def generar_y_guardar_pdf(pedido):
         page.snack_bar = ft.SnackBar(ft.Text("Generando PDF...", color=ft.Colors.WHITE))
@@ -129,15 +198,13 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             
             pdf.set_font("helvetica", 'B', 14)
             pdf.cell(0, 10, text="Productos", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("helvetica", size=11) # Reducir un poco el tamaño para descripciones largas
+            pdf.set_font("helvetica", size=11)
             
             detalles = pedido["detalles_productos"].split(" | ") if pedido["detalles_productos"] else []
             for item in detalles:
-                # Limpiar y preparar el texto
                 safe_item = item.encode('latin-1', 'replace').decode('latin-1')
-                # multi_cell con w=pdf.epw forzará el salto de línea automático dentro de los márgenes
                 pdf.multi_cell(w=pdf.epw, h=7, text=f"- {safe_item}", border=0, align='L')
-                pdf.ln(1) # Pequeño espacio entre productos
+                pdf.ln(1)
             
             pdf.ln(5)
             pdf.set_font("helvetica", 'B', 16)
@@ -145,17 +212,26 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
             pdf_bytes = bytes(pdf.output())
             
-            await file_picker.save_file(
-                dialog_title=f"Guardar PDF #{pedido['id']}",
-                file_name=f"pedido_{pedido['id']}.pdf",
-                allowed_extensions=["pdf"],
-                src_bytes=pdf_bytes
-            )
+            filename = f"pedido_{pedido['id']}.pdf"
+            
+            # --- SELECTOR DE ESTRATEGIA ---
+            plat = str(page.platform).lower() if page.platform else ""
+            es_escritorio_o_web = page.web or plat in ["windows", "macos", "linux"]
+
+            if es_escritorio_o_web:
+                print("DEBUG: Modo Web/Escritorio detectado (PDF). Usando FilePicker.")
+                await file_picker.save_file(
+                    dialog_title=f"Guardar PDF #{pedido['id']}",
+                    file_name=filename,
+                    allowed_extensions=["pdf"],
+                    src_bytes=pdf_bytes
+                )
+            else:
+                print("DEBUG: Modo Móvil detectado (PDF). Usando Escritura Directa.")
+                guardar_archivo_android(filename, pdf_bytes)
             
         except Exception as ex:
-             page.snack_bar = ft.SnackBar(ft.Text(f"Error PDF: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-             page.snack_bar.open = True
-             page.update()
+             mostrar_error(f"Error PDF: {ex}")
 
     def create_pdf_handler(pedido):
         async def handler(e):
@@ -333,16 +409,16 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                     ft.FilledButton("Limpiar", on_click=lambda e: (setattr(search_filter, "value", ""), cargar_pedidos()), style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE)),
                     ft.IconButton(ft.Icons.REFRESH, on_click=lambda e: cargar_pedidos(), icon_color=ft.Colors.BLUE_GREY_700, tooltip="Actualizar lista"),
                 ], spacing=10),
+                # Botones de exportación
                 ft.Row([
                     ft.FilledButton("CSV", icon=ft.Icons.DOWNLOAD, on_click=export_csv_click, expand=True, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
                     ft.FilledButton("Excel", icon=ft.Icons.TABLE_VIEW, on_click=export_xlsm_click, expand=True, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
                 ], spacing=10),
+                # Área de la tabla
                 ft.Column(
                     [
                         ft.Row([pedidos_data_table], scroll=ft.ScrollMode.ALWAYS)
-                    ],
-                    scroll=ft.ScrollMode.AUTO,
-                    expand=True
+                    ]
                 ),
                 ft.Row([btn_prev, txt_page_info, btn_next], alignment=ft.MainAxisAlignment.CENTER),
             ],

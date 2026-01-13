@@ -111,6 +111,11 @@ def main(page: ft.Page):
     page.overlay.append(ft.Container(content=global_file_picker, visible=False))
     page.session.file_picker = global_file_picker
 
+    # --- SELECTOR DE EXPORTACIÓN (PEDIDOS) ---
+    # Instanciamos aquí para evitar errores visuales y duplicados
+    export_file_picker = ft.FilePicker()
+    page.overlay.append(ft.Container(content=export_file_picker, visible=False))
+
     # ------- DIÁLOGO DE ADMIN -------
     admin_field = ft.TextField(password=True, hint_text="Clave")
 
@@ -192,7 +197,13 @@ def main(page: ft.Page):
         elif route.startswith("/admin"):
             if admin_mode:
                 nav.selected_index = 3
-                content_area.content = create_admin_panel_view(page, logout_func=logout, file_picker=global_file_picker)
+                # Usamos el export_file_picker ya creado en el inicio
+                content_area.content = create_admin_panel_view(
+                    page, 
+                    logout_func=logout, 
+                    file_picker=global_file_picker,
+                    export_file_picker=export_file_picker
+                )
             else:
                 await page.push_route("/menu")
         elif route == "/" or route.startswith("/menu"):

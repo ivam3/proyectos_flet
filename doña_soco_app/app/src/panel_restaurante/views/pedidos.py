@@ -121,7 +121,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 writer = csv.writer(output)
                 writer.writerow(headers)
                 for row in datos:
-                    writer.writerow(list(row))
+                    writer.writerow(list(row.values()))
                 content_bytes = output.getvalue().encode('utf-8')
                 output.close()
                 file_ext = "csv"
@@ -131,7 +131,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 ws.title = "Detalle de Ordenes"
                 ws.append(headers)
                 for row in datos:
-                    ws.append(list(row))
+                    ws.append(list(row.values()))
                 output = io.BytesIO()
                 wb.save(output)
                 content_bytes = output.getvalue()

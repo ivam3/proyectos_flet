@@ -74,7 +74,17 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         page.update()
 
     def llenar_campos(platillo):
-        pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = platillo
+        # pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = platillo
+        pid = platillo['id']
+        nom = platillo['nombre']
+        desc = platillo.get('descripcion', "")
+        pre = platillo['precio']
+        img = platillo.get('imagen')
+        desc_val = platillo.get('descuento', 0)
+        is_conf = platillo.get('is_configurable', 0)
+        is_conf_salsa = platillo.get('is_configurable_salsa', 0)
+        piezas = platillo.get('piezas', 1)
+
         nombre_field.value = nom
         descripcion_field.value = desc
         precio_field.value = str(pre)
@@ -210,7 +220,16 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         lista.controls.clear()
         platillos = obtener_menu(solo_activos=False, search_term=search_term)
         for p in platillos:
-            pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = p
+            # pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = p
+            pid = p['id']
+            nom = p['nombre']
+            desc = p.get('descripcion', "")
+            pre = p['precio']
+            img = p.get('imagen')
+            active = p.get('is_active', 1)
+            is_conf = p.get('is_configurable', 0)
+            is_conf_salsa = p.get('is_configurable_salsa', 0)
+
             extras = []
             if is_conf: extras.append("Guisos")
             if is_conf_salsa: extras.append("Salsas")
@@ -258,6 +277,33 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         on_change=lambda e: cargar_lista(e.control.value)
     )
 
+    # --- DIÁLOGO DE CONFIRMACIÓN GLOBAL ---
+    global_confirm_dialog = ft.AlertDialog(title=ft.Text("Confirmación"))
+    page.overlay.append(global_confirm_dialog)
+
+    def confirmar_accion_global(es_mostrar):
+        accion_texto = "MOSTRAR" if es_mostrar else "OCULTAR"
+        
+        def ejecutar_accion(e):
+            if es_mostrar:
+                mostrar_todos_los_platillos()
+            else:
+                ocultar_todos_los_platillos()
+            
+            cargar_lista()
+            global_confirm_dialog.open = False
+            page.snack_bar = ft.SnackBar(ft.Text(f"Acción '{accion_texto}' completada."))
+            page.snack_bar.open = True
+            page.update()
+
+        global_confirm_dialog.content = ft.Text(f"¿Estás seguro de {accion_texto} todos los platillos?", color=ft.Colors.BLACK)
+        global_confirm_dialog.actions = [
+            ft.TextButton("Cancelar", on_click=lambda e: setattr(global_confirm_dialog, 'open', False) or page.update(), style=ft.ButtonStyle(color=ft.Colors.GREY)),
+            ft.FilledButton("Confirmar", on_click=ejecutar_accion, style=ft.ButtonStyle(bgcolor=ft.Colors.RED if not es_mostrar else ft.Colors.GREEN, color=ft.Colors.WHITE))
+        ]
+        global_confirm_dialog.open = True
+        page.update()
+
     cargar_lista()
 
     content_container = ft.Container(
@@ -281,8 +327,8 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
                 ft.Divider(),
                 search_bar,
                 ft.Row([
-                    ft.FilledButton("Mostrar Todo", icon=ft.Icons.VISIBILITY, on_click=lambda _: [mostrar_todos_los_platillos(), cargar_lista()], style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN, color=ft.Colors.WHITE), expand=True),
-                    ft.FilledButton("Ocultar Todo", icon=ft.Icons.VISIBILITY_OFF, on_click=lambda _: [ocultar_todos_los_platillos(), cargar_lista()], style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE), expand=True),
+                    ft.FilledButton("Mostrar Todo", icon=ft.Icons.VISIBILITY, on_click=lambda _: confirmar_accion_global(True), style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN, color=ft.Colors.WHITE), expand=True),
+                    ft.FilledButton("Ocultar Todo", icon=ft.Icons.VISIBILITY_OFF, on_click=lambda _: confirmar_accion_global(False), style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE), expand=True),
                 ], spacing=10),
                 lista
             ],

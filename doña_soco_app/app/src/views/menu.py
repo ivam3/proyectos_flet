@@ -10,7 +10,7 @@ def cargar_menu(page: ft.Page):
 
     def update_menu_list(search_term=""):
         platillos = obtener_menu(solo_activos=True, search_term=search_term)
-        platillos.sort(key=lambda x: x[6] if x[6] else 0, reverse=True)
+        platillos.sort(key=lambda x: x.get('descuento', 0) or 0, reverse=True)
 
         # Responsive: Ratio y Columnas
         if page.width < 600:
@@ -43,7 +43,16 @@ def cargar_menu(page: ft.Page):
             )
 
             for platillo in platillos:
-                pid, nombre, descripcion, precio, imagen, _, descuento, is_configurable, is_configurable_salsa, piezas = platillo
+                pid = platillo['id']
+                nombre = platillo['nombre']
+                descripcion = platillo.get('descripcion', "")
+                precio = platillo['precio']
+                imagen = platillo.get('imagen')
+                descuento = platillo.get('descuento', 0)
+                is_configurable = platillo.get('is_configurable', 0)
+                is_configurable_salsa = platillo.get('is_configurable_salsa', 0)
+                piezas = platillo.get('piezas', 1)
+
                 precio_final = precio * (1 - descuento / 100) if descuento > 0 else precio
 
                 async def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas):

@@ -199,23 +199,14 @@ def seguimiento_view(page: ft.Page):
         metodo_pago = pedido['metodo_pago'] or "N/A"
         paga_con = pedido['paga_con'] or 0
 
-        # USE database.conectar() to be safe on Android
-        conexion = conectar()
-        cursor = conexion.cursor()
-        cursor.execute("""
-            SELECT nuevo_estado, fecha
-            FROM historial_estados
-            WHERE orden_id = ?
-            ORDER BY fecha ASC
-        """, (orden_id,))
-        historial = cursor.fetchall()
-        conexion.close()
+        # Obtener historial directamente del objeto pedido (API)
+        historial = pedido.get('historial', [])
 
         pasos = [
             ft.Row([
                 ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREY),
-                ft.Text(f"{h_estado.title()} — {h_fecha}", size=13, color=ft.Colors.BLACK)
-            ]) for h_estado, h_fecha in historial
+                ft.Text(f"{h.get('nuevo_estado', '').title()} — {h.get('fecha', '')}", size=13, color=ft.Colors.BLACK)
+            ]) for h in historial
         ]
         
         detalles_productos_lista = pedido["detalles_productos"].split(" | ") if pedido["detalles_productos"] else []

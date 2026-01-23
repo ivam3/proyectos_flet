@@ -125,6 +125,23 @@ python app/src/main.py
     4.  Actualizar `app/src/database.py` para enviar el nuevo campo.
     5.  Actualizar las Vistas (`app/src/views/...`).
 
-*   **Depuración:**
+*   Depuración:
     *   Usa `print(f"DEBUG: ...")` generosamente. En Termux, la salida estándar es tu mejor herramienta de diagnóstico.
     *   Revisa la salida de Uvicorn para errores de API.
+
+---
+
+## 8. Compilación a APK (Android)
+
+Para generar el instalador `.apk`, el comando debe ejecutarse en una máquina con **Windows o Linux** (no es posible compilar directamente desde Termux debido a dependencias del Android SDK).
+
+**Comando de compilación:**
+```bash
+flet build apk --module-name main
+```
+
+**Requisitos:**
+*   Python 3.10+
+*   Flet CLI instalado (`pip install flet`)
+*   Flutter SDK configurado en el sistema.
+*   Android SDK y Java (JDK) correctamente instalados.

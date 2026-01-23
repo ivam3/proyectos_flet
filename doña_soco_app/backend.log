@@ -1,0 +1,19 @@
+nohup: ignoring input
+INFO:     Will watch for changes in these directories: ['/data/data/com.termux/files/home/.repositories/proyectos_flet/doña_soco_app']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [21143] using WatchFiles
+INFO:     Started server process [21145]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:35714 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56062 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56074 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56082 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56092 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56100 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21145]
+INFO:     Stopping reloader process [21143]

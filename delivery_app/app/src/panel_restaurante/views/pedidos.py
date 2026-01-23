@@ -7,6 +7,7 @@ import io
 import os
 import openpyxl
 from fpdf import FPDF
+from config import APP_NAME
 
 def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     """

@@ -1,0 +1,22 @@
+nohup: ignoring input
+INFO:     Will watch for changes in these directories: ['/data/data/com.termux/files/home/.repositories/proyectos_flet/delivery_app']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [21020] using WatchFiles
+INFO:     Started server process [21022]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:39276 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39290 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39300 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53140 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53152 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53156 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53168 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53170 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40690 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21022]
+INFO:     Stopping reloader process [21020]

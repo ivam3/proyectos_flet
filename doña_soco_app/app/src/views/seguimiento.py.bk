@@ -2,8 +2,6 @@ import flet as ft
 import sqlite3
 import os
 import json
-import datetime
-from fpdf import FPDF
 from components.notifier import init_pubsub
 from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido, actualizar_estado_pedido
 
@@ -23,163 +21,6 @@ def seguimiento_view(page: ft.Page):
     """Pantalla donde el cliente ve y recibe actualizaciones de un pedido específico."""
 
     pubsub = init_pubsub(page)
-    
-    # --- LÓGICA DE PLATAFORMA ---
-    plat = str(page.platform).lower() if page.platform else ""
-    # Forzar modo móvil si la plataforma contiene 'android' o 'ios', ignorando page.web
-    es_movil = "android" in plat or "ios" in plat
-    es_escritorio_o_web = (page.web or plat in ["windows", "macos", "linux"]) and not es_movil
-    
-    print(f"DEBUG: Iniciando Seguimiento | Plataforma: {plat} | Es Movil: {es_movil} | Modo Web/Desktop activo: {es_escritorio_o_web}")
-
-    # --- LÓGICA PDF Y ARCHIVOS ---
-    export_file_picker = None
-
-    def on_file_picker_result(e):
-        if e.path:
-             page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado exitosamente.", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
-        else:
-             page.snack_bar = ft.SnackBar(ft.Text("Operación cancelada.", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
-
-    # SOLO agregamos el FilePicker al overlay si estamos en Desktop/Web (incluyendo Termux)
-    # Esto evita el error visual "Red Stripe" en Android APK, donde no se usa el FilePicker.
-    if es_escritorio_o_web:
-        print("DEBUG: Agregando FilePicker al overlay (Entorno compatible)")
-        export_file_picker = ft.FilePicker()
-        export_file_picker.on_result = on_file_picker_result
-        page.overlay.append(export_file_picker)
-        page.update()
-    else:
-        print("DEBUG: Omitiendo FilePicker (Entorno Android/Móvil Nativo)")
-
-    error_dialog = ft.AlertDialog(title=ft.Text("Error"), content=ft.Text(""))
-    success_dialog = ft.AlertDialog(
-        title=ft.Text("Descarga Exitosa", color=ft.Colors.GREEN), 
-        content=ft.Text(""),
-        actions=[ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogos())]
-    )
-    page.overlay.extend([error_dialog, success_dialog])
-
-    def cerrar_dialogos():
-        error_dialog.open = False
-        success_dialog.open = False
-        page.update()
-
-    def mostrar_error(msg):
-        error_dialog.content.value = str(msg)
-        error_dialog.open = True
-        page.update()
-
-    def mostrar_exito_android(ruta):
-        success_dialog.content.value = f"El archivo se ha guardado correctamente en:\n\n{ruta}"
-        success_dialog.open = True
-        page.update()
-
-    def guardar_archivo_android(filename, content_bytes):
-        rutas_a_probar = []
-        rutas_a_probar.append(os.path.join("/storage/emulated/0/Download", filename))
-        rutas_a_probar.append(os.path.join(os.getcwd(), filename))
-
-        guardado = False
-        ruta_final = ""
-
-        for ruta in rutas_a_probar:
-            try:
-                os.makedirs(os.path.dirname(ruta), exist_ok=True)
-                with open(ruta, "wb") as f:
-                    f.write(content_bytes)
-                guardado = True
-                ruta_final = ruta
-                break
-            except Exception as e:
-                continue
-
-        if guardado:
-            mostrar_exito_android(ruta_final)
-        else:
-            mostrar_error("No se pudo guardar el archivo. Verifique permisos de almacenamiento.")
-
-    async def generar_y_guardar_pdf(pedido):
-        print(f"DEBUG: Iniciando generación PDF para pedido {pedido['id']}")
-        page.snack_bar = ft.SnackBar(ft.Text("Generando PDF...", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
-
-        try:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("helvetica", size=12)
-            pdf.set_margins(10, 10, 10)
-            
-            pdf.set_font("helvetica", 'B', 16)
-            pdf.cell(0, 10, text=f"Detalle del Pedido #{pedido['id']}", align='C', new_x="LMARGIN", new_y="NEXT")
-            pdf.ln(5)
-            
-            pdf.set_font("helvetica", size=12)
-            pdf.cell(0, 10, text=f"Fecha: {pedido['fecha']}", new_x="LMARGIN", new_y="NEXT")
-            pdf.cell(0, 10, text=f"Código: {pedido['codigo_seguimiento']}", new_x="LMARGIN", new_y="NEXT")
-            pdf.ln(5)
-            
-            pdf.set_font("helvetica", 'B', 14)
-            pdf.cell(0, 10, text="Datos del Cliente", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("helvetica", size=12)
-            pdf.cell(0, 8, text=f"Nombre: {pedido['nombre_cliente']}", new_x="LMARGIN", new_y="NEXT")
-            
-            direccion = (pedido['direccion'] or "").encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(w=pdf.epw, h=8, text=f"Dirección: {direccion}")
-            pdf.ln(5)
-            
-            pdf.set_font("helvetica", 'B', 14)
-            pdf.cell(0, 10, text="Productos", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("helvetica", size=11)
-            
-            detalles = pedido["detalles_productos"].split(" | ") if pedido.get("detalles_productos") else []
-            for item in detalles:
-                safe_item = item.encode('latin-1', 'replace').decode('latin-1')
-                pdf.multi_cell(w=pdf.epw, h=7, text=f"- {safe_item}", border=0, align='L')
-                pdf.ln(1)
-            
-            pdf.ln(5)
-            pdf.set_font("helvetica", 'B', 16)
-            pdf.cell(0, 10, text=f"Total: ${pedido['total']:.2f}", align='R', new_x="LMARGIN", new_y="NEXT")
-
-            pdf_bytes = bytes(pdf.output())
-            
-            filename = f"pedido_{pedido['id']}.pdf"
-            
-            # --- SELECTOR DE ESTRATEGIA (Usando banderas pre-calculadas) ---
-            print(f"DEBUG: Ejecutando estrategia para plataforma: {plat} | Web/Desktop: {es_escritorio_o_web}")
-
-            if es_escritorio_o_web:
-                if export_file_picker:
-                    print("DEBUG: Usando FilePicker (Web/Escritorio)")
-                    await export_file_picker.save_file(
-                        dialog_title=f"Guardar PDF #{pedido['id']}",
-                        file_name=filename,
-                        allowed_extensions=["pdf"],
-                        src_bytes=pdf_bytes
-                    )
-                else:
-                    print("DEBUG ERROR: Se detectó Desktop pero export_file_picker es None")
-                    mostrar_error("Error interno: Selector de archivos no inicializado.")
-            else:
-                print("DEBUG: Usando Escritura Directa (Android/Móvil)")
-                guardar_archivo_android(filename, pdf_bytes)
-            
-        except Exception as ex:
-             print(f"DEBUG ERROR en PDF: {ex}")
-             mostrar_error(f"Error PDF: {ex}")
-
-    def create_pdf_handler(pedido):
-        async def handler(e):
-            print(f"DEBUG: Click recibido en botón PDF para pedido {pedido.get('id')}")
-            try:
-                await generar_y_guardar_pdf(pedido)
-            except Exception as ex:
-                print(f"DEBUG: Error al invocar generar_y_guardar_pdf: {ex}")
-        return handler
 
     def show_cancel_order(e, pedido):
         reason_field = ft.TextField(label="¿Por qué deseas cancelar?", multiline=True, hint_text="Ej: Me equivoqué de platillo...", text_style=ft.TextStyle(color=ft.Colors.BLACK))
@@ -407,15 +248,7 @@ def seguimiento_view(page: ft.Page):
                     content=ft.Column([
                         ft.Row([
                             ft.Text(f"Pedido #{orden_id}", size=18, weight="bold", color=ft.Colors.BLACK),
-                            ft.Row([
-                                ft.IconButton(
-                                    icon=ft.Icons.PICTURE_AS_PDF, 
-                                    tooltip="Descargar Comprobante", 
-                                    icon_color=ft.Colors.RED_700, 
-                                    on_click=create_pdf_handler(pedido)
-                                ),
-                                ft.IconButton(icon=ft.Icons.HELP_OUTLINE, on_click=show_help, tooltip="Ayuda / Contacto", icon_color=ft.Colors.BLACK)
-                            ])
+                            ft.IconButton(icon=ft.Icons.HELP_OUTLINE, on_click=show_help, tooltip="Ayuda / Contacto", icon_color=ft.Colors.BLACK)
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         
                         ft.Text(f"Fecha: {fecha}", color=ft.Colors.BLACK),

@@ -4,6 +4,7 @@ import os
 import json
 import datetime
 from fpdf import FPDF
+from config import COMPANY_NAME
 from components.notifier import init_pubsub
 from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido, actualizar_estado_pedido
 
@@ -114,7 +115,9 @@ def seguimiento_view(page: ft.Page):
             pdf.set_margins(10, 10, 10)
             
             pdf.set_font("helvetica", 'B', 16)
-            pdf.cell(0, 10, text=f"Detalle del Pedido #{pedido['id']}", align='C', new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 10, text=f"Comprobante - {COMPANY_NAME}", align='C', new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", size=14)
+            pdf.cell(0, 10, text=f"Pedido #{pedido['id']}", align='C', new_x="LMARGIN", new_y="NEXT")
             pdf.ln(5)
             
             pdf.set_font("helvetica", size=12)

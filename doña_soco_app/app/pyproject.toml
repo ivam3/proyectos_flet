@@ -5,7 +5,7 @@ description = "Aplicación de pedidos y administración Antojitos Doña Soco"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-  "flet==0.80.0",
+  "flet==0.80.1",
   "fpdf2==2.8.5",
   "flet_core==0.24.1",
   "openpyxl==3.1.5"
@@ -15,7 +15,7 @@ dependencies = [
 app_name = "Antojitos Doña Soco"
 # org name in reverse domain name notation, e.g. "com.mycompany".
 # Combined with project.name to build bundle ID for iOS and Android apps
-org = "com.ivam3bycinderella"
+org = "Ivam3byCinderella"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
@@ -25,7 +25,7 @@ product = "Doña Soco App"
 company = "Ivam3byCinderella"
 
 # copyright text to display in about app dialogs
-copyright = "Copyright (C) 2024 by Flet"
+copyright = "Copyright (C) 2026 by Ivam3byCinderella"
 
 [tool.flet.android]
 package_name = "com.donasoco.app"

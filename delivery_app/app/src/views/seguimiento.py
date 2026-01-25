@@ -44,14 +44,14 @@ def seguimiento_view(page: ft.Page):
         page.snack_bar.open = True
         page.update()
 
-    # SOLO agregamos el FilePicker al overlay si estamos en Desktop/Web (incluyendo Termux)
-    # Esto evita el error visual "Red Stripe" en Android APK, donde no se usa el FilePicker.
+    # SOLO agregamos el FilePicker si estamos en Desktop/Web
+    # Lo agregaremos a la vista (no al overlay) para evitar errores y simplificar ciclo de vida
+    picker_container = ft.Container(visible=False)
     if es_escritorio_o_web:
-        print("DEBUG: Agregando FilePicker al overlay (Entorno compatible)")
+        print("DEBUG: Inicializando FilePicker (Entorno Web/Escritorio)")
         export_file_picker = ft.FilePicker()
         export_file_picker.on_result = on_file_picker_result
-        page.overlay.append(export_file_picker)
-        page.update()
+        picker_container.content = export_file_picker
     else:
         print("DEBUG: Omitiendo FilePicker (Entorno Android/Móvil Nativo)")
 
@@ -491,5 +491,6 @@ def seguimiento_view(page: ft.Page):
             ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: buscar_pedidos(None), tooltip="Actualizar estado")
         ]),
         ft.Divider(),
-        resultado_container
+        resultado_container,
+        picker_container
     ], scroll="auto", expand=True)

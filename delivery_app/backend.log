@@ -1,22 +1,39 @@
 nohup: ignoring input
 INFO:     Will watch for changes in these directories: ['/data/data/com.termux/files/home/.repositories/proyectos_flet/delivery_app']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [21020] using WatchFiles
-INFO:     Started server process [21022]
+INFO:     Started reloader process [12148] using WatchFiles
+INFO:     Started server process [12150]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:39276 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39290 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39300 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53140 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53152 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53156 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53168 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53170 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40690 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40694 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52118 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52130 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52132 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34026 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34034 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34036 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34048 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34052 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34062 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34068 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49784 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49792 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49800 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47376 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47392 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60610 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60612 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60614 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60626 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60642 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60654 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60668 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60670 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60676 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39708 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40558 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [21022]
-INFO:     Stopping reloader process [21020]
+INFO:     Finished server process [12150]
+INFO:     Stopping reloader process [12148]

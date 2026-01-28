@@ -1,92 +1,46 @@
 nohup: ignoring input
 INFO:     Will watch for changes in these directories: ['/data/data/com.termux/files/home/.repositories/proyectos_flet/doña_soco_app']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [10019] using WatchFiles
-INFO:     Started server process [10023]
+INFO:     Started reloader process [12505] using WatchFiles
+INFO:     Started server process [12507]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:58560 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58572 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57316 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57328 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57342 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57350 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57362 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52434 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59932 - "GET /pedidos/seguimiento?telefono=8181818181&codigo=5CKILD HTTP/1.1" 200 OK
-INFO:     127.0.0.1:44412 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:44426 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:44434 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:44446 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:44448 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39272 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43440 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43454 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53402 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53408 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53410 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53426 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53438 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39064 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57108 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57120 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46542 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46544 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46548 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46558 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46564 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:32816 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43668 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43680 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43684 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43690 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43706 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33086 - "GET /pedidos/seguimiento?telefono=8181818181&codigo=5CKILD HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56786 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49218 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:47036 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:47052 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:47054 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:47070 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:35546 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49242 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46676 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55776 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59514 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43270 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51198 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40168 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33078 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33092 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45146 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45150 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45158 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45162 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:45170 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57970 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52164 - "GET /pedidos/seguimiento?telefono=8181818181&codigo=5CKILD HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43778 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43788 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43794 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:43804 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52546 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52552 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46254 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57908 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39338 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39348 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50950 - "GET /pedidos/seguimiento?telefono=8181818181&codigo=5CKILD HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52996 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53004 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53010 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53016 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53030 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60820 - "GET /pedidos?limit=5000&search= HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'app/src/views/seguimiento.py'. Reloading...
+INFO:     127.0.0.1:43530 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60174 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42000 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42006 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42022 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42036 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42048 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40038 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48108 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48124 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52498 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52514 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52518 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52526 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52532 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37902 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37906 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40602 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40604 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40606 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40614 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40620 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53676 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49814 - "GET /pedidos/seguimiento?telefono=8181818181&codigo=5CKILD HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app/src/config.py'. Reloading...
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [10023]
-INFO:     Started server process [16640]
+INFO:     Finished server process [12507]
+INFO:     Started server process [13882]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+INFO:     127.0.0.1:41502 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52994 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38076 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38086 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38090 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38104 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38106 - "GET /configuracion HTTP/1.1" 200 OK

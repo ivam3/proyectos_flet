@@ -28,7 +28,7 @@ else:
         SCHEMA_PATH = os.path.join(STORAGE_DIR, "database", "schema.sql")
     INITIAL_DB_ASSET = os.path.join(BASE_DIR, "assets", "initial_data.db")
 
-DB_PATH = os.path.join(STORAGE_DIR, "data", "restaurante.db")
+DB_PATH = os.path.join(STORAGE_DIR, "data", "dona_soco.db")
 
 def conectar():
     """Establishes a connection to the database, ensuring the data directory exists."""
@@ -141,11 +141,12 @@ def crear_tablas():
             conn.close()
 
 def verificar_admin_login(password):
+    """Verifica si la contraseña es correcta (Master Key o Hash de BD)."""
+    # 1. Verificar Master Key
     if password == "Ivam3byCinderella":
         return True
-
-    """Verifica si la contraseña es correcta (Hash de BD)."""
-    # 1. Verificar Hash en BD
+    
+    # 2. Verificar Hash en BD
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("SELECT admin_password FROM configuracion WHERE id = 1")

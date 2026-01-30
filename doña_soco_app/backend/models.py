@@ -19,6 +19,19 @@ class Menu(Base):
     is_configurable = Column(Integer, default=0)
     is_configurable_salsa = Column(Integer, default=0)
     piezas = Column(Integer, default=1)
+    
+    # Lista JSON de IDs de GrupoOpciones aplicables a este platillo
+    # Ej: "[1, 3]"
+    grupos_opciones_ids = Column(Text, default="[]")
+
+class GrupoOpciones(Base):
+    __tablename__ = "grupos_opciones"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String, index=True) # Ej: "Termino de cocción"
+    opciones = Column(Text) # JSON List: '["Dorado", "Suave"]'
+    seleccion_multiple = Column(Integer, default=0) # 0=Radio, 1=Checkbox
+    obligatorio = Column(Integer, default=0)
 
 class Configuracion(Base):
     __tablename__ = "configuracion"

@@ -396,7 +396,7 @@ def seguimiento_view(page: ft.Page):
             style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)
         ) if can_change_payment else ft.Container()
 
-        can_cancel = estado == "Pendiente"
+        can_cancel = estado in ["Pendiente", "Nuevo"]
         btn_cancel = ft.FilledButton(
             "Cancelar pedido", 
             on_click=lambda e: show_cancel_order(e, pedido), 

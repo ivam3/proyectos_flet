@@ -1,46 +1,22 @@
 nohup: ignoring input
 INFO:     Will watch for changes in these directories: ['/data/data/com.termux/files/home/.repositories/proyectos_flet/doña_soco_app']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [12505] using WatchFiles
-INFO:     Started server process [12507]
+INFO:     Started reloader process [12436] using WatchFiles
+INFO:     Started server process [12438]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:43530 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60174 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42000 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42006 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42022 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42036 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42048 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40038 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48108 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48124 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52498 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52514 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52518 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52526 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52532 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37902 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37906 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40602 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40604 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40606 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40614 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:40620 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53676 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49814 - "GET /pedidos/seguimiento?telefono=8181818181&codigo=5CKILD HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'app/src/config.py'. Reloading...
+INFO:     127.0.0.1:60646 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56016 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35290 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35298 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35304 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35310 - "GET /opciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35316 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35330 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35334 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35336 - "GET /opciones HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [12507]
-INFO:     Started server process [13882]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     127.0.0.1:41502 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52994 - "GET /configuracion HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38076 - "POST /admin/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38086 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38090 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38104 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38106 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     Finished server process [12438]
+INFO:     Stopping reloader process [12436]

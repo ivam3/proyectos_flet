@@ -1,5 +1,5 @@
 # Configuración Global de la Aplicación
 # Cambia el valor de estas variables para personalizar la marca (White Label)
 
-APP_NAME = "Mi Restaurante App"
-COMPANY_NAME = "Mi Restaurante" # Usado en reportes y encabezados
+APP_NAME = "App de Pedidos"
+COMPANY_NAME = "Mi Negocio" # Usado en reportes y encabezados

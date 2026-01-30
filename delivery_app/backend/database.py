@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Por ahora usaremos SQLite para el backend local, luego cambiamos a PostgreSQL
-SQLALCHEMY_DATABASE_URL = "sqlite:///./restaurante.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./backend_dona_soco.db"
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
 
 engine = create_engine(

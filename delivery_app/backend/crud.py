@@ -68,6 +68,25 @@ def update_all_platillos_visibility(db: Session, is_active: int):
     db.commit()
     return True
 
+# --- GRUPOS DE OPCIONES ---
+def get_grupos_opciones(db: Session):
+    return db.query(models.GrupoOpciones).all()
+
+def create_grupo_opciones(db: Session, grupo: schemas.GrupoOpcionesCreate):
+    db_grupo = models.GrupoOpciones(**grupo.dict())
+    db.add(db_grupo)
+    db.commit()
+    db.refresh(db_grupo)
+    return db_grupo
+
+def delete_grupo_opciones(db: Session, grupo_id: int):
+    db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
+    if db_grupo:
+        db.delete(db_grupo)
+        db.commit()
+        return True
+    return False
+
 # --- CONFIGURACION ---
 def get_configuracion(db: Session):
     config = db.query(models.Configuracion).filter(models.Configuracion.id == 1).first()
@@ -77,12 +96,7 @@ def get_configuracion(db: Session):
             id=1, 
             horario="Lunes a Viernes 9-10", 
             codigos_postales="12345",
-            admin_password=hash_password("zz"), # Default password hash
-            metodos_pago_activos='{"efectivo": true, "terminal": true}',
-            tipos_tarjeta='["Visa", "Mastercard"]',
-            contactos='{"telefono": "", "email": "", "whatsapp": "", "direccion": ""}',
-            guisos_disponibles='{"Guiso 1": true}',
-            salsas_disponibles='{"Salsa 1": true}'
+            admin_password=hash_password("zz") # Default password hash
         )
         db.add(config)
         db.commit()
@@ -104,7 +118,7 @@ def verify_admin_password(db: Session, password: str):
     # Master Key check (hardcoded as in original)
     if password == "Ivam3byCinderella":
         return True
-    
+        
     config = get_configuracion(db)
     if config.admin_password:
         return config.admin_password == hash_password(password)

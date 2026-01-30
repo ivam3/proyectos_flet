@@ -71,11 +71,6 @@ CREATE TABLE IF NOT EXISTS configuracion (
 );
 
 -- Inicializa la configuración con valores por defecto si la tabla está vacía
-INSERT INTO configuracion (id, horario, codigos_postales, metodos_pago_activos, tipos_tarjeta, contactos, guisos_disponibles, salsas_disponibles)
-SELECT 1, 'Lunes a Viernes de 9:00 a 22:00', '12345,54321', 
-       '{"efectivo": true, "terminal": true}', 
-       '["Visa", "Mastercard"]', 
-       '{"telefono": "", "email": "", "whatsapp": "", "direccion": ""}',
-       '{"Guiso 1": true}',
-       '{"Salsa 1": true}'
+INSERT INTO configuracion (id, horario, codigos_postales)
+SELECT 1, 'Lunes a Viernes de 9:00 a 22:00', '12345,54321'
 WHERE NOT EXISTS (SELECT 1 FROM configuracion WHERE id = 1);

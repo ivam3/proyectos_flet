@@ -2,6 +2,7 @@ import flet as ft
 import os
 import uuid
 import shutil
+import json
 from database import (
     obtener_menu,
     agregar_platillo,
@@ -10,6 +11,7 @@ from database import (
     actualizar_visibilidad_platillo,
     ocultar_todos_los_platillos,
     mostrar_todos_los_platillos,
+    get_grupos_opciones
 )
 
 # Definimos menu_admin_view sin usar el file_picker global
@@ -48,6 +50,32 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
 
     is_config_chk = config_chk("Guisos")
     is_config_salsa_chk = config_chk("Salsas")
+    
+    # --- GRUPOS DE OPCIONES DINÁMICOS ---
+    # Contenedor para checkboxes generados dinámicamente
+    grupos_opciones_container = ft.Column()
+    grupos_opciones_checks = {} # Map id -> checkbox
+
+    def cargar_checkboxes_grupos():
+        grupos_opciones_container.controls.clear()
+        grupos_opciones_checks.clear()
+        grupos = get_grupos_opciones()
+        
+        if not grupos:
+            grupos_opciones_container.controls.append(ft.Text("No hay grupos extras configurados (Ir a Configuración)", size=12, color=ft.Colors.GREY))
+            return
+
+        for g in grupos:
+            chk = ft.Checkbox(
+                label=f"Opciones: {g['nombre']}",
+                value=False,
+                label_style=ft.TextStyle(color=ft.Colors.BLACK),
+                fill_color=ft.Colors.BROWN_700,
+                check_color=ft.Colors.WHITE,
+                on_change=lambda e: (sync_checkbox_color(e.control), page.update())
+            )
+            grupos_opciones_checks[g['id']] = chk
+            grupos_opciones_container.controls.append(chk)
 
     imagen_preview = ft.Image(src="/icon.png", width=80, height=80, fit="cover", visible=False, border_radius=10)
     btn_subir_imagen = ft.FilledButton("Imagen", icon=ft.Icons.IMAGE, style=ft.ButtonStyle(bgcolor=ft.Colors.GREY_700, color=ft.Colors.WHITE))
@@ -62,6 +90,12 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         piezas_field.value = "1"
         is_config_chk.value = False
         is_config_salsa_chk.value = False
+        
+        # Reset dynamic checks
+        for chk in grupos_opciones_checks.values():
+            chk.value = False
+            sync_checkbox_color(chk)
+            
         imagen_path_guardado.value = ""
         imagen_preview.src = "/icon.png"
         imagen_preview.visible = False
@@ -84,6 +118,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         is_conf = platillo.get('is_configurable', 0)
         is_conf_salsa = platillo.get('is_configurable_salsa', 0)
         piezas = platillo.get('piezas', 1)
+        grupos_ids_json = platillo.get('grupos_opciones_ids', "[]")
 
         nombre_field.value = nom
         descripcion_field.value = desc
@@ -92,6 +127,15 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         piezas_field.value = str(piezas)
         is_config_chk.value = bool(is_conf)
         is_config_salsa_chk.value = bool(is_conf_salsa)
+        
+        # Load dynamic checks
+        try:
+            active_ids = json.loads(grupos_ids_json)
+            for gid, chk in grupos_opciones_checks.items():
+                chk.value = gid in active_ids
+                sync_checkbox_color(chk)
+        except:
+            pass
         
         imagen_path_guardado.value = img
         if img:
@@ -195,12 +239,18 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
     def agregar_click(e):
         data = validar_datos()
         if data:
-            agregar_platillo(*data)
-            limpiar_campos()
-            cargar_lista()
-            page.snack_bar = ft.SnackBar(ft.Text("Agregado"))
+            if agregar_platillo(*data):
+                limpiar_campos()
+                cargar_lista()
+                page.snack_bar = ft.SnackBar(ft.Text("Platillo agregado correctamente", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+            else:
+                page.snack_bar = ft.SnackBar(ft.Text("Error al agregar platillo (Verificar Backend)", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
             page.snack_bar.open = True
             page.update()
+        else:
+             page.snack_bar = ft.SnackBar(ft.Text("Por favor revise los campos (Precio, Piezas)", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
+             page.snack_bar.open = True
+             page.update()
 
     def guardar_cambios_click(e):
         data = validar_datos()
@@ -263,10 +313,29 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             return None
         try:
             p = float(precio_field.value)
+        except ValueError:
+            precio_field.error_text = "Debe ser número"
+            page.update()
+            return None
+            
+        try:
             d = float(descuento_field.value)
+        except ValueError:
+             descuento_field.value = "0"
+             d = 0.0
+
+        try:
             pz = int(piezas_field.value)
-        except: return None
-        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz
+        except ValueError:
+            piezas_field.error_text = "Entero requerido"
+            page.update()
+            return None
+        
+        # Collect checked groups
+        selected_groups = [gid for gid, chk in grupos_opciones_checks.items() if chk.value]
+        grupos_json = json.dumps(selected_groups)
+        
+        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz, grupos_json
 
     search_bar = ft.TextField(
         hint_text="Buscar platillo...",
@@ -305,6 +374,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         page.update()
 
     cargar_lista()
+    cargar_checkboxes_grupos() # Inicializar checks dinámicos
 
     content_container = ft.Container(
         padding=20,
@@ -321,6 +391,9 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
                 descuento_field,
                 piezas_field,
                 ft.Column([is_config_chk, is_config_salsa_chk], spacing=0),
+                ft.Text("Opciones Extras (Configurado en Ajustes):", size=14, weight="bold", color=ft.Colors.BLACK),
+                grupos_opciones_container,
+                ft.Divider(),
                 ft.Row([btn_subir_imagen, imagen_preview, upload_status], alignment="start", spacing=10),
                 # BOTONES ALINEADOS A LA IZQUIERDA (START)
                 ft.Row([btn_accion, btn_cancelar], alignment=ft.MainAxisAlignment.START, spacing=10),

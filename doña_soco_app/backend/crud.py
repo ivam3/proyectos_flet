@@ -68,6 +68,25 @@ def update_all_platillos_visibility(db: Session, is_active: int):
     db.commit()
     return True
 
+# --- GRUPOS DE OPCIONES ---
+def get_grupos_opciones(db: Session):
+    return db.query(models.GrupoOpciones).all()
+
+def create_grupo_opciones(db: Session, grupo: schemas.GrupoOpcionesCreate):
+    db_grupo = models.GrupoOpciones(**grupo.dict())
+    db.add(db_grupo)
+    db.commit()
+    db.refresh(db_grupo)
+    return db_grupo
+
+def delete_grupo_opciones(db: Session, grupo_id: int):
+    db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
+    if db_grupo:
+        db.delete(db_grupo)
+        db.commit()
+        return True
+    return False
+
 # --- CONFIGURACION ---
 def get_configuracion(db: Session):
     config = db.query(models.Configuracion).filter(models.Configuracion.id == 1).first()

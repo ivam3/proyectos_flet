@@ -1,6 +1,7 @@
 import flet as ft
 from database import guardar_pedido, get_configuracion
 from views.menu import cargar_menu
+from components.notifier import init_pubsub # Importar notifier
 import asyncio
 import re
 import httpx
@@ -253,6 +254,14 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         paga_con = float(paga_con_field.value) if metodo == "efectivo" else 0.0
         
         exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total_final_confirm, items, metodo, paga_con)
+
+        if exito:
+            # Enviar notificación en tiempo real a los admins
+            try:
+                pubsub = init_pubsub(page)
+                pubsub.send_all("nuevo_pedido")
+            except Exception as e:
+                print(f"Error enviando notificacion: {e}")
 
         dlg_content = ft.Column([
                 ft.Text("Tu pedido ha sido enviado correctamente."),

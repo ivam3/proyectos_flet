@@ -1,6 +1,6 @@
 import flet as ft
 import os
-from config import APP_NAME
+from flet_core import Audio # Importación directa desde core para evitar error de atributo
 from database import crear_tablas, verificar_admin_login
 from views.carrito import create_carrito_view
 from views.seguimiento import seguimiento_view
@@ -10,6 +10,8 @@ from components.notifier import init_pubsub
 from panel_restaurante.admin_panel import create_admin_panel_view
 from components.cart import Cart
 
+
+from config import COMPANY_NAME # Importar configuración centralizada
 
 def main(page: ft.Page):
     crear_tablas()
@@ -23,7 +25,7 @@ def main(page: ft.Page):
     # Se ha eliminado PermissionHandler por incompatibilidad técnica en esta versión de Flet.
     # Los permisos necesarios (fotos/notificaciones) serán gestionados automáticamente por el SO.
 
-    page.title = APP_NAME
+    page.title = COMPANY_NAME
     page.window_favicon_path = "favicon.png"
     page.favicon = "favicon.png"  # <- FAVICON WEB USANDO PNG CONVERTIDO
 
@@ -116,6 +118,10 @@ def main(page: ft.Page):
     # Instanciamos aquí para evitar errores visuales y duplicados
     export_file_picker = ft.FilePicker()
     page.overlay.append(ft.Container(content=export_file_picker, visible=False))
+    
+    # --- AUDIO DE NOTIFICACIONES ---
+    # (Eliminado por incompatibilidad de serialización en este entorno)
+    # Se usará inyección de HTML en notifier.py
 
     # ------- DIÁLOGO DE ADMIN -------
     admin_field = ft.TextField(password=True, hint_text="Clave")
@@ -220,7 +226,7 @@ def main(page: ft.Page):
         content=ft.Row(
             [
                 ft.Image(src="icon.png", width=60, height=60),
-                ft.Text(APP_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
+                ft.Text(COMPANY_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
             ],
             alignment=ft.MainAxisAlignment.START,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -265,5 +271,5 @@ def main(page: ft.Page):
 
 # Ruta absoluta segura para assets
 assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
-os.environ["FLET_SECRET_KEY"] = "mi_restaurante_app_secret_key"
+os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
 ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")

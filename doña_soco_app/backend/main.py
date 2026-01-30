@@ -53,6 +53,22 @@ def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return {"ok": True}
 
+# --- RUTAS DE GRUPOS DE OPCIONES ---
+@app.get("/opciones", response_model=List[schemas.GrupoOpciones])
+def read_grupos_opciones(db: Session = Depends(get_db)):
+    return crud.get_grupos_opciones(db)
+
+@app.post("/opciones", response_model=schemas.GrupoOpciones)
+def create_grupo_opciones(grupo: schemas.GrupoOpcionesCreate, db: Session = Depends(get_db)):
+    return crud.create_grupo_opciones(db, grupo)
+
+@app.delete("/opciones/{grupo_id}")
+def delete_grupo_opciones(grupo_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_grupo_opciones(db, grupo_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    return {"ok": True}
+
 # --- RUTAS DE CONFIGURACION ---
 @app.get("/configuracion", response_model=schemas.Configuracion)
 def read_config(db: Session = Depends(get_db)):

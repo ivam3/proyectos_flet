@@ -13,6 +13,7 @@ class MenuBase(BaseModel):
     is_configurable: Optional[int] = 0
     is_configurable_salsa: Optional[int] = 0
     piezas: Optional[int] = 1
+    grupos_opciones_ids: Optional[str] = "[]"
 
 class MenuCreate(MenuBase):
     pass
@@ -23,6 +24,21 @@ class Menu(MenuBase):
 
     class Config:
         from_attributes = True # Antes orm_mode = True
+
+# --- SCHEMAS DE GRUPOS OPCIONES ---
+class GrupoOpcionesBase(BaseModel):
+    nombre: str
+    opciones: str # JSON list string
+    seleccion_multiple: Optional[int] = 0
+    obligatorio: Optional[int] = 0
+
+class GrupoOpcionesCreate(GrupoOpcionesBase):
+    pass
+
+class GrupoOpciones(GrupoOpcionesBase):
+    id: int
+    class Config:
+        from_attributes = True
 
 # --- SCHEMAS DE ORDEN ---
 class OrdenDetalleBase(BaseModel):

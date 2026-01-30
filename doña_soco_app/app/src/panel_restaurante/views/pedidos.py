@@ -1,5 +1,6 @@
 import flet as ft
 from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion
+from components.notifier import init_pubsub, play_notification_sound # Importar herramientas de notificación
 import math
 import csv
 import datetime
@@ -449,6 +450,21 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         page.update()
 
     cargar_pedidos()
+
+    # --- SUBSCRIPCIÓN A NOTIFICACIONES ---
+    def on_new_order(message):
+        if message == "nuevo_pedido":
+            # Reproducir sonido
+            play_notification_sound(page)
+            # Mostrar alerta visual (SnackBar)
+            page.snack_bar = ft.SnackBar(ft.Text("🔔 ¡Nuevo Pedido Recibido!", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN_700)
+            page.snack_bar.open = True
+            # Recargar tabla
+            cargar_pedidos()
+            page.update()
+
+    pubsub = init_pubsub(page)
+    pubsub.subscribe(on_new_order)
 
     content_container = ft.Container(
         padding=20,

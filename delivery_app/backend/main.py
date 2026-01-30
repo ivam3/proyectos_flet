@@ -7,12 +7,11 @@ import os
 
 from . import crud, models, schemas
 from .database import SessionLocal, engine
-from .config import PROJECT_NAME
 
 # Crear tablas automáticamente (en producción usar Alembic para migraciones)
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title=PROJECT_NAME)
+app = FastAPI(title="Doña Soco API")
 
 # Configurar CORS para permitir que Flet (Web/Android) se conecte
 app.add_middleware(
@@ -52,6 +51,22 @@ def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
     success = crud.delete_platillo(db, item_id)
     if not success:
         raise HTTPException(status_code=404, detail="Platillo no encontrado")
+    return {"ok": True}
+
+# --- RUTAS DE GRUPOS DE OPCIONES ---
+@app.get("/opciones", response_model=List[schemas.GrupoOpciones])
+def read_grupos_opciones(db: Session = Depends(get_db)):
+    return crud.get_grupos_opciones(db)
+
+@app.post("/opciones", response_model=schemas.GrupoOpciones)
+def create_grupo_opciones(grupo: schemas.GrupoOpcionesCreate, db: Session = Depends(get_db)):
+    return crud.create_grupo_opciones(db, grupo)
+
+@app.delete("/opciones/{grupo_id}")
+def delete_grupo_opciones(grupo_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_grupo_opciones(db, grupo_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
     return {"ok": True}
 
 # --- RUTAS DE CONFIGURACION ---
@@ -133,4 +148,4 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.get("/")
 def read_root():
-    return {"message": "API del Restaurante funcionando"}
+    return {"message": "API de Antojitos Doña Soco funcionando"}

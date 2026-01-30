@@ -1,6 +1,5 @@
 import flet as ft
 from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion
-from components.notifier import init_pubsub, play_notification_sound # Importar herramientas de notificación
 import math
 import csv
 import datetime
@@ -288,15 +287,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             pago_info.append(ft.Text(f"Paga con: ${paga_con:.2f}", color=ft.Colors.BLACK))
             pago_info.append(ft.Text(f"Cambio: ${cambio:.2f}", color=ft.Colors.GREEN_700 if cambio >= 0 else ft.Colors.RED))
 
-        # Motivo cancelación
-        motivo_widget = ft.Container()
-        if str(pedido['estado']).lower() == "cancelado" and pedido.get('motivo_cancelacion'):
-            motivo_widget = ft.Column([
-                ft.Divider(),
-                ft.Text("❌ PEDIDO CANCELADO", color=ft.Colors.RED, weight="bold"),
-                ft.Text(f"Motivo: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700)
-            ])
-
         details_dialog.title = ft.Text(f"Pedido #{pedido['id']}", color=ft.Colors.BLACK)
         details_dialog.content = ft.Container(
             content=ft.Column([
@@ -313,7 +303,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 ft.Divider(),
                 ft.Text(f"Total: ${pedido['total']:.2f}", weight="bold", size=16, color=ft.Colors.BLACK),
                 ft.Text(f"Estado Actual: {pedido['estado']}", weight="bold", color=ft.Colors.BLACK),
-                motivo_widget
             ], scroll="auto"),
             height=400, width=350,
         )
@@ -344,52 +333,13 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         def set_status(status):
             return lambda e: confirm_status_change(e, pedido['id'], status)
 
-        def show_cancel_reason_dialog(e):
-            reason_field = ft.TextField(label="Motivo de cancelación", multiline=True, autofocus=True, text_style=ft.TextStyle(color=ft.Colors.BLACK))
-            
-            def confirm_cancel(e):
-                if not reason_field.value or not reason_field.value.strip():
-                    reason_field.error_text = "Debes ingresar un motivo"
-                    reason_field.update()
-                    return
-                
-                # Cerrar primero el diálogo de motivo
-                cancel_dialog.open = False
-                page.update()
-                
-                # Luego procesar el cambio que cierra el diálogo principal
-                confirm_status_change(None, pedido['id'], "Cancelado", reason_field.value.strip())
-
-            cancel_dialog = ft.AlertDialog(
-                title=ft.Text("Confirmar Cancelación", color=ft.Colors.BLACK),
-                content=ft.Container(content=reason_field, height=150),
-                actions=[
-                    ft.TextButton("Volver", on_click=lambda e: setattr(cancel_dialog, "open", False) or page.update(), style=ft.ButtonStyle(color=ft.Colors.BROWN_700)),
-                    ft.FilledButton("Confirmar", on_click=confirm_cancel, style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE))
-                ]
-            )
-            page.overlay.append(cancel_dialog)
-            cancel_dialog.open = True
-            page.update()
-
         confirmation_dialog.title = ft.Text(f"Cambiar estado pedido #{pedido['id']}", color=ft.Colors.BLACK)
-        
-        # Deshabilitar si ya está cancelado
-        is_canceled = str(pedido['estado']).lower() == "cancelado"
-        
-        controls = [
-            ft.FilledButton("Pendiente", on_click=set_status("Pendiente"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE), disabled=is_canceled),
-            ft.FilledButton("Preparando", on_click=set_status("Preparando"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE), disabled=is_canceled),
-            ft.FilledButton("En Camino", on_click=set_status("En Camino"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE), disabled=is_canceled),
-            ft.FilledButton("Entregado", on_click=set_status("Entregado"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE), disabled=is_canceled),
-            ft.Divider(),
-            ft.FilledButton("Cancelar Pedido", on_click=show_cancel_reason_dialog, width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.RED, color=ft.Colors.WHITE), disabled=is_canceled),
-        ]
-
-        if is_canceled:
-            controls.append(ft.Text("Este pedido ya fue cancelado.", color=ft.Colors.RED, weight="bold"))
-
-        confirmation_dialog.content = ft.Column(controls, height=350, alignment=ft.MainAxisAlignment.CENTER, scroll="auto")
+        confirmation_dialog.content = ft.Column([
+            ft.FilledButton("Pendiente", on_click=set_status("Pendiente"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("Preparando", on_click=set_status("Preparando"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("En Camino", on_click=set_status("En Camino"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+            ft.FilledButton("Entregado", on_click=set_status("Entregado"), width=200, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE)),
+        ], height=250, alignment=ft.MainAxisAlignment.CENTER)
         
         confirmation_dialog.actions = [ft.TextButton("Cerrar", on_click=close_confirmation_dialog)]
         confirmation_dialog.open = True
@@ -422,7 +372,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         
         pedidos_data_table.rows.clear()
         for p in pedidos:
-            es_cancelado = str(p['estado']).lower() == "cancelado"
             pedidos_data_table.rows.append(
                 ft.DataRow(cells=[
                     ft.DataCell(ft.Text(str(p['id']), color=ft.Colors.BLACK)),
@@ -434,12 +383,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                     ft.DataCell(ft.Text(p['estado'], color=ft.Colors.BLACK)),
                     ft.DataCell(ft.Row([
                         ft.IconButton(ft.Icons.VISIBILITY, icon_color=ft.Colors.BLUE_GREY_700, on_click=lambda e, p=p: open_details_dialog(e, p)),
-                        ft.IconButton(
-                            ft.Icons.EDIT, 
-                            icon_color=ft.Colors.GREY_400 if es_cancelado else ft.Colors.BLUE_GREY_700, 
-                            disabled=es_cancelado, 
-                            on_click=lambda e, p=p: open_status_dialog(e, p)
-                        ),
+                        ft.IconButton(ft.Icons.EDIT, icon_color=ft.Colors.BLUE_GREY_700, on_click=lambda e, p=p: open_status_dialog(e, p)),
                         ft.IconButton(ft.Icons.PICTURE_AS_PDF, icon_color=ft.Colors.RED_700, on_click=create_pdf_handler(p))
                     ])),
                 ])
@@ -450,21 +394,6 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         page.update()
 
     cargar_pedidos()
-
-    # --- SUBSCRIPCIÓN A NOTIFICACIONES ---
-    def on_new_order(message):
-        if message == "nuevo_pedido":
-            # Reproducir sonido
-            play_notification_sound(page)
-            # Mostrar alerta visual (SnackBar)
-            page.snack_bar = ft.SnackBar(ft.Text("🔔 ¡Nuevo Pedido Recibido!", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN_700)
-            page.snack_bar.open = True
-            # Recargar tabla
-            cargar_pedidos()
-            page.update()
-
-    pubsub = init_pubsub(page)
-    pubsub.subscribe(on_new_order)
 
     content_container = ft.Container(
         padding=20,

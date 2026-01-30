@@ -1,6 +1,13 @@
 import flet as ft
 import json
-from database import get_configuracion, update_configuracion, cambiar_admin_password
+from database import (
+    get_configuracion,
+    update_configuracion,
+    cambiar_admin_password,
+    get_grupos_opciones,
+    create_grupo_opciones,
+    delete_grupo_opciones
+)
 
 
 def configuracion_view(page: ft.Page):
@@ -127,6 +134,22 @@ def configuracion_view(page: ft.Page):
 
     guisos_chk = {}
     guisos_list_col = ft.Column()
+    
+    nuevo_guiso_input = ft.TextField(hint_text="Nuevo Guiso (ej: Chicharrón)", text_style=ft.TextStyle(color=ft.Colors.BLACK), hint_style=ft.TextStyle(color=ft.Colors.GREY), expand=True)
+    
+    def agregar_guiso_action(e):
+        nombre = nuevo_guiso_input.value.strip()
+        if nombre and nombre not in guisos_chk:
+            crear_item_row(nombre, True, guisos_chk, guisos_list_col)
+            nuevo_guiso_input.value = ""
+            page.update()
+        else:
+            if nombre in guisos_chk:
+                mostrar_notificacion("Ese guiso ya existe", ft.Colors.ORANGE)
+            else:
+                mostrar_notificacion("Escribe un nombre", ft.Colors.RED)
+
+    btn_add_guiso = ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.GREEN, on_click=agregar_guiso_action)
 
     # --- Configuración de Salsas ---
     label_salsas = ft.Text(
@@ -138,6 +161,47 @@ def configuracion_view(page: ft.Page):
 
     salsas_chk = {}
     salsas_list_col = ft.Column()
+    
+    nueva_salsa_input = ft.TextField(hint_text="Nueva Salsa (ej: Verde)", text_style=ft.TextStyle(color=ft.Colors.BLACK), hint_style=ft.TextStyle(color=ft.Colors.GREY), expand=True)
+
+    def agregar_salsa_action(e):
+        nombre = nueva_salsa_input.value.strip()
+        if nombre and nombre not in salsas_chk:
+            crear_item_row(nombre, True, salsas_chk, salsas_list_col)
+            nueva_salsa_input.value = ""
+            page.update()
+        else:
+            if nombre in salsas_chk:
+                mostrar_notificacion("Esa salsa ya existe", ft.Colors.ORANGE)
+            else:
+                mostrar_notificacion("Escribe un nombre", ft.Colors.RED)
+
+    btn_add_salsa = ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.GREEN, on_click=agregar_salsa_action)
+
+    def crear_item_row(name, val, target_dict, target_col):
+        chk = ft.Checkbox(
+            label=name,
+            value=val,
+            label_style=ft.TextStyle(color=ft.Colors.BLACK),
+            fill_color=ft.Colors.BROWN_700 if val else ft.Colors.WHITE,
+            check_color=ft.Colors.WHITE,
+            on_change=lambda e: (sync_checkbox_color(e.control), page.update()),
+        )
+        # Guardamos referencia para el guardado final
+        target_dict[name] = chk
+        
+        def delete_item(e):
+            del target_dict[name]
+            target_col.controls.remove(row)
+            page.update()
+
+        row = ft.Row([
+            chk,
+            ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_color=ft.Colors.RED_400, on_click=delete_item, tooltip="Eliminar")
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        
+        target_col.controls.append(row)
+        return row
 
     # --- Cambio de Contraseña Admin ---
     new_password_field = ft.TextField(
@@ -157,6 +221,63 @@ def configuracion_view(page: ft.Page):
         text_style=ft.TextStyle(color=ft.Colors.BLACK),
         label_style=ft.TextStyle(color=ft.Colors.BLACK),
     )
+    
+    # --- GESTIÓN DE GRUPOS DE OPCIONES (NUEVO) ---
+    nombre_grupo_field = ft.TextField(label="Nombre del Grupo (ej: Termino)", border_radius=10, expand=True, text_style=ft.TextStyle(color=ft.Colors.BLACK), label_style=ft.TextStyle(color=ft.Colors.BLACK))
+    opciones_grupo_field = ft.TextField(label="Opciones (separadas por coma)", hint_text="Ej: Dorado, Suave, Medio", border_radius=10, expand=True, text_style=ft.TextStyle(color=ft.Colors.BLACK), label_style=ft.TextStyle(color=ft.Colors.BLACK))
+    
+    lista_grupos_col = ft.Column(spacing=10)
+
+    def cargar_grupos_opciones():
+        lista_grupos_col.controls.clear()
+        grupos = get_grupos_opciones()
+        
+        for g in grupos:
+            # g: id, nombre, opciones (str json), ...
+            try:
+                ops = json.loads(g['opciones'])
+                ops_str = ", ".join(ops)
+            except:
+                ops_str = g['opciones']
+
+            item = ft.Container(
+                padding=10,
+                bgcolor=ft.Colors.GREY_100,
+                border_radius=8,
+                content=ft.Row([
+                    ft.Column([
+                        ft.Text(g['nombre'], weight="bold", color=ft.Colors.BLACK),
+                        ft.Text(ops_str, size=12, color=ft.Colors.GREY_700),
+                    ], expand=True),
+                    ft.IconButton(ft.Icons.DELETE, icon_color=ft.Colors.RED, on_click=lambda e, gid=g['id']: borrar_grupo_click(gid))
+                ])
+            )
+            lista_grupos_col.controls.append(item)
+        page.update()
+
+    def agregar_grupo_click(e):
+        if not nombre_grupo_field.value or not opciones_grupo_field.value:
+            mostrar_notificacion("Complete todos los campos del grupo", ft.Colors.RED)
+            return
+            
+        # Convertir CSV a JSON List
+        ops_list = [x.strip() for x in opciones_grupo_field.value.split(",") if x.strip()]
+        ops_json = json.dumps(ops_list)
+        
+        if create_grupo_opciones(nombre_grupo_field.value, ops_json):
+            mostrar_notificacion("Grupo agregado", ft.Colors.GREEN_700)
+            nombre_grupo_field.value = ""
+            opciones_grupo_field.value = ""
+            cargar_grupos_opciones()
+        else:
+            mostrar_notificacion("Error al crear grupo", ft.Colors.RED)
+
+    def borrar_grupo_click(gid):
+        if delete_grupo_opciones(gid):
+            cargar_grupos_opciones()
+            mostrar_notificacion("Grupo eliminado", ft.Colors.ORANGE)
+
+    btn_add_grupo = ft.FilledButton("Agregar Grupo", icon=ft.Icons.ADD, on_click=agregar_grupo_click, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
 
     def mostrar_notificacion(mensaje, color):
         page.snack_bar = ft.SnackBar(
@@ -202,31 +323,13 @@ def configuracion_view(page: ft.Page):
         guisos_chk.clear()
 
         for name, val in json.loads(config["guisos_disponibles"]).items():
-            chk = ft.Checkbox(
-                label=name,
-                value=val,
-                label_style=ft.TextStyle(color=ft.Colors.BLACK),
-                fill_color=ft.Colors.BROWN_700 if val else ft.Colors.WHITE,
-                check_color=ft.Colors.WHITE,
-                on_change=lambda e: (sync_checkbox_color(e.control), page.update()),
-            )
-            guisos_chk[name] = chk
-            guisos_list_col.controls.append(chk)
+            crear_item_row(name, val, guisos_chk, guisos_list_col)
 
         salsas_list_col.controls.clear()
         salsas_chk.clear()
 
         for name, val in json.loads(config["salsas_disponibles"]).items():
-            chk = ft.Checkbox(
-                label=name,
-                value=val,
-                label_style=ft.TextStyle(color=ft.Colors.BLACK),
-                fill_color=ft.Colors.BROWN_700 if val else ft.Colors.WHITE,
-                check_color=ft.Colors.WHITE,
-                on_change=lambda e: (sync_checkbox_color(e.control), page.update()),
-            )
-            salsas_chk[name] = chk
-            salsas_list_col.controls.append(chk)
+            crear_item_row(name, val, salsas_chk, salsas_list_col)
 
         page.update()
 
@@ -308,6 +411,7 @@ def configuracion_view(page: ft.Page):
     )
 
     cargar_datos()
+    cargar_grupos_opciones() # Cargar al inicio
 
     content_container = ft.Container(
         content=ft.Column(
@@ -332,10 +436,18 @@ def configuracion_view(page: ft.Page):
                 whatsapp_field,
                 direccion_field,
                 ft.Divider(),
+                ft.Text("Opciones Configurables (Extras)", size=18, weight="bold", color=ft.Colors.BLACK),
+                ft.Text("Crea grupos de opciones (ej: Término, Verduras) para asignarlos a los platillos.", size=12, color=ft.Colors.GREY_700),
+                ft.Row([nombre_grupo_field, opciones_grupo_field], spacing=10),
+                btn_add_grupo,
+                lista_grupos_col,
+                ft.Divider(),
                 label_guisos,
+                ft.Row([nuevo_guiso_input, btn_add_guiso]),
                 guisos_list_col,
                 ft.Divider(),
                 label_salsas,
+                ft.Row([nueva_salsa_input, btn_add_salsa]),
                 salsas_list_col,
                 ft.Divider(),
                 guardar_button,

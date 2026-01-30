@@ -5,7 +5,7 @@ description = "Aplicación de pedidos y administración Antojitos Doña Soco"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-  "flet==0.80.1",
+  "flet==0.80.5",
   "fpdf2==2.8.5",
   "flet_core==0.24.1",
   "openpyxl==3.1.5"
@@ -32,3 +32,6 @@ package_name = "com.donasoco.app"
 
 [tool.flet.app]
 path = "src"
+
+[tool.flet.flutter.dependencies]
+file_picker = "^10.3.10"

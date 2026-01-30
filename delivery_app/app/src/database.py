@@ -1,11 +1,16 @@
 import httpx
 import json
 import os
+# Importar init_pubsub no es ideal aquí porque requiere 'page', 
+# pero podemos simular un evento si tuviéramos acceso a la instancia.
+# Como database.py es independiente de la UI, la notificación la debe gatillar 
+# quien llama a guardar_pedido (checkout.py).
+# Dejaremos este archivo limpio y modificaremos checkout.py.
 
 # CONFIGURACIÓN DE CONEXIÓN
 # En producción/nube, cambiar esto por la URL de tu servidor (ej: https://dona-soco-api.railway.app)
 # Para pruebas locales en PC/Termux:
-API_URL = "http://0.0.0.0:8000"
+API_URL = "http://localhost:8000"
 
 # Si estás en Android real y el servidor está en tu PC, usa la IP de tu PC (ej: http://192.168.1.50:8000)
 # Si el servidor corre en el mismo Termux que la app, localhost está bien.
@@ -36,7 +41,7 @@ def cambiar_admin_password(new_password):
         return False
 
 # --- MENU ---
-def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1):
+def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]"):
     data = {
         "nombre": nombre,
         "descripcion": descripcion,
@@ -46,16 +51,17 @@ def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_config
         "is_configurable": is_configurable,
         "is_configurable_salsa": is_configurable_salsa,
         "piezas": piezas,
+        "grupos_opciones_ids": grupos_opciones_ids,
         "is_active": 1
     }
     try:
-        httpx.post(f"{API_URL}/menu", json=data)
-        return True
+        r = httpx.post(f"{API_URL}/menu", json=data)
+        return r.status_code in [200, 201]
     except Exception as e:
         print(f"Error agregar platillo: {e}")
         return False
 
-def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1):
+def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]"):
     data = {
         "nombre": nombre,
         "descripcion": descripcion,
@@ -64,7 +70,8 @@ def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descue
         "descuento": descuento,
         "is_configurable": is_configurable,
         "is_configurable_salsa": is_configurable_salsa,
-        "piezas": piezas
+        "piezas": piezas,
+        "grupos_opciones_ids": grupos_opciones_ids
     }
     try:
         httpx.put(f"{API_URL}/menu/{platillo_id}", json=data)
@@ -79,6 +86,40 @@ def eliminar_platillo(platillo_id):
         return True
     except Exception as e:
         print(f"Error eliminar platillo: {e}")
+        return False
+
+# --- GRUPOS DE OPCIONES ---
+def get_grupos_opciones():
+    try:
+        response = httpx.get(f"{API_URL}/opciones")
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception as e:
+        print(f"Error obtener grupos: {e}")
+        return []
+
+def create_grupo_opciones(nombre, opciones, seleccion_multiple=0, obligatorio=0):
+    # opciones debe ser un string JSON list: '["Op1", "Op2"]'
+    data = {
+        "nombre": nombre,
+        "opciones": opciones,
+        "seleccion_multiple": seleccion_multiple,
+        "obligatorio": obligatorio
+    }
+    try:
+        r = httpx.post(f"{API_URL}/opciones", json=data)
+        return r.status_code in [200, 201]
+    except Exception as e:
+        print(f"Error crear grupo: {e}")
+        return False
+
+def delete_grupo_opciones(grupo_id):
+    try:
+        r = httpx.delete(f"{API_URL}/opciones/{grupo_id}")
+        return r.status_code == 200
+    except Exception as e:
+        print(f"Error borrar grupo: {e}")
         return False
 
 def actualizar_visibilidad_platillo(platillo_id, is_active):

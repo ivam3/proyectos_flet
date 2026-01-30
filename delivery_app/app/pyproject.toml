@@ -1,7 +1,7 @@
 [project]
-name = "delivery-app"
-version = "0.1.0"
-description = "Aplicación de pedidos y administración para envios a domicilio"
+name = "pedido-express-app"
+version = "1.0.0"
+description = "Plantilla genérica para App de Pedidos y Delivery"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
@@ -12,23 +12,26 @@ dependencies = [
 ]
 
 [tool.flet]
-app_name = "delivery-app"
+app_name = "Mi Negocio App"
 # org name in reverse domain name notation, e.g. "com.mycompany".
 # Combined with project.name to build bundle ID for iOS and Android apps
-org = "com.delivery.app"
+org = "com.minegocio"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "Delivery App"
+product = "Mi Negocio"
 
 # company name to display in about app dialogs
-company = "Ivam3byCinderella"
+company = "Mi Empresa S.A."
 
 # copyright text to display in about app dialogs
-copyright = "Copyright (C) 2026 by Ivam3byCinderella"
+copyright = "Copyright (C) 2026"
 
 [tool.flet.android]
-package_name = "com.delivery.app"
+package_name = "com.minegocio.app"
 
 [tool.flet.app]
 path = "src"
+
+[tool.flet.flutter.dependencies]
+file_picker = "^10.3.10"

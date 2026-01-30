@@ -1,7 +1,7 @@
-# Documentación Técnica: Proyecto Mi Restaurante App
+# Documentación Técnica: Proyecto Doña Soco App
 
 ## 1. Visión General del Proyecto
-Esta aplicación es un sistema de gestión de pedidos para un restaurante (Marca Blanca / White Label). 
+Esta aplicación es un sistema de gestión de pedidos para un restaurante ("Antojitos Doña Soco"). 
 Está construida con **Python** utilizando una arquitectura híbrida:
 - **Frontend:** Flet (Framework UI basado en Flutter). Funciona como App Móvil (Android/APK), Web App y Aplicación de Escritorio.
 - **Backend:** FastAPI (API REST). Gestiona la lógica de negocio y la base de datos.
@@ -18,7 +18,7 @@ El sistema permite a los clientes ver el menú, armar un carrito, realizar pedid
 2.  **Capa de Comunicación (`database.py`):** La UI llama a funciones en este archivo.
 3.  **Transporte (HTTPX):** Estas funciones envían peticiones HTTP (GET, POST, PUT) a la API local o remota.
 4.  **Servidor (FastAPI):** Recibe la petición, valida datos con Pydantic (`schemas.py`) y llama al controlador de base de datos (`crud.py`).
-5.  **Persistencia (SQLAlchemy):** Interactúa con el archivo `restaurante.db` y devuelve la respuesta.
+5.  **Persistencia (SQLAlchemy):** Interactúa con el archivo `dona_soco.db` y devuelve la respuesta.
 
 > **Nota Importante:** Actualmente, algunas partes del panel administrativo (ej. `pedidos.py`) leen directamente la base de datos SQLite por rendimiento en local, mientras que la app del cliente consume 100% la API.
 
@@ -28,7 +28,7 @@ El sistema permite a los clientes ver el menú, armar un carrito, realizar pedid
 
 ### Raíz del Proyecto
 *   `migrate.py`: Script de utilidad para inicializar o migrar la base de datos.
-*   `backend/restaurante.db` / `app/storage/data/restaurante.db`: Archivos físicos de la base de datos SQLite.
+*   `backend_dona_soco.db` / `app/storage/data/dona_soco.db`: Archivos físicos de la base de datos SQLite.
 
 ### 📂 `app/` (El Frontend - Flet)
 El núcleo de la interfaz de usuario.
@@ -105,8 +105,7 @@ Para que la subida de archivos funcione en Flet (uploads), se debe definir la va
 
 ### 1. Iniciar el Backend (Terminal 1)
 ```bash
-cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+nohup uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 &
 ```
 
 ### 2. Iniciar la App Flet (Terminal 2)
@@ -125,23 +124,6 @@ python app/src/main.py
     4.  Actualizar `app/src/database.py` para enviar el nuevo campo.
     5.  Actualizar las Vistas (`app/src/views/...`).
 
-*   Depuración:
+*   **Depuración:**
     *   Usa `print(f"DEBUG: ...")` generosamente. En Termux, la salida estándar es tu mejor herramienta de diagnóstico.
-    *   Revisa la salida de Uvicorn para errores de API.
-
----
-
-## 8. Compilación a APK (Android)
-
-Para generar el instalador `.apk`, el comando debe ejecutarse en una máquina con **Windows o Linux** (no es posible compilar directamente desde Termux debido a dependencias del Android SDK).
-
-**Comando de compilación:**
-```bash
-flet build apk --module-name main
-```
-
-**Requisitos:**
-*   Python 3.10+
-*   Flet CLI instalado (`pip install flet`)
-*   Flutter SDK configurado en el sistema.
-*   Android SDK y Java (JDK) correctamente instalados.
+    *   Revisa `backend.log` (si se configura logging) o la salida de Uvicorn para errores de API.

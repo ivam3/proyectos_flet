@@ -52,11 +52,12 @@ def cargar_menu(page: ft.Page):
                 is_configurable = platillo.get('is_configurable', 0)
                 is_configurable_salsa = platillo.get('is_configurable_salsa', 0)
                 piezas = platillo.get('piezas', 1)
+                grupos_opciones_ids = platillo.get('grupos_opciones_ids', "[]")
 
                 precio_final = precio * (1 - descuento / 100) if descuento > 0 else precio
 
-                async def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas):
-                    user_cart.add_item(item_id, name, price, img, is_configurable=is_conf, is_configurable_salsa=is_conf_salsa, piezas=pz)
+                async def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas, g_ids=grupos_opciones_ids):
+                    user_cart.add_item(item_id, name, price, img, is_configurable=is_conf, is_configurable_salsa=is_conf_salsa, piezas=pz, grupos_opciones_ids=g_ids)
                     await page.push_route("/carrito") # Redirección directa al carrito vía ruteo unificado
                     page.update()
 

@@ -8,7 +8,7 @@ class Cart:
     def get_items(self) -> List[Dict]:
         return self.items
 
-    def add_item(self, item_id: int, nombre: str, precio: float, imagen: str = None, cantidad: int = 1, is_configurable: bool = False, is_configurable_salsa: bool = False, piezas: int = 1):
+    def add_item(self, item_id: int, nombre: str, precio: float, imagen: str = None, cantidad: int = 1, is_configurable: bool = False, is_configurable_salsa: bool = False, piezas: int = 1, grupos_opciones_ids: str = "[]"):
         # Si ya existe el item, aumentamos cantidad
         for it in self.items:
             if it["id"] == item_id:
@@ -17,6 +17,7 @@ class Cart:
                 it["is_configurable"] = is_configurable
                 it["is_configurable_salsa"] = is_configurable_salsa
                 it["piezas"] = piezas
+                it["grupos_opciones_ids"] = grupos_opciones_ids
                 return
         self.items.append({
             "id": item_id, 
@@ -27,6 +28,7 @@ class Cart:
             "is_configurable": is_configurable,
             "is_configurable_salsa": is_configurable_salsa,
             "piezas": piezas,
+            "grupos_opciones_ids": grupos_opciones_ids,
             "details": "" 
         })
 

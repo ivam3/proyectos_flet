@@ -1,5 +1,6 @@
 import flet as ft
 import os
+from flet_core import Audio # Importación directa desde core para evitar error de atributo
 from database import crear_tablas, verificar_admin_login
 from views.carrito import create_carrito_view
 from views.seguimiento import seguimiento_view
@@ -115,6 +116,10 @@ def main(page: ft.Page):
     # Instanciamos aquí para evitar errores visuales y duplicados
     export_file_picker = ft.FilePicker()
     page.overlay.append(ft.Container(content=export_file_picker, visible=False))
+    
+    # --- AUDIO DE NOTIFICACIONES ---
+    # (Eliminado por incompatibilidad de serialización en este entorno)
+    # Se usará inyección de HTML en notifier.py
 
     # ------- DIÁLOGO DE ADMIN -------
     admin_field = ft.TextField(password=True, hint_text="Clave")

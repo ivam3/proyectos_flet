@@ -96,7 +96,8 @@ def get_configuracion(db: Session):
             id=1, 
             horario="Lunes a Viernes 9-10", 
             codigos_postales="12345",
-            admin_password=hash_password("zz") # Default password hash
+            admin_password=hash_password("zz"), # Default password hash
+            costo_envio=20.0
         )
         db.add(config)
         db.commit()

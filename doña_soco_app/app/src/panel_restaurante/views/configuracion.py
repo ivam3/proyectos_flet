@@ -32,6 +32,15 @@ def configuracion_view(page: ft.Page):
         label_style=ft.TextStyle(color=ft.Colors.BLACK),
     )
 
+    costo_envio_field = ft.TextField(
+        label="Costo de Envío ($)",
+        keyboard_type=ft.KeyboardType.NUMBER,
+        prefix=ft.Text("$ ", color=ft.Colors.BLACK),
+        border_radius=10,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
+
     # --- Configuración de Pagos ---
     pago_efectivo_chk = ft.Checkbox(
         label="Efectivo",
@@ -295,6 +304,7 @@ def configuracion_view(page: ft.Page):
 
         horario_field.value = config["horario"]
         codigos_postales_field.value = config["codigos_postales"]
+        costo_envio_field.value = str(config.get("costo_envio", 20.0))
 
         pagos = json.loads(config["metodos_pago_activos"])
         pago_efectivo_chk.value = pagos.get("efectivo", True)
@@ -362,6 +372,11 @@ def configuracion_view(page: ft.Page):
         guisos_json = json.dumps({k: v.value for k, v in guisos_chk.items()})
         salsas_json = json.dumps({k: v.value for k, v in salsas_chk.items()})
 
+        try:
+            c_envio = float(costo_envio_field.value)
+        except:
+            c_envio = 20.0
+
         if update_configuracion(
             horario_field.value,
             codigos_postales_field.value,
@@ -370,6 +385,7 @@ def configuracion_view(page: ft.Page):
             contactos_json,
             guisos_json,
             salsas_json,
+            costo_envio=c_envio
         ):
             mostrar_notificacion("Configuración guardada correctamente", ft.Colors.GREEN_700)
         else:
@@ -425,6 +441,7 @@ def configuracion_view(page: ft.Page):
                 ft.Divider(),
                 horario_field,
                 codigos_postales_field,
+                costo_envio_field,
                 ft.Divider(),
                 ft.Text("Métodos de Pago", weight="bold", color=ft.Colors.BLACK),
                 ft.Row([pago_efectivo_chk, pago_terminal_chk]),

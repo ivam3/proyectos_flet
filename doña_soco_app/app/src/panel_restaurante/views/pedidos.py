@@ -1,5 +1,5 @@
 import flet as ft
-from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion
+from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion, obtener_menu
 from components.notifier import init_pubsub, play_notification_sound # Importar herramientas de notificación
 import math
 import csv
@@ -51,6 +51,18 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         actions=[ft.TextButton("Aceptar", on_click=lambda e: cerrar_dialogos())]
     )
     page.overlay.extend([error_dialog, success_dialog])
+
+    # Diálogo de éxito de impresión
+    print_success_dialog = ft.AlertDialog(
+        title=ft.Text("Impresión Enviada", color=ft.Colors.GREEN, weight="bold"),
+        content=ft.Column([
+            ft.Icon(ft.Icons.PRINT_ROUNDED, size=50, color=ft.Colors.GREEN),
+            ft.Text("Los tickets han sido enviados correctamente a las impresoras correspondientes:", text_align="center", color=ft.Colors.BLACK),
+            ft.Text("", weight="bold", color=ft.Colors.BLUE_GREY_700, text_align="center")
+        ], tight=True, horizontal_alignment="center"),
+        actions=[ft.TextButton("Entendido", on_click=lambda e: setattr(print_success_dialog, "open", False) or page.update())]
+    )
+    page.overlay.append(print_success_dialog)
 
     def cerrar_dialogos():
         error_dialog.open = False
@@ -167,6 +179,89 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         except Exception as ex:
             print(f"DEBUG ERROR: {ex}")
             mostrar_error(f"Error: {ex}")
+
+    # --- LÓGICA DE IMPRESIÓN (COCINA, FOODTRUCK, CAJA) ---
+    async def imprimir_pedido(pedido):
+        page.snack_bar = ft.SnackBar(ft.Text("Iniciando impresión masiva...", color=ft.Colors.WHITE), bgcolor=ft.Colors.BLUE)
+        page.snack_bar.open = True
+        page.update()
+
+        try:
+            # 1. Obtener mapa de productos para saber destino
+            # Nota: Esto trae todo el menú. En producción optimizar con caché o mapa estático.
+            menu_items = obtener_menu(solo_activos=False)
+            # Map: "Nombre Producto" -> "cocina" | "foodtruck"
+            # Normalizamos nombres para evitar fallos por espacios
+            product_map = { m['nombre'].strip().lower(): m.get('printer_target', 'cocina') for m in menu_items }
+            
+            # 2. Clasificar items del pedido
+            # pedido['detalles'] es la lista de objetos dict con keys: producto, cantidad, precio_unitario
+            items_caja = []     # Todos
+            items_cocina = []   # Target cocina
+            items_foodtruck = [] # Target foodtruck
+            
+            for item in pedido.get('detalles', []):
+                items_caja.append(item)
+                
+                # Extraer nombre base si tiene extras (ej: "Tacos (Sin cebolla)")
+                nombre_full = item['producto']
+                nombre_base = nombre_full.split("(")[0].strip().lower()
+                
+                target = product_map.get(nombre_base, 'cocina') # Default a cocina si no se encuentra
+                
+                if target == 'foodtruck':
+                    items_foodtruck.append(item)
+                else:
+                    items_cocina.append(item)
+
+            # 3. Función Simulata de Envío a Impresora (Logica ESC/POS iría aquí)
+            def enviar_a_impresora(nombre_impresora, items, es_ticket_completo=False):
+                if not items: return
+                
+                print(f"--- IMPRIMIENDO EN {nombre_impresora.upper()} ---")
+                print(f"Pedido #{pedido['id']} - {pedido['nombre_cliente']}")
+                for i in items:
+                    print(f"- {i['cantidad']} x {i['producto']}")
+                print("------------------------------------------")
+                
+                # AQUI IRÍA LA CONEXIÓN TCP/IP o USB CON LA IMPRESORA
+                # Ejemplo pseudocodigo:
+                # printer = NetworkPrinter("192.168.1.xxx")
+                # printer.text(f"Pedido #{pedido['id']}\n")
+                # ...
+            
+            # 4. Ejecutar impresiones
+            # CAJA (Siempre imprime todo)
+            enviar_a_impresora("CAJA", items_caja, es_ticket_completo=True)
+            
+            # COCINA (Solo si hay items)
+            if items_cocina:
+                enviar_a_impresora("COCINA", items_cocina)
+            
+            # FOODTRUCK (Solo si hay items)
+            if items_foodtruck:
+                enviar_a_impresora("FOODTRUCK", items_foodtruck)
+
+            # Mostrar confirmación visual clara en pantalla
+            areas = ["Caja"]
+            if items_cocina: areas.append("Cocina")
+            if items_foodtruck: areas.append("Foodtruck")
+            
+            # Actualizar texto del diálogo (segundo control de la columna)
+            print_success_dialog.content.controls[2].value = " + ".join(areas)
+            print_success_dialog.open = True
+            page.update()
+
+        except Exception as ex:
+            print(f"ERROR IMPRESION: {ex}")
+            page.snack_bar = ft.SnackBar(ft.Text(f"Error imprimiendo: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
+            page.snack_bar.open = True
+            page.update()
+
+    def print_handler(pedido):
+        async def handler(e):
+            await imprimir_pedido(pedido)
+        return handler
 
     async def generar_y_guardar_pdf(pedido):
         page.snack_bar = ft.SnackBar(ft.Text("Generando PDF...", color=ft.Colors.WHITE))
@@ -440,6 +535,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                             disabled=es_cancelado, 
                             on_click=lambda e, p=p: open_status_dialog(e, p)
                         ),
+                        ft.IconButton(ft.Icons.PRINT, icon_color=ft.Colors.BLUE, tooltip="Imprimir Tickets (Cocina/Foodtruck)", on_click=print_handler(p)),
                         ft.IconButton(ft.Icons.PICTURE_AS_PDF, icon_color=ft.Colors.RED_700, on_click=create_pdf_handler(p))
                     ])),
                 ])

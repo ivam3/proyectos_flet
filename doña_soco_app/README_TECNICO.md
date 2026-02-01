@@ -7,7 +7,7 @@ Está construida con **Python** utilizando una arquitectura híbrida:
 - **Backend:** FastAPI (API REST). Gestiona la lógica de negocio y la base de datos.
 - **Base de Datos:** SQLite (Relacional).
 
-El sistema permite a los clientes ver el menú, armar un carrito, realizar pedidos (con envío o recoger en tienda) y rastrearlos. Para el administrador, ofrece un panel para gestionar el menú, actualizar estados de pedidos y exportar reportes.
+El sistema permite a los clientes ver el menú, armar un carrito, realizar pedidos (con envío o recoger en tienda) y rastrearlos. Para el administrador, ofrece un panel para gestionar el menú, actualizar estados de pedidos, exportar reportes y **gestionar la impresión de comandas**.
 
 ---
 
@@ -40,6 +40,7 @@ El núcleo de la interfaz de usuario.
 
 #### `app/src/views/` (Vistas del Cliente)
 *   `menu.py`: Muestra las tarjetas de productos. Maneja la lógica de agregar al carrito.
+    *   *Mejora UX:* Descripciones de platillos ampliadas para mejor legibilidad.
 *   `carrito.py`: Visualiza los items seleccionados, permite editar cantidades y proceder al checkout.
 *   `checkout.py`: Formulario de datos de entrega.
     *   *Lógica clave:* Checkbox "Recoger en restaurante" que oculta campos de dirección y anula costos de envío.
@@ -50,9 +51,13 @@ El núcleo de la interfaz de usuario.
 
 #### `app/src/panel_restaurante/` (Vistas del Administrador)
 *   `admin_panel.py`: Contenedor principal del layout administrativo (Sidebar + Área de contenido).
-*   `views/menu_admin.py`: ABM (Alta, Baja, Modificación) de platillos. Subida de imágenes.
+*   `views/menu_admin.py`: ABM (Alta, Baja, Modificación) de platillos.
+    *   *Configuración:* Permite definir el **Área de Preparación** (`printer_target`) como "Cocina (Interior)" o "Foodtruck (Exterior)".
+    *   *Visual:* Etiquetas de colores en la lista para identificar rápidamente el destino de impresión.
+    *   *Imagenes:* Subida y gestión de fotos de platillos.
 *   `views/pedidos.py`: Tabla de gestión de pedidos.
-    *   *Funcionalidad:* Cambiar estados, **Cancelar pedidos** (con motivo obligatorio), Ver detalles.
+    *   *Funcionalidad:* Cambiar estados, cancelar pedidos, ver detalles.
+    *   *Impresión Inteligente:* Botón para enviar tickets desglosados a múltiples impresoras (Caja, Cocina, Foodtruck) con confirmación en pantalla.
     *   *Exportación:* Generación de reportes CSV/Excel y comprobantes PDF.
 
 #### `app/src/components/`
@@ -62,13 +67,27 @@ El núcleo de la interfaz de usuario.
 ### 📂 `backend/` (El Servidor - FastAPI)
 *   `main.py`: Inicialización de la App FastAPI, definición de rutas (endpoints) y configuración de CORS.
 *   `models.py`: Definición de tablas de la base de datos (SQLAlchemy).
-    *   *Tablas:* `Menu`, `Orden`, `OrdenDetalle`, `Configuracion`, `HistorialEstado`.
+    *   *Tablas:* `Menu` (incluye nuevo campo `printer_target`), `Orden`, `OrdenDetalle`, `Configuracion`, `HistorialEstado`.
 *   `schemas.py`: Modelos Pydantic para validación y serialización de datos (Request/Response bodies).
 *   `crud.py`: Lógica pura de base de datos (Creates, Reads, Updates, Deletes).
 
 ---
 
-## 4. Dependencias Críticas (`requirements.txt`)
+## 4. Sistema de Impresión Inteligente
+
+El sistema cuenta con una lógica de enrutamiento de impresión para optimizar el flujo de trabajo en el restaurante:
+
+1.  **Configuración:** Cada platillo tiene asignado un atributo `printer_target` ("cocina" o "foodtruck").
+2.  **Disparador:** Botón de impresión en la vista de pedidos.
+3.  **Enrutamiento:**
+    *   **Impresora Caja:** Recibe siempre el ticket completo (Totales + Todos los items).
+    *   **Impresora Cocina (Interior):** Recibe solo los items etiquetados como "Interior" (si existen en el pedido).
+    *   **Impresora Foodtruck (Exterior):** Recibe solo los items etiquetados como "Exterior" (si existen en el pedido).
+4.  **Confirmación:** El administrador recibe un feedback visual indicando a qué áreas se enviaron los tickets exitosamente.
+
+---
+
+## 5. Dependencias Críticas (`requirements.txt`)
 
 *   **Core:**
     *   `flet`: Framework UI.
@@ -85,7 +104,7 @@ El núcleo de la interfaz de usuario.
 
 ---
 
-## 5. Notas Específicas para Desarrollo en Android/Termux
+## 6. Notas Específicas para Desarrollo en Android/Termux
 
 ### A. Subida de Archivos y FilePicker
 En Android (Flet 0.28+), el control `FilePicker` no puede agregarse directamente al `page.overlay` si no se va a usar inmediatamente, ya que provoca un error visual (franja roja "Unknown Control").
@@ -101,7 +120,7 @@ Para que la subida de archivos funcione en Flet (uploads), se debe definir la va
 
 ---
 
-## 6. Cómo Ejecutar el Proyecto
+## 7. Cómo Ejecutar el Proyecto
 
 ### 1. Iniciar el Backend (Terminal 1)
 ```bash
@@ -116,7 +135,7 @@ python app/src/main.py
 
 ---
 
-## 7. Guía de Colaboración Futura
+## 8. Guía de Colaboración Futura
 *   **Agregar un campo a la BD:**
     1.  Modificar `backend/models.py`.
     2.  Modificar `backend/schemas.py`.

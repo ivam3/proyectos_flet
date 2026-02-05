@@ -6,7 +6,7 @@ from typing import List, Optional
 import os
 
 from . import crud, models, schemas
-from .database import engine, get_db
+from .database import SessionLocal, engine
 
 # Crear tablas automáticamente (en producción usar Alembic para migraciones)
 models.Base.metadata.create_all(bind=engine)
@@ -21,6 +21,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Dependency para obtener la sesión de BD
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # --- RUTAS DE MENU ---
 @app.get("/menu", response_model=List[schemas.Menu])

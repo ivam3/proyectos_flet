@@ -1,7 +1,7 @@
 import flet as ft
-from .views.menu_admin import menu_admin_view
-from .views.pedidos import pedidos_view
-from .views.configuracion import configuracion_view # Importar la nueva vista
+from .admin_views.menu_admin import menu_admin_view
+from .admin_views.pedidos import pedidos_view
+from .admin_views.configuracion import configuracion_view # Importar la nueva vista
 
 def create_admin_panel_view(page: ft.Page, logout_func, file_picker, export_file_picker=None):
     """

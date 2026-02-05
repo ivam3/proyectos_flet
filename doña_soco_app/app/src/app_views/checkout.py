@@ -1,6 +1,6 @@
 import flet as ft
 from database import guardar_pedido, get_configuracion
-from views.menu import cargar_menu
+from app_views.menu import cargar_menu
 from components.notifier import init_pubsub # Importar notifier
 import asyncio
 import re
@@ -127,7 +127,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         dialog_instance.open = False
         
         # 3. Forzar cambio visual inmediato
-        from views.seguimiento import seguimiento_view
+        from app_views.seguimiento import seguimiento_view
         nav.selected_index = 2
         
         # Intentamos encontrar el contenedor de contenido en el layout

@@ -13,6 +13,7 @@ from database import (
     mostrar_todos_los_platillos,
     get_grupos_opciones
 )
+from components.notifier import show_notification
 
 # Definimos menu_admin_view sin usar el file_picker global
 def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
@@ -256,14 +257,12 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             if agregar_platillo(*data):
                 limpiar_campos()
                 cargar_lista()
-                page.snack_bar = ft.SnackBar(ft.Text("Platillo agregado correctamente", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+                show_notification(page, "Platillo agregado correctamente", ft.Colors.GREEN)
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Error al agregar platillo (Verificar Backend)", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-            page.snack_bar.open = True
+                show_notification(page, "Error al agregar platillo (Verificar Backend)", ft.Colors.RED)
             page.update()
         else:
-             page.snack_bar = ft.SnackBar(ft.Text("Por favor revise los campos (Precio, Piezas)", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-             page.snack_bar.open = True
+             show_notification(page, "Por favor revise los campos (Precio, Piezas)", ft.Colors.RED)
              page.update()
 
     def guardar_cambios_click(e):
@@ -272,8 +271,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             actualizar_platillo(int(edit_mode_id.value), *data)
             limpiar_campos()
             cargar_lista()
-            page.snack_bar = ft.SnackBar(ft.Text("Actualizado"))
-            page.snack_bar.open = True
+            show_notification(page, "Actualizado", ft.Colors.GREEN)
             page.update()
 
     btn_accion = ft.FilledButton("Guardar", icon=ft.Icons.SAVE, on_click=agregar_click, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
@@ -388,8 +386,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             
             cargar_lista()
             global_confirm_dialog.open = False
-            page.snack_bar = ft.SnackBar(ft.Text(f"Acción '{accion_texto}' completada."))
-            page.snack_bar.open = True
+            show_notification(page, f"Acción '{accion_texto}' completada.", ft.Colors.GREEN)
             page.update()
 
         global_confirm_dialog.content = ft.Text(f"¿Estás seguro de {accion_texto} todos los platillos?", color=ft.Colors.BLACK)

@@ -8,6 +8,7 @@ from database import (
     create_grupo_opciones,
     delete_grupo_opciones
 )
+from components.notifier import show_notification
 
 
 def configuracion_view(page: ft.Page):
@@ -154,9 +155,9 @@ def configuracion_view(page: ft.Page):
             page.update()
         else:
             if nombre in guisos_chk:
-                mostrar_notificacion("Ese guiso ya existe", ft.Colors.ORANGE)
+                show_notification(page, "Ese guiso ya existe", ft.Colors.ORANGE)
             else:
-                mostrar_notificacion("Escribe un nombre", ft.Colors.RED)
+                show_notification(page, "Escribe un nombre", ft.Colors.RED)
 
     btn_add_guiso = ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.GREEN, on_click=agregar_guiso_action)
 
@@ -181,9 +182,9 @@ def configuracion_view(page: ft.Page):
             page.update()
         else:
             if nombre in salsas_chk:
-                mostrar_notificacion("Esa salsa ya existe", ft.Colors.ORANGE)
+                show_notification(page, "Esa salsa ya existe", ft.Colors.ORANGE)
             else:
-                mostrar_notificacion("Escribe un nombre", ft.Colors.RED)
+                show_notification(page, "Escribe un nombre", ft.Colors.RED)
 
     btn_add_salsa = ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.GREEN, on_click=agregar_salsa_action)
 
@@ -266,7 +267,7 @@ def configuracion_view(page: ft.Page):
 
     def agregar_grupo_click(e):
         if not nombre_grupo_field.value or not opciones_grupo_field.value:
-            mostrar_notificacion("Complete todos los campos del grupo", ft.Colors.RED)
+            show_notification(page, "Complete todos los campos del grupo", ft.Colors.RED)
             return
             
         # Convertir CSV a JSON List
@@ -274,28 +275,19 @@ def configuracion_view(page: ft.Page):
         ops_json = json.dumps(ops_list)
         
         if create_grupo_opciones(nombre_grupo_field.value, ops_json):
-            mostrar_notificacion("Grupo agregado", ft.Colors.GREEN_700)
+            show_notification(page, "Grupo agregado", ft.Colors.GREEN_700)
             nombre_grupo_field.value = ""
             opciones_grupo_field.value = ""
             cargar_grupos_opciones()
         else:
-            mostrar_notificacion("Error al crear grupo", ft.Colors.RED)
+            show_notification(page, "Error al crear grupo", ft.Colors.RED)
 
     def borrar_grupo_click(gid):
         if delete_grupo_opciones(gid):
             cargar_grupos_opciones()
-            mostrar_notificacion("Grupo eliminado", ft.Colors.ORANGE)
+            show_notification(page, "Grupo eliminado", ft.Colors.ORANGE)
 
     btn_add_grupo = ft.FilledButton("Agregar Grupo", icon=ft.Icons.ADD, on_click=agregar_grupo_click, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
-
-    def mostrar_notificacion(mensaje, color):
-        page.snack_bar = ft.SnackBar(
-            content=ft.Text(mensaje, color=ft.Colors.WHITE),
-            bgcolor=color,
-            duration=4000,
-        )
-        page.snack_bar.open = True
-        page.update()
 
     def cargar_datos():
         config = get_configuracion()
@@ -387,17 +379,17 @@ def configuracion_view(page: ft.Page):
             salsas_json,
             costo_envio=c_envio
         ):
-            mostrar_notificacion("Configuración guardada correctamente", ft.Colors.GREEN_700)
+            show_notification(page, "Configuración guardada correctamente", ft.Colors.GREEN_700)
         else:
-            mostrar_notificacion("Error al guardar configuración", ft.Colors.RED)
+            show_notification(page, "Error al guardar configuración", ft.Colors.RED)
 
     def cambiar_pass_click(e):
         if new_password_field.value != confirm_password_field.value:
-            mostrar_notificacion("Las contraseñas no coinciden", ft.Colors.RED)
+            show_notification(page, "Las contraseñas no coinciden", ft.Colors.RED)
             return
 
         if cambiar_admin_password(new_password_field.value):
-            mostrar_notificacion("Contraseña actualizada", ft.Colors.GREEN_700)
+            show_notification(page, "Contraseña actualizada", ft.Colors.GREEN_700)
             new_password_field.value = ""
             confirm_password_field.value = ""
             page.update()

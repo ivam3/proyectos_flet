@@ -2,6 +2,7 @@ import flet as ft
 import sqlite3
 import os
 from components.notifier import init_pubsub
+from ..config import APP_NAME
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "../../../storage/data/dona_soco.db")
 
@@ -138,7 +139,7 @@ for p in pedidos_data:
 return ft.View(
     "/admin/pedidos",
     [
-        ft.AppBar(title=ft.Text("Panel de Pedidos - Antojitos Doña Soco"), bgcolor=ft.Colors.ORANGE),
+        ft.AppBar(title=ft.Text(f"Panel de Pedidos - {APP_NAME}"), bgcolor=ft.Colors.ORANGE),
         ft.Container(
             padding=20,
             content=pedidos_list

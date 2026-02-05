@@ -1,4 +1,4 @@
-# app/src/views/menu.py
+# app/src/app_views/menu.py
 import flet as ft
 from database import obtener_menu, get_configuracion
 
@@ -89,7 +89,7 @@ def cargar_menu(page: ft.Page):
                                         height=img_height, border_radius=8, clip_behavior=ft.ClipBehavior.HARD_EDGE,
                                     ),
                                     ft.Text(nombre, weight=ft.FontWeight.BOLD, size=13, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS, color=ft.Colors.BLACK),
-                                    ft.Text(descripcion or "", size=10, color=ft.Colors.GREY_700, max_lines=3, overflow=ft.TextOverflow.ELLIPSIS),
+                                    ft.Text(descripcion or "", size=11, color=ft.Colors.GREY_800, max_lines=10, overflow=ft.TextOverflow.FADE),
                                     ft.Container(expand=True),
                                     ft.Row(
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,

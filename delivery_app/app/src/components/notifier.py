@@ -13,6 +13,17 @@ def init_pubsub(page: ft.Page):
 import time
 import threading
 
+def show_notification(page: ft.Page, text: str, color=ft.Colors.GREEN):
+    """Muestra un SnackBar de forma robusta."""
+    page.snack_bar = ft.SnackBar(
+        content=ft.Text(text, color=ft.Colors.WHITE),
+        bgcolor=color,
+        action="Cerrar",
+        duration=3000
+    )
+    page.snack_bar.open = True
+    page.update()
+
 def play_notification_sound(page: ft.Page):
     """Reproduce sonido inyectando un componente de audio HTML temporal."""
     try:

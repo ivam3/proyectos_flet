@@ -11,7 +11,7 @@ from .database import SessionLocal, engine
 # Crear tablas automáticamente (en producción usar Alembic para migraciones)
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Doña Soco API")
+app = FastAPI(title="Antojitos Doña Soco API")
 
 # Configurar CORS para permitir que Flet (Web/Android) se conecte
 app.add_middleware(

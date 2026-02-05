@@ -1,6 +1,6 @@
 import flet as ft
 from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion, obtener_menu
-from components.notifier import init_pubsub, play_notification_sound # Importar herramientas de notificación
+from components.notifier import init_pubsub, play_notification_sound, show_notification # Importar herramientas de notificación
 import math
 import csv
 import datetime
@@ -35,11 +35,9 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     
     def on_file_picker_result(e):
         if e.path:
-             page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado exitosamente.", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+             show_notification(page, f"Archivo guardado exitosamente.", ft.Colors.GREEN)
         else:
-             page.snack_bar = ft.SnackBar(ft.Text("Operación cancelada.", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
+             show_notification(page, "Operación cancelada.", ft.Colors.GREY_700)
 
     file_picker.on_result = on_file_picker_result
 
@@ -109,9 +107,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
     async def iniciar_exportacion(extension="csv"):
         print(f"DEBUG: Iniciando exportación {extension}")
-        page.snack_bar = ft.SnackBar(ft.Text(f"Generando datos {extension.upper()}...", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
+        show_notification(page, f"Generando datos {extension.upper()}...", ft.Colors.BLUE_GREY_700)
 
         try:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -160,9 +156,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 
                 if es_escritorio_o_web:
                     print("DEBUG: Modo Web/Escritorio detectado. Usando FilePicker.")
-                    page.snack_bar = ft.SnackBar(ft.Text(f"Abriendo selector...", color=ft.Colors.WHITE))
-                    page.snack_bar.open = True
-                    page.update()
+                    show_notification(page, f"Abriendo selector...", ft.Colors.BLUE_GREY_700)
                     
                     await file_picker.save_file(
                         dialog_title=f"Guardar {file_ext.upper()}",
@@ -182,9 +176,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
     # --- LÓGICA DE IMPRESIÓN (COCINA, FOODTRUCK, CAJA) ---
     async def imprimir_pedido(pedido):
-        page.snack_bar = ft.SnackBar(ft.Text("Iniciando impresión masiva...", color=ft.Colors.WHITE), bgcolor=ft.Colors.BLUE)
-        page.snack_bar.open = True
-        page.update()
+        show_notification(page, "Iniciando impresión masiva...", ft.Colors.BLUE)
 
         try:
             # 1. Obtener mapa de productos para saber destino
@@ -254,9 +246,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
         except Exception as ex:
             print(f"ERROR IMPRESION: {ex}")
-            page.snack_bar = ft.SnackBar(ft.Text(f"Error imprimiendo: {ex}", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-            page.snack_bar.open = True
-            page.update()
+            show_notification(page, f"Error imprimiendo: {ex}", ft.Colors.RED)
 
     def print_handler(pedido):
         async def handler(e):
@@ -264,9 +254,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         return handler
 
     async def generar_y_guardar_pdf(pedido):
-        page.snack_bar = ft.SnackBar(ft.Text("Generando PDF...", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
+        show_notification(page, "Generando PDF...", ft.Colors.BLUE_GREY_700)
 
         try:
             pdf = FPDF()
@@ -423,9 +411,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         actualizar_estado_pedido(pedido_id, new_status, motivo)
         close_confirmation_dialog()
         cargar_pedidos()
-        page.snack_bar = ft.SnackBar(ft.Text(f"Estado actualizado a {new_status}", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
+        show_notification(page, f"Estado actualizado a {new_status}", ft.Colors.GREEN)
 
     confirmation_dialog = ft.AlertDialog(
         modal=True,
@@ -548,16 +534,28 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
     cargar_pedidos()
 
     # --- SUBSCRIPCIÓN A NOTIFICACIONES ---
-    def on_new_order(message):
+    async def on_new_order(message):
         if message == "nuevo_pedido":
             # Reproducir sonido
             play_notification_sound(page)
-            # Mostrar alerta visual (SnackBar)
-            page.snack_bar = ft.SnackBar(ft.Text("🔔 ¡Nuevo Pedido Recibido!", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN_700)
-            page.snack_bar.open = True
+            # Mostrar alerta visual
+            show_notification(page, "🔔 ¡Nuevo Pedido Recibido!", ft.Colors.GREEN_700)
+            
             # Recargar tabla
             cargar_pedidos()
             page.update()
+
+            # Imprimir automaticamente
+            try:
+                # Obtener el ultimo pedido para imprimirlo
+                # Asumimos que obtener_pedidos devuelve ordenados por fecha descendente
+                pedidos_recientes = obtener_pedidos(limit=1)
+                if pedidos_recientes:
+                    ultimo_pedido = pedidos_recientes[0]
+                    # Llamar a la funcion de impresion existente
+                    await imprimir_pedido(ultimo_pedido)
+            except Exception as e:
+                print(f"Error en impresion automatica: {e}")
 
     pubsub = init_pubsub(page)
     pubsub.subscribe(on_new_order)

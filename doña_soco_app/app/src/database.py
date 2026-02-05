@@ -10,7 +10,8 @@ import os
 # CONFIGURACIÓN DE CONEXIÓN
 # En producción/nube, cambiar esto por la URL de tu servidor (ej: https://dona-soco-api.railway.app)
 # Para pruebas locales en PC/Termux:
-API_URL = "http://localhost:8000"
+# API_URL = "http://localhost:8000"
+API_URL = "https://apiibyc.loca.lt"
 
 # Si estás en Android real y el servidor está en tu PC, usa la IP de tu PC (ej: http://192.168.1.50:8000)
 # Si el servidor corre en el mismo Termux que la app, localhost está bien.

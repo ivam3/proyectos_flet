@@ -1,4 +1,4 @@
-# app/src/views/menu.py
+# app/src/app_views/menu.py
 import flet as ft
 from database import obtener_menu, get_configuracion
 

@@ -1,0 +1,42 @@
+nohup: ignoring input
+INFO:     Will watch for changes in these directories: ['/data/data/com.termux/files/home/.repositories/proyectos_flet/doña_soco_app']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [10005] using WatchFiles
+INFO:     Started server process [10007]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:49068 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42544 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42560 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42574 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42590 - "GET /opciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42604 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42608 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42620 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42634 - "GET /opciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53348 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32946 - "GET /menu?solo_activos=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48330 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48338 - "POST /admin/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48344 - "GET /menu?solo_activos=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48356 - "GET /opciones HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48358 - "GET /pedidos?skip=0&limit=1000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48372 - "GET /pedidos?skip=0&limit=12 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48386 - "GET /configuracion HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48390 - "GET /opciones HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'app/src/config.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10007]
+INFO:     Started server process [11268]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/src/config.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [11268]
+INFO:     Started server process [11306]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

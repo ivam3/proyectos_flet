@@ -13,6 +13,7 @@ class MenuBase(BaseModel):
     is_configurable: Optional[int] = 0
     is_configurable_salsa: Optional[int] = 0
     piezas: Optional[int] = 1
+    printer_target: Optional[str] = "cocina"
     grupos_opciones_ids: Optional[str] = "[]"
 
 class MenuCreate(MenuBase):
@@ -100,6 +101,7 @@ class ConfiguracionBase(BaseModel):
     contactos: Optional[str] = None # JSON string
     guisos_disponibles: Optional[str] = None
     salsas_disponibles: Optional[str] = None
+    costo_envio: Optional[float] = 20.0
 
 class ConfiguracionUpdate(ConfiguracionBase):
     pass

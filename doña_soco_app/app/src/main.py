@@ -18,6 +18,7 @@ except Exception as e:
 
 import flet as ft
 from flet_core import Audio
+from config import APP_NAME
 from database import crear_tablas, verificar_admin_login
 from app_views.carrito import create_carrito_view
 from app_views.seguimiento import seguimiento_view
@@ -34,7 +35,7 @@ def main(page: ft.Page):
     if not hasattr(page.session, "cart"):
         page.session.cart = Cart()
 
-    page.title = "Antojitos Doña Soco"
+    page.title = APP_NAME
     page.window_favicon_path = "favicon.png"
     page.favicon = "favicon.png"
 
@@ -194,7 +195,7 @@ def main(page: ft.Page):
         content=ft.Row(
             [
                 ft.Image(src="icon.png", width=60, height=60),
-                ft.Text("Antojitos Doña Soco", size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
+                ft.Text(APP_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
             ],
             alignment=ft.MainAxisAlignment.START,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,

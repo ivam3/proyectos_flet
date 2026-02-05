@@ -1,58 +1,64 @@
-import flet as ft
 import os
-from flet_core import Audio # Importación directa desde core para evitar error de atributo
+import sys
+
+# --- SOLUCIÓN TOTAL PARA ANDROID ---
+# Forzamos al sistema a ver la raíz de la app y sus subcarpetas
+try:
+    APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+    if APP_ROOT not in sys.path:
+        sys.path.insert(0, APP_ROOT)
+    
+    # Añadimos explícitamente el directorio padre por si acaso
+    PARENT_DIR = os.path.dirname(APP_ROOT)
+    if PARENT_DIR not in sys.path:
+        sys.path.insert(1, PARENT_DIR)
+except Exception as e:
+    pass
+# -----------------------------------
+
+import flet as ft
+from flet_core import Audio
+from config import APP_NAME
 from database import crear_tablas, verificar_admin_login
-from views.carrito import create_carrito_view
-from views.seguimiento import seguimiento_view
-from views.menu import cargar_menu
-from views.checkout import create_checkout_view
-from components.notifier import init_pubsub
+from app_views.carrito import create_carrito_view
+from app_views.seguimiento import seguimiento_view
+from app_views.menu import cargar_menu
+from app_views.checkout import create_checkout_view
+from components.notifier import init_pubsub, show_notification
 from panel_restaurante.admin_panel import create_admin_panel_view
 from components.cart import Cart
 
 
-from config import COMPANY_NAME # Importar configuración centralizada
-
 def main(page: ft.Page):
     crear_tablas()
 
-    # Initialize cart
     if not hasattr(page.session, "cart"):
         page.session.cart = Cart()
-    # -------------------------------------------
-    
-    # ------- PERMISOS ANDROID -------
-    # Se ha eliminado PermissionHandler por incompatibilidad técnica en esta versión de Flet.
-    # Los permisos necesarios (fotos/notificaciones) serán gestionados automáticamente por el SO.
 
-    page.title = COMPANY_NAME
+    page.title = APP_NAME
     page.window_favicon_path = "favicon.png"
-    page.favicon = "favicon.png"  # <- FAVICON WEB USANDO PNG CONVERTIDO
+    page.favicon = "favicon.png"
 
-    # Directorio correcto para assets (Flet sirve desde aquí - Read Only)
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
     
-    # Directorio para subidas (Debe ser escribible)
     if "ANDROID_ARGUMENT" in os.environ:
         page.upload_dir = os.path.join(os.path.expanduser("~"), "dona_soco_uploads")
     else:
         page.upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "uploads"))
         
     os.makedirs(page.upload_dir, exist_ok=True)
-    # Sistema pub-sub
     pubsub = init_pubsub(page)
 
     page.theme_mode = ft.ThemeMode.LIGHT
     
-    # Define a custom text theme with slightly smaller font sizes AND FORCE BLACK COLOR
     page.theme = ft.Theme(
         color_scheme_seed="orange",
         color_scheme=ft.ColorScheme(
-            primary=ft.Colors.ORANGE_300, # Suavizado de ORANGE a ORANGE_300 para bordes con foco
+            primary=ft.Colors.ORANGE_300,
             on_primary=ft.Colors.WHITE,
             surface=ft.Colors.WHITE,
-            on_surface=ft.Colors.BLACK, # Texto negro por defecto
-            outline=ft.Colors.ORANGE_200, # Color de bordes en reposo
+            on_surface=ft.Colors.BLACK,
+            outline=ft.Colors.ORANGE_200,
         ),
         text_theme=ft.TextTheme(
             body_large=ft.TextStyle(size=15, color=ft.Colors.BLACK),
@@ -66,64 +72,36 @@ def main(page: ft.Page):
     page.window.width = 400
     page.window.height = 700
 
-    # ------- ESTADO -------
     admin_mode = False
 
-    # ------- UTILIDADES -------
     def show_snackbar(message: str, color=ft.Colors.BLACK):
-        page.snack_bar = ft.SnackBar(
-            content=ft.Text(message, color=ft.Colors.WHITE),
-            bgcolor=color,
-            behavior=ft.SnackBarBehavior.FLOATING,
-            margin=ft.Margin.only(bottom=50, left=10, right=10), # Margen reducido
-            duration=3000
-        )
-        page.snack_bar.open = True
-        page.update()
+        show_notification(page, message, color)
 
     def close_dialog():
         dialog.open = False
         page.update()
 
-    # Área central de contenido
     content_area = ft.Container(expand=True)
     
-    # ------- DIÁLOGO DE ADMIN & FILE PICKER GLOBAL -------
-    # --- SELECTOR GLOBAL ESTABLE (SOLUCIÓN CICLO DE VIDA) ---
     def global_file_picker_handler(e):
-        print(f"GLOBAL PICKER RESULT: {e.files}")
         if not e.files:
             return
-
-        # Recuperamos datos persistentes de forma segura
         ctx = getattr(page.session, "file_picker_ctx", None)
         if not ctx:
-            print("No picker context found in session")
             return
-
-        # Ejecutamos callback seguro
         try:
-            # El callback espera el objeto file directo, según el snippet del usuario
             ctx["callback"](e.files[0])
         except Exception as ex:
-            print(f"Error executing picker callback: {ex}")
+            print(f"Error callback: {ex}")
 
     global_file_picker = ft.FilePicker()
     global_file_picker.on_result = global_file_picker_handler
-    # Wrap in invisible container to hide visual glitches in Android (Red Stripe fix)
     page.overlay.append(ft.Container(content=global_file_picker, visible=False))
     page.session.file_picker = global_file_picker
 
-    # --- SELECTOR DE EXPORTACIÓN (PEDIDOS) ---
-    # Instanciamos aquí para evitar errores visuales y duplicados
     export_file_picker = ft.FilePicker()
     page.overlay.append(ft.Container(content=export_file_picker, visible=False))
     
-    # --- AUDIO DE NOTIFICACIONES ---
-    # (Eliminado por incompatibilidad de serialización en este entorno)
-    # Se usará inyección de HTML en notifier.py
-
-    # ------- DIÁLOGO DE ADMIN -------
     admin_field = ft.TextField(password=True, hint_text="Clave")
 
     def activar_admin(e):
@@ -137,8 +115,6 @@ def main(page: ft.Page):
             admin_mode = True
             close_dialog()
             show_snackbar("Modo administrador activado")
-            
-            # Sincronizar vía ruteo
             await page.push_route("/admin")
         else:
             admin_field.value = ""
@@ -155,18 +131,15 @@ def main(page: ft.Page):
     )
     page.overlay.append(dialog)
 
-    # ------- LOGOUT -------
     async def logout(e=None):
         nonlocal admin_mode
         admin_mode = False
         show_snackbar("Sesión de administrador cerrada")
-        # Restore overlay state (dialog only, picker is in main controls)
         page.overlay.clear()
         page.overlay.append(dialog)
         await page.push_route("/menu")
         page.update()
 
-    # ------- CAMBIAR PANTALLAS -------
     async def change_page(e):
         selected = e.control.selected_index
         if selected == 0:
@@ -179,7 +152,6 @@ def main(page: ft.Page):
             if admin_mode:
                 await page.push_route("/admin")
             else:
-                # Si no es admin, forzar el índice a la vista actual
                 if page.route.startswith("/carrito"):
                     nav.selected_index = 1
                 elif page.route.startswith("/seguimiento"):
@@ -189,7 +161,6 @@ def main(page: ft.Page):
                 show_snackbar("Acceso restringido")
         page.update()
 
-    # ------- ROUTING -------
     async def handle_route_change(e):
         route = e.route
         if route.startswith("/seguimiento"):
@@ -204,7 +175,6 @@ def main(page: ft.Page):
         elif route.startswith("/admin"):
             if admin_mode:
                 nav.selected_index = 3
-                # Usamos el export_file_picker ya creado en el inicio
                 content_area.content = create_admin_panel_view(
                     page, 
                     logout_func=logout, 
@@ -221,12 +191,11 @@ def main(page: ft.Page):
 
     page.on_route_change = handle_route_change
 
-    # ------- HEADER (doble clic para admin) -------
     top_bar = ft.Container(
         content=ft.Row(
             [
                 ft.Image(src="icon.png", width=60, height=60),
-                ft.Text(COMPANY_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
+                ft.Text(APP_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
             ],
             alignment=ft.MainAxisAlignment.START,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -238,7 +207,6 @@ def main(page: ft.Page):
         border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.BLACK_12))
     )
 
-    # ------- BOTTOM NAV -------
     nav = ft.NavigationBar(
         destinations=[
             ft.NavigationBarDestination(icon=ft.Icons.RESTAURANT_MENU, label="Menú"),
@@ -249,10 +217,8 @@ def main(page: ft.Page):
         on_change=change_page
     )
 
-    # ------- UI FINAL -------
     content_area.content = cargar_menu(page)
 
-    # Usar SafeArea para evitar solapamiento con la barra de estado
     page.add(
         ft.SafeArea(
             ft.Column(
@@ -269,7 +235,10 @@ def main(page: ft.Page):
     )
 
 
-# Ruta absoluta segura para assets
-assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
-os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
-ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")
+if __name__ == "__main__":
+    assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
+    os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
+    # Inicio de la aplicación con renderizado optimizado para su construccion en formato .APK para Android
+    # ft.app(target=main, assets_dir=assets_path)
+    # Inicio de la aplicación con renderizado optimizado para web y soporte completo de CanvasKi
+    ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")

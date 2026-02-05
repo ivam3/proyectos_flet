@@ -5,7 +5,7 @@ import json
 import datetime
 from fpdf import FPDF
 from config import COMPANY_NAME
-from components.notifier import init_pubsub
+from components.notifier import init_pubsub, show_notification
 from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido, actualizar_estado_pedido
 
 # Adjust path to DB relative to src/views
@@ -38,10 +38,9 @@ def seguimiento_view(page: ft.Page):
 
     def on_file_picker_result(e):
         if e.path:
-             page.snack_bar = ft.SnackBar(ft.Text(f"Archivo guardado exitosamente.", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+             show_notification(page, f"Archivo guardado exitosamente.", ft.Colors.GREEN)
         else:
-             page.snack_bar = ft.SnackBar(ft.Text("Operación cancelada.", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
+             show_notification(page, "Operación cancelada.", ft.Colors.GREY_700)
         page.update()
 
     # SOLO agregamos el FilePicker si estamos en Desktop/Web
@@ -104,9 +103,7 @@ def seguimiento_view(page: ft.Page):
 
     async def generar_y_guardar_pdf(pedido):
         print(f"DEBUG: Iniciando generación PDF para pedido {pedido['id']}")
-        page.snack_bar = ft.SnackBar(ft.Text("Generando PDF...", color=ft.Colors.WHITE))
-        page.snack_bar.open = True
-        page.update()
+        show_notification(page, "Generando PDF...", ft.Colors.BLUE_GREY_700)
 
         try:
             pdf = FPDF()
@@ -195,12 +192,10 @@ def seguimiento_view(page: ft.Page):
             
             if actualizar_estado_pedido(pedido['id'], "Cancelado", reason_field.value.strip()):
                 dlg_cancel.open = False
-                page.snack_bar = ft.SnackBar(ft.Text("Pedido cancelado exitosamente."))
-                page.snack_bar.open = True
+                show_notification(page, "Pedido cancelado exitosamente.", ft.Colors.GREEN)
                 buscar_pedidos(None)
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Error al cancelar el pedido."))
-                page.snack_bar.open = True
+                show_notification(page, "Error al cancelar el pedido.", ft.Colors.RED)
                 page.update()
 
         dlg_cancel = ft.AlertDialog(
@@ -305,24 +300,20 @@ def seguimiento_view(page: ft.Page):
                 try:
                     paga_con = float(paga_con_field.value)
                     if paga_con < total:
-                        page.snack_bar = ft.SnackBar(ft.Text("El monto es menor al total."))
-                        page.snack_bar.open = True
+                        show_notification(page, "El monto es menor al total.", ft.Colors.RED)
                         page.update()
                         return
                 except:
-                    page.snack_bar = ft.SnackBar(ft.Text("Monto inválido."))
-                    page.snack_bar.open = True
+                    show_notification(page, "Monto inválido.", ft.Colors.RED)
                     page.update()
                     return
             
             if actualizar_pago_pedido(pedido['id'], group.value, paga_con):
                 dlg_pay.open = False
-                page.snack_bar = ft.SnackBar(ft.Text("Método de pago actualizado."))
-                page.snack_bar.open = True
+                show_notification(page, "Método de pago actualizado.", ft.Colors.GREEN)
                 buscar_pedidos(None)
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Error al actualizar."))
-                page.snack_bar.open = True
+                show_notification(page, "Error al actualizar.", ft.Colors.RED)
                 page.update()
 
         dlg_pay = ft.AlertDialog(
@@ -444,8 +435,7 @@ def seguimiento_view(page: ft.Page):
         codigo = codigo_field.value.strip().upper()
 
         if not tel or not codigo:
-            page.snack_bar = ft.SnackBar(ft.Text("Por favor, ingresa el teléfono y el código de seguimiento."))
-            page.snack_bar.open = True
+            show_notification(page, "Por favor, ingresa el teléfono y el código de seguimiento.", ft.Colors.ORANGE)
             page.update()
             return
         
@@ -470,8 +460,7 @@ def seguimiento_view(page: ft.Page):
             # Sound logic... (simplified for now)
             pass
 
-            page.snack_bar = ft.SnackBar(ft.Text(f"🔔 Tu pedido #{data['orden_id']} ahora está '{data['nuevo_estado']}'"))
-            page.snack_bar.open = True
+            show_notification(page, f"🔔 Tu pedido #{data['orden_id']} ahora está '{data['nuevo_estado']}'", ft.Colors.BLUE)
             buscar_pedidos(None)
 
     pubsub.subscribe(recibir_mensaje)

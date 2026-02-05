@@ -1,34 +1,36 @@
 [project]
-name = "pedido-express-app"
-version = "1.0.0"
-description = "Plantilla genérica para App de Pedidos y Delivery"
+name = "delivery-app"
+version = "0.1.0"
+description = "Aplicación de pedidos y administración"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-  "flet==0.80.1",
+  "flet==0.80.5",
   "fpdf2==2.8.5",
-  "flet_core==0.24.1",
-  "openpyxl==3.1.5"
+  "flet_core==0.80.5",
+  "openpyxl==3.1.5",
+  "httpx==0.28.1",
+  "httpcore==1.0.5"
 ]
 
 [tool.flet]
-app_name = "Mi Negocio App"
+app_name = "delivery-app"
 # org name in reverse domain name notation, e.g. "com.mycompany".
 # Combined with project.name to build bundle ID for iOS and Android apps
-org = "com.minegocio"
+org = "Ivam3byCinderella"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "Mi Negocio"
+product = "Delivery App"
 
 # company name to display in about app dialogs
-company = "Mi Empresa S.A."
+company = "Ivam3byCinderella"
 
 # copyright text to display in about app dialogs
-copyright = "Copyright (C) 2026"
+copyright = "Copyright (C) 2026 by Ivam3byCinderella"
 
 [tool.flet.android]
-package_name = "com.minegocio.app"
+package_name = "com.delivery.app"
 
 [tool.flet.app]
 path = "src"

@@ -20,6 +20,9 @@ class Menu(Base):
     is_configurable_salsa = Column(Integer, default=0)
     piezas = Column(Integer, default=1)
     
+    # Target de impresion: 'cocina' (Interior) o 'foodtruck' (Exterior)
+    printer_target = Column(String, default="cocina")
+    
     # Lista JSON de IDs de GrupoOpciones aplicables a este platillo
     # Ej: "[1, 3]"
     grupos_opciones_ids = Column(Text, default="[]")
@@ -49,6 +52,7 @@ class Configuracion(Base):
     admin_password = Column(String, nullable=True)
     guisos_disponibles = Column(Text, nullable=True)
     salsas_disponibles = Column(Text, nullable=True)
+    costo_envio = Column(Float, default=20.0)
 
 class Orden(Base):
     __tablename__ = "ordenes"

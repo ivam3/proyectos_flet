@@ -13,6 +13,7 @@ from database import (
     mostrar_todos_los_platillos,
     get_grupos_opciones
 )
+from components.notifier import show_notification
 
 # Definimos menu_admin_view sin usar el file_picker global
 def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
@@ -33,6 +34,17 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
     precio_field = ft.TextField(label="Precio", keyboard_type=ft.KeyboardType.NUMBER, prefix=ft.Text("$", color=ft.Colors.BLACK), text_style=ft.TextStyle(color=ft.Colors.BLACK))
     descuento_field = ft.TextField(label="Descuento %", keyboard_type=ft.KeyboardType.NUMBER, value="0", text_style=ft.TextStyle(color=ft.Colors.BLACK))
     piezas_field = ft.TextField(label="Piezas por orden", keyboard_type=ft.KeyboardType.NUMBER, value="1", text_style=ft.TextStyle(color=ft.Colors.BLACK))
+
+    printer_target_dd = ft.Dropdown(
+        label="Área de Preparación",
+        options=[
+            ft.dropdown.Option("cocina", "Cocina (Interior)"),
+            ft.dropdown.Option("foodtruck", "Foodtruck (Exterior)"),
+        ],
+        value="cocina",
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
 
     def sync_checkbox_color(chk: ft.Checkbox):
         chk.fill_color = ft.Colors.BROWN_700 if chk.value else ft.Colors.WHITE
@@ -88,6 +100,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         precio_field.value = ""
         descuento_field.value = "0"
         piezas_field.value = "1"
+        printer_target_dd.value = "cocina"
         is_config_chk.value = False
         is_config_salsa_chk.value = False
         
@@ -118,6 +131,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         is_conf = platillo.get('is_configurable', 0)
         is_conf_salsa = platillo.get('is_configurable_salsa', 0)
         piezas = platillo.get('piezas', 1)
+        printer_target = platillo.get('printer_target', 'cocina')
         grupos_ids_json = platillo.get('grupos_opciones_ids', "[]")
 
         nombre_field.value = nom
@@ -125,6 +139,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         precio_field.value = str(pre)
         descuento_field.value = str(desc_val)
         piezas_field.value = str(piezas)
+        printer_target_dd.value = printer_target
         is_config_chk.value = bool(is_conf)
         is_config_salsa_chk.value = bool(is_conf_salsa)
         
@@ -242,14 +257,12 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             if agregar_platillo(*data):
                 limpiar_campos()
                 cargar_lista()
-                page.snack_bar = ft.SnackBar(ft.Text("Platillo agregado correctamente", color=ft.Colors.WHITE), bgcolor=ft.Colors.GREEN)
+                show_notification(page, "Platillo agregado correctamente", ft.Colors.GREEN)
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Error al agregar platillo (Verificar Backend)", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-            page.snack_bar.open = True
+                show_notification(page, "Error al agregar platillo (Verificar Backend)", ft.Colors.RED)
             page.update()
         else:
-             page.snack_bar = ft.SnackBar(ft.Text("Por favor revise los campos (Precio, Piezas)", color=ft.Colors.WHITE), bgcolor=ft.Colors.RED)
-             page.snack_bar.open = True
+             show_notification(page, "Por favor revise los campos (Precio, Piezas)", ft.Colors.RED)
              page.update()
 
     def guardar_cambios_click(e):
@@ -258,8 +271,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             actualizar_platillo(int(edit_mode_id.value), *data)
             limpiar_campos()
             cargar_lista()
-            page.snack_bar = ft.SnackBar(ft.Text("Actualizado"))
-            page.snack_bar.open = True
+            show_notification(page, "Actualizado", ft.Colors.GREEN)
             page.update()
 
     btn_accion = ft.FilledButton("Guardar", icon=ft.Icons.SAVE, on_click=agregar_click, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
@@ -279,22 +291,35 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             active = p.get('is_active', 1)
             is_conf = p.get('is_configurable', 0)
             is_conf_salsa = p.get('is_configurable_salsa', 0)
+            target = p.get('printer_target', 'cocina')
+            target_color = ft.Colors.BLUE_700 if target == "cocina" else ft.Colors.ORANGE_700
+            target_label = "COCINA (INT)" if target == "cocina" else "FOODTRUCK (EXT)"
 
             extras = []
             if is_conf: extras.append("Guisos")
             if is_conf_salsa: extras.append("Salsas")
-            desc_final = f"{desc or ''} ({', '.join(extras)})" if extras else (desc or "")
+            
+            desc_final = f"{desc or ''}"
+            config_labels = f"({', '.join(extras)})" if extras else ""
 
             item_row = ft.Container(
                 padding=10,
                 bgcolor=ft.Colors.ORANGE_50,
                 border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
                 content=ft.Row([
-                    ft.Image(src=f"/{img}" if img else "/icon.png", width=60, height=60, fit="cover", border_radius=8),
+                    ft.Image(src=f"/{img}" if img else "/icon.png", width=70, height=70, fit="cover", border_radius=8),
                     ft.Column([
-                        ft.Text(nom, weight="bold", size=14, color=ft.Colors.BLACK),
-                        ft.Text(desc_final, size=12, color=ft.Colors.GREY_700, max_lines=2, overflow="ellipsis"),
-                        ft.Text(f"${pre:.2f}", weight="bold", color=ft.Colors.BROWN_700),
+                        ft.Row([
+                            ft.Text(nom, weight="bold", size=16, color=ft.Colors.BLACK, expand=True),
+                                                                    ft.Container(
+                                                                        content=ft.Text(target_label, size=10, color=ft.Colors.WHITE, weight="bold"),
+                                                                        bgcolor=target_color,
+                                                                        padding=ft.Padding.symmetric(horizontal=8, vertical=2),
+                                                                        border_radius=5
+                                                                    )                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        ft.Text(desc_final, size=13, color=ft.Colors.GREY_800),
+                        ft.Text(config_labels, size=11, color=ft.Colors.BROWN_400, italic=True) if config_labels else ft.Container(),
+                        ft.Text(f"${pre:.2f}", weight="bold", size=15, color=ft.Colors.BROWN_700),
                         ft.Row([
                             ft.IconButton(ft.Icons.EDIT, icon_color=ft.Colors.BROWN_700, icon_size=20, tooltip="Editar", on_click=lambda e, pl=p: llenar_campos(pl)),
                             ft.IconButton(ft.Icons.DELETE, icon_color=ft.Colors.RED, icon_size=20, tooltip="Eliminar", on_click=lambda e, id=pid: [eliminar_platillo(id), cargar_lista()]),
@@ -335,7 +360,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         selected_groups = [gid for gid, chk in grupos_opciones_checks.items() if chk.value]
         grupos_json = json.dumps(selected_groups)
         
-        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz, grupos_json
+        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz, grupos_json, printer_target_dd.value
 
     search_bar = ft.TextField(
         hint_text="Buscar platillo...",
@@ -361,8 +386,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             
             cargar_lista()
             global_confirm_dialog.open = False
-            page.snack_bar = ft.SnackBar(ft.Text(f"Acción '{accion_texto}' completada."))
-            page.snack_bar.open = True
+            show_notification(page, f"Acción '{accion_texto}' completada.", ft.Colors.GREEN)
             page.update()
 
         global_confirm_dialog.content = ft.Text(f"¿Estás seguro de {accion_texto} todos los platillos?", color=ft.Colors.BLACK)
@@ -390,6 +414,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
                 precio_field,
                 descuento_field,
                 piezas_field,
+                printer_target_dd,
                 ft.Column([is_config_chk, is_config_salsa_chk], spacing=0),
                 ft.Text("Opciones Extras (Configurado en Ajustes):", size=14, weight="bold", color=ft.Colors.BLACK),
                 grupos_opciones_container,

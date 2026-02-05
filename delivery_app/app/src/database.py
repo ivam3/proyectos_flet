@@ -41,7 +41,7 @@ def cambiar_admin_password(new_password):
         return False
 
 # --- MENU ---
-def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]"):
+def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina"):
     data = {
         "nombre": nombre,
         "descripcion": descripcion,
@@ -52,6 +52,7 @@ def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_config
         "is_configurable_salsa": is_configurable_salsa,
         "piezas": piezas,
         "grupos_opciones_ids": grupos_opciones_ids,
+        "printer_target": printer_target,
         "is_active": 1
     }
     try:
@@ -61,7 +62,7 @@ def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_config
         print(f"Error agregar platillo: {e}")
         return False
 
-def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]"):
+def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina"):
     data = {
         "nombre": nombre,
         "descripcion": descripcion,
@@ -71,7 +72,8 @@ def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descue
         "is_configurable": is_configurable,
         "is_configurable_salsa": is_configurable_salsa,
         "piezas": piezas,
-        "grupos_opciones_ids": grupos_opciones_ids
+        "grupos_opciones_ids": grupos_opciones_ids,
+        "printer_target": printer_target
     }
     try:
         httpx.put(f"{API_URL}/menu/{platillo_id}", json=data)
@@ -171,7 +173,7 @@ def get_configuracion():
         print(f"Error obtener config: {e}")
         return {}
 
-def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None, guisos_disponibles=None, salsas_disponibles=None):
+def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None, guisos_disponibles=None, salsas_disponibles=None, costo_envio=20.0):
     data = {
         "horario": horario,
         "codigos_postales": codigos_postales,
@@ -179,7 +181,8 @@ def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, t
         "tipos_tarjeta": tipos_tarjeta,
         "contactos": contactos,
         "guisos_disponibles": guisos_disponibles,
-        "salsas_disponibles": salsas_disponibles
+        "salsas_disponibles": salsas_disponibles,
+        "costo_envio": costo_envio
     }
     # Limpiar nones para no sobreescribir con null
     data = {k: v for k, v in data.items() if v is not None}

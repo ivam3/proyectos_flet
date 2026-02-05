@@ -3,3 +3,5 @@ uvicorn>=0.29.0
 sqlalchemy>=2.0.29
 pydantic>=2.7.0
 python-multipart
+psycopg2-binary
+python-dotenv

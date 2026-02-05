@@ -40,3 +40,8 @@ INFO:     Finished server process [11268]
 INFO:     Started server process [11306]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [11306]
+INFO:     Stopping reloader process [10005]

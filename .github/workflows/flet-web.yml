@@ -2,8 +2,7 @@ name: Build Flet Web (Doña Soco)
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -11,13 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.7"
+          channel: stable
 
       - name: Install system dependencies
         run: |
@@ -37,18 +40,15 @@ jobs:
       - name: Install Python dependencies
         working-directory: dona_soco_app/app
         run: |
-          python -m pip install --upgrade pip
-          pip install flet flet-cli
+          pip install --upgrade pip
+          pip install flet==0.80.5 flet-cli==0.80.5
 
       - name: Build Flet Web
-        env:
-          FLET_FLUTTER_AUTO_INSTALL: "1"
-          FLET_FLUTTER_INSTALL_NON_INTERACTIVE: "1"
         working-directory: dona_soco_app/app
         run: |
           flet build web
 
-      - name: Upload web build artifact
+      - name: Upload web build
         uses: actions/upload-artifact@v4
         with:
           name: dona-soco-flet-web

@@ -1,0 +1,42 @@
+name: Build Flet Web (Doña Soco)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev
+
+      - name: Install Python dependencies
+        working-directory: dona_soco_app/app
+        run: |
+          python -m pip install --upgrade pip
+          pip install flet
+
+      - name: Build Flet Web
+        working-directory: dona_soco_app/app
+        run: |
+          flet build web
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dona-soco-flet-web
+          path: dona_soco_app/app/build/web

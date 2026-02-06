@@ -32,7 +32,7 @@ jobs:
             libxrandr2 \
             libxtst6 \
             libxkbcommon0 \
-            libasound2
+            libasound2t64
 
       - name: Install Python dependencies
         working-directory: dona_soco_app/app

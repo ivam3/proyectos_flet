@@ -31,6 +31,8 @@ jobs:
           pip install flet
 
       - name: Build Flet Web
+        env:
+          FLET_FLUTTER_AUTO_INSTALL: "1"
         working-directory: dona_soco_app/app
         run: |
           flet build web

@@ -2,5 +2,11 @@
 # Cambia el valor de estas variables para personalizar la marca (White Label)
 
 APP_NAME = "Antojitos Doña Soco"
-COMPANY_NAME = "Ivam3byCinderella" # Usado en reportes y encabezados
-API_URL = "https://dona-soco-app.onrender.com" # URL de la API, cambiar si se usa localmente
+COMPANY_NAME = "Antojitos Doña Soco" # Usado en reportes y encabezados
+
+# URL de la API, cambiar si se usa localmente
+API_URL = "http://0.0.0.0:8000" #"https://dona-soco-api.up.railway.app" 
+
+# Seguridad de la API
+API_KEY = "ads2026_Ivam3byCinderella"
+HEADERS = {"X-API-KEY": API_KEY}

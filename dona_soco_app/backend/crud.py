@@ -91,13 +91,18 @@ def delete_grupo_opciones(db: Session, grupo_id: int):
 def get_configuracion(db: Session):
     config = db.query(models.Configuracion).filter(models.Configuracion.id == 1).first()
     if not config:
-        # Crear config por defecto si no existe
+        # Crear config por defecto si no existe con todos los campos JSON inicializados
         config = models.Configuracion(
             id=1, 
             horario="Lunes a Viernes 9-10", 
             codigos_postales="12345",
             admin_password=hash_password("zz"), # Default password hash
-            costo_envio=20.0
+            costo_envio=20.0,
+            metodos_pago_activos='{"efectivo": true, "terminal": true}',
+            tipos_tarjeta='["Visa", "Mastercard"]',
+            contactos='{"telefono": "", "email": "", "whatsapp": "", "direccion": ""}',
+            guisos_disponibles='{"Asado": true, "Deshebrada": true}',
+            salsas_disponibles='{"Verde": true, "Roja": true}'
         )
         db.add(config)
         db.commit()

@@ -1,5 +1,5 @@
 # Manual de Usuario
-# Sistema de Gestión "Antojitos Doña Soco"
+# Sistema de Gestión
 
 **Versión del Documento:** 1.0  
 **Fecha de Actualización:** 30 de Enero de 2026
@@ -27,7 +27,7 @@
 
 ## 1. Introducción
 
-Bienvenido al manual de uso de la aplicación **Antojitos Doña Soco**. Este sistema permite a los clientes realizar pedidos de forma digital y al personal administrativo gestionar la cocina, las ventas y la logística del restaurante de manera eficiente.
+Bienvenido al manual de uso de la aplicación. Este sistema permite a los clientes realizar pedidos de forma digital y al personal administrativo gestionar la cocina, las ventas y la logística del restaurante de manera eficiente.
 
 El sistema es híbrido y cuenta con soporte para impresión distribuida en distintas áreas (Caja, Cocina Interior y Foodtruck Exterior).
 
@@ -39,7 +39,7 @@ El sistema es híbrido y cuenta con soporte para impresión distribuida en disti
 Los clientes acceden a la aplicación directamente desde la pantalla de inicio. No se requiere registro previo para ver el menú.
 
 ### Para Administradores
-1.  En el menú lateral de la aplicación, seleccione el encabezado de la aplicación **Antojitos Doña Soco** o el icono de "Admin".
+1.  En el menú lateral de la aplicación, seleccione el encabezado de la aplicación.
 2.  Ingrese la contraseña de administración proporcionada por el encargado.
 3.  Al ingresar correctamente, será redirigido al **Panel de Administración**.
 
@@ -133,4 +133,4 @@ Puede descargar el historial de ventas usando los botones en la parte superior:
 | **App lenta en Android** | Muchos pedidos cargados en memoria. | Cierre y vuelva a abrir la aplicación. |
 
 ---
-*Documento generado automáticamente para Antojitos Doña Soco.*
+*Documento generado por Ivam3byCinderella.*

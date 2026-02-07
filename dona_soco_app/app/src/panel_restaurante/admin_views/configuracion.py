@@ -294,11 +294,20 @@ def configuracion_view(page: ft.Page):
         if not config:
             return
 
-        horario_field.value = config["horario"]
-        codigos_postales_field.value = config["codigos_postales"]
+        def safe_json_load(field_name, default):
+            val = config.get(field_name)
+            if val is None:
+                return default
+            try:
+                return json.loads(val)
+            except:
+                return default
+
+        horario_field.value = config.get("horario", "")
+        codigos_postales_field.value = config.get("codigos_postales", "")
         costo_envio_field.value = str(config.get("costo_envio", 20.0))
 
-        pagos = json.loads(config["metodos_pago_activos"])
+        pagos = safe_json_load("metodos_pago_activos", {"efectivo": True, "terminal": True})
         pago_efectivo_chk.value = pagos.get("efectivo", True)
         pago_terminal_chk.value = pagos.get("terminal", True)
 
@@ -307,7 +316,7 @@ def configuracion_view(page: ft.Page):
 
         tarjetas_container.visible = pago_terminal_chk.value
 
-        tarjetas = json.loads(config["tipos_tarjeta"])
+        tarjetas = safe_json_load("tipos_tarjeta", ["Visa", "Mastercard"])
         tarjeta_visa_chk.value = "Visa" in tarjetas
         tarjeta_master_chk.value = "Mastercard" in tarjetas
         tarjeta_amex_chk.value = "Amex" in tarjetas
@@ -315,7 +324,7 @@ def configuracion_view(page: ft.Page):
         for chk in [tarjeta_visa_chk, tarjeta_master_chk, tarjeta_amex_chk]:
             sync_checkbox_color(chk)
 
-        contactos = json.loads(config["contactos"])
+        contactos = safe_json_load("contactos", {})
         telefono_field.value = contactos.get("telefono", "")
         email_field.value = contactos.get("email", "")
         whatsapp_field.value = contactos.get("whatsapp", "")
@@ -324,13 +333,15 @@ def configuracion_view(page: ft.Page):
         guisos_list_col.controls.clear()
         guisos_chk.clear()
 
-        for name, val in json.loads(config["guisos_disponibles"]).items():
+        guisos_data = safe_json_load("guisos_disponibles", {})
+        for name, val in guisos_data.items():
             crear_item_row(name, val, guisos_chk, guisos_list_col)
 
         salsas_list_col.controls.clear()
         salsas_chk.clear()
 
-        for name, val in json.loads(config["salsas_disponibles"]).items():
+        salsas_data = safe_json_load("salsas_disponibles", {})
+        for name, val in salsas_data.items():
             crear_item_row(name, val, salsas_chk, salsas_list_col)
 
         page.update()

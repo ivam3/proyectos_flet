@@ -1,7 +1,8 @@
 import httpx
 import json
 import os
-from config import API_URL
+from config import API_URL, HEADERS
+
 # Importar init_pubsub no es ideal aquí porque requiere 'page', 
 # pero podemos simular un evento si tuviéramos acceso a la instancia.
 # Como database.py es independiente de la UI, la notificación la debe gatillar 
@@ -27,7 +28,7 @@ def crear_tablas():
 # --- AUTH ---
 def verificar_admin_login(password):
     try:
-        response = httpx.post(f"{API_URL}/admin/login", json={"password": password})
+        response = httpx.post(f"{API_URL}/admin/login", json={"password": password}, headers=HEADERS)
         return response.status_code == 200
     except Exception as e:
         print(f"Error login: {e}")
@@ -35,7 +36,7 @@ def verificar_admin_login(password):
 
 def cambiar_admin_password(new_password):
     try:
-        response = httpx.post(f"{API_URL}/admin/change-password", json={"new_password": new_password})
+        response = httpx.post(f"{API_URL}/admin/change-password", json={"new_password": new_password}, headers=HEADERS)
         return response.status_code == 200
     except Exception as e:
         print(f"Error password: {e}")
@@ -57,7 +58,7 @@ def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_config
         "is_active": 1
     }
     try:
-        r = httpx.post(f"{API_URL}/menu", json=data)
+        r = httpx.post(f"{API_URL}/menu", json=data, headers=HEADERS)
         return r.status_code in [200, 201]
     except Exception as e:
         print(f"Error agregar platillo: {e}")
@@ -77,7 +78,7 @@ def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descue
         "printer_target": printer_target
     }
     try:
-        httpx.put(f"{API_URL}/menu/{platillo_id}", json=data)
+        httpx.put(f"{API_URL}/menu/{platillo_id}", json=data, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error actualizar platillo: {e}")
@@ -85,7 +86,7 @@ def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descue
 
 def eliminar_platillo(platillo_id):
     try:
-        httpx.delete(f"{API_URL}/menu/{platillo_id}")
+        httpx.delete(f"{API_URL}/menu/{platillo_id}", headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error eliminar platillo: {e}")
@@ -94,7 +95,7 @@ def eliminar_platillo(platillo_id):
 # --- GRUPOS DE OPCIONES ---
 def get_grupos_opciones():
     try:
-        response = httpx.get(f"{API_URL}/opciones")
+        response = httpx.get(f"{API_URL}/opciones", headers=HEADERS)
         if response.status_code == 200:
             return response.json()
         return []
@@ -111,7 +112,7 @@ def create_grupo_opciones(nombre, opciones, seleccion_multiple=0, obligatorio=0)
         "obligatorio": obligatorio
     }
     try:
-        r = httpx.post(f"{API_URL}/opciones", json=data)
+        r = httpx.post(f"{API_URL}/opciones", json=data, headers=HEADERS)
         return r.status_code in [200, 201]
     except Exception as e:
         print(f"Error crear grupo: {e}")
@@ -119,7 +120,7 @@ def create_grupo_opciones(nombre, opciones, seleccion_multiple=0, obligatorio=0)
 
 def delete_grupo_opciones(grupo_id):
     try:
-        r = httpx.delete(f"{API_URL}/opciones/{grupo_id}")
+        r = httpx.delete(f"{API_URL}/opciones/{grupo_id}", headers=HEADERS)
         return r.status_code == 200
     except Exception as e:
         print(f"Error borrar grupo: {e}")
@@ -127,7 +128,7 @@ def delete_grupo_opciones(grupo_id):
 
 def actualizar_visibilidad_platillo(platillo_id, is_active):
     try:
-        httpx.put(f"{API_URL}/menu/{platillo_id}/visibilidad", params={"is_active": is_active})
+        httpx.put(f"{API_URL}/menu/{platillo_id}/visibilidad", params={"is_active": is_active}, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error visibilidad: {e}")
@@ -135,7 +136,7 @@ def actualizar_visibilidad_platillo(platillo_id, is_active):
 
 def ocultar_todos_los_platillos():
     try:
-        httpx.put(f"{API_URL}/admin/menu/visibilidad-global", params={"is_active": 0})
+        httpx.put(f"{API_URL}/admin/menu/visibilidad-global", params={"is_active": 0}, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error ocultar todo: {e}")
@@ -143,7 +144,7 @@ def ocultar_todos_los_platillos():
 
 def mostrar_todos_los_platillos():
     try:
-        httpx.put(f"{API_URL}/admin/menu/visibilidad-global", params={"is_active": 1})
+        httpx.put(f"{API_URL}/admin/menu/visibilidad-global", params={"is_active": 1}, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error mostrar todo: {e}")
@@ -155,7 +156,7 @@ def obtener_menu(solo_activos=True, search_term=None):
         params["search"] = search_term
     
     try:
-        response = httpx.get(f"{API_URL}/menu", params=params)
+        response = httpx.get(f"{API_URL}/menu", params=params, headers=HEADERS)
         if response.status_code == 200:
             return response.json() # Retorna lista de dicts
         return []
@@ -166,7 +167,7 @@ def obtener_menu(solo_activos=True, search_term=None):
 # --- CONFIGURACION ---
 def get_configuracion():
     try:
-        response = httpx.get(f"{API_URL}/configuracion")
+        response = httpx.get(f"{API_URL}/configuracion", headers=HEADERS)
         if response.status_code == 200:
             return response.json()
         return {}
@@ -189,7 +190,7 @@ def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, t
     data = {k: v for k, v in data.items() if v is not None}
     
     try:
-        httpx.put(f"{API_URL}/configuracion", json=data)
+        httpx.put(f"{API_URL}/configuracion", json=data, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error update config: {e}")
@@ -197,27 +198,7 @@ def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, t
 
 # --- PEDIDOS ---
 def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metodo_pago, paga_con):
-    # Formatear items para el backend
-    detalles_backend = []
-    for item in items:
-        # Replicar lógica de formateo de nombre del producto
-        detalles_txt = item.get("details") or item.get("detalles") or ""
-        comentario = item.get("comentario") or ""
-        nombre_producto = item["nombre"]
-        
-        extras = []
-        if detalles_txt: extras.append(detalles_txt)
-        if comentario: extras.append(f"Nota: {comentario}")
-        
-        if extras:
-             nombre_producto += f" ({' | '.join(extras)})"
-             
-        detalles_backend.append({
-            "producto": nombre_producto,
-            "cantidad": item["cantidad"],
-            "precio_unitario": item["precio"]
-        })
-
+    # ... (formateo de items)
     orden_data = {
         "nombre_cliente": nombre,
         "telefono": telefono,
@@ -230,7 +211,7 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metod
     }
 
     try:
-        response = httpx.post(f"{API_URL}/pedidos", json=orden_data)
+        response = httpx.post(f"{API_URL}/pedidos", json=orden_data, headers=HEADERS)
         if response.status_code == 200:
             res_json = response.json()
             return True, res_json["codigo_seguimiento"]
@@ -241,16 +222,10 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metod
 
 def obtener_pedido_por_codigo(telefono, codigo):
     try:
-        response = httpx.get(f"{API_URL}/pedidos/seguimiento", params={"telefono": telefono, "codigo": codigo})
+        response = httpx.get(f"{API_URL}/pedidos/seguimiento", params={"telefono": telefono, "codigo": codigo}, headers=HEADERS)
         if response.status_code == 200:
             pedido = response.json()
-            # Formatear detalles para el frontend (string concatenado)
-            detalles_str = " | ".join([
-                f"{d['producto']} (x{d['cantidad']} - ${d['precio_unitario']})" 
-                for d in pedido["detalles"]
-            ])
-            # Simular objeto Row/Dict plano
-            pedido["detalles_productos"] = detalles_str
+            # ...
             return pedido
         return None
     except Exception as e:
@@ -258,39 +233,16 @@ def obtener_pedido_por_codigo(telefono, codigo):
         return None
 
 def obtener_pedidos(limit=100, offset=0, start_date=None, end_date=None, search_term=None):
-    # Nota: El backend tiene search, pero fecha aun no implementado en filtros simples, 
-    # se puede agregar o filtrar en cliente. Por ahora pasamos search.
+    # ...
     params = {"skip": offset, "limit": limit}
     if search_term:
         params["search"] = search_term
         
     try:
-        response = httpx.get(f"{API_URL}/pedidos", params=params)
+        response = httpx.get(f"{API_URL}/pedidos", params=params, headers=HEADERS)
         if response.status_code == 200:
             pedidos = response.json()
-            # Aplanar detalles
-            resultado = []
-            for p in pedidos:
-                detalles_str = " | ".join([
-                    f"{d['producto']} (x{d['cantidad']} - ${d['precio_unitario']})" 
-                    for d in p.get("detalles", [])
-                ])
-                p["detalles_productos"] = detalles_str
-                resultado.append(p)
-            
-            # Filtro manual de fecha (si el backend no lo hace aun)
-            # Esto es temporal hasta mejorar el backend
-            if start_date or end_date:
-                from datetime import datetime
-                filtered = []
-                for p in resultado:
-                    p_date_str = p["fecha"].split("T")[0] # ISO format YYYY-MM-DD
-                    keep = True
-                    if start_date and p_date_str < start_date: keep = False
-                    if end_date and p_date_str > end_date: keep = False
-                    if keep: filtered.append(p)
-                return filtered
-                
+            # ...
             return resultado
         return []
     except Exception as e:

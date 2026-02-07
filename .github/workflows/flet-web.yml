@@ -52,4 +52,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dona-soco-flet-web
-          path: dona_soco_app/app/build/web
+          path: dona_soco_app/app/build/web 
+
+      - name: Commit web build to repo 
+        run: | 
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add dona_soco_app/app/build/web
+          git commit -m "chore: build flet web frontend" || echo "No changes to commit"
+          git push

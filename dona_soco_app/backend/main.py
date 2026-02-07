@@ -6,7 +6,7 @@ from typing import List, Optional
 import os
 
 import crud, models, schemas
-from database import SessionLocal, engine
+from database import SessionLocal, engine, get_db
 
 # Crear tablas automáticamente (en producción usar Alembic para migraciones)
 models.Base.metadata.create_all(bind=engine)

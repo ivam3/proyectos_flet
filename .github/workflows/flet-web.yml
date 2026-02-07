@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   build-web:
     runs-on: ubuntu-latest
@@ -60,4 +64,4 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add dona_soco_app/app/build/web
           git commit -m "chore: build flet web frontend" || echo "No changes to commit"
-          git push
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main

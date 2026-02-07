@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, desc
-from . import models, schemas
+import models, schemas
 import secrets
 import string
 import hashlib

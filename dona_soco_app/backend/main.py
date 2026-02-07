@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -10,8 +11,7 @@ from database import SessionLocal, engine, get_db
 
 # --- SEGURIDAD ---
 API_KEY_NAME = "X-API-KEY"
-# Esta llave DEBE configurarse en las variables de entorno de Railway
-API_KEY = os.getenv("API_SECRET_KEY", "ads2025_super_secret_key_99")
+API_KEY = os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella")
 
 async def verify_api_key(x_api_key: str = Header(None)):
     if x_api_key != API_KEY:
@@ -34,7 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- RUTAS DE MENU ---
+# --- RUTAS DE API ---
+
 @app.get("/menu", response_model=List[schemas.Menu])
 def read_menu(solo_activos: bool = True, search: Optional[str] = None, db: Session = Depends(get_db)):
     return crud.get_menu(db, solo_activos, search)
@@ -57,7 +58,6 @@ def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return {"ok": True}
 
-# --- RUTAS DE GRUPOS DE OPCIONES ---
 @app.get("/opciones", response_model=List[schemas.GrupoOpciones])
 def read_grupos_opciones(db: Session = Depends(get_db)):
     return crud.get_grupos_opciones(db)
@@ -73,7 +73,6 @@ def delete_grupo_opciones(grupo_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
     return {"ok": True}
 
-# --- RUTAS DE CONFIGURACION ---
 @app.get("/configuracion", response_model=schemas.Configuracion)
 def read_config(db: Session = Depends(get_db)):
     return crud.get_configuracion(db)
@@ -82,10 +81,8 @@ def read_config(db: Session = Depends(get_db)):
 def update_config(config: schemas.ConfiguracionUpdate, db: Session = Depends(get_db)):
     return crud.update_configuracion(db, config)
 
-# --- RUTAS DE PEDIDOS ---
 @app.post("/pedidos", response_model=schemas.Orden)
 def create_pedido(orden: schemas.OrdenCreate, db: Session = Depends(get_db)):
-    # Los pedidos son públicos para que los clientes compren, pero puedes protegerlo si gustas.
     return crud.create_pedido(db, orden)
 
 @app.get("/pedidos/seguimiento", response_model=schemas.Orden)
@@ -125,7 +122,6 @@ def toggle_menu_item(item_id: int, is_active: int, db: Session = Depends(get_db)
          raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return {"ok": True}
 
-# --- RUTAS DE AUTH ADMIN ---
 @app.post("/admin/login")
 def admin_login(creds: schemas.LoginRequest, db: Session = Depends(get_db)):
     is_valid = crud.verify_admin_password(db, creds.password)
@@ -138,10 +134,6 @@ def admin_change_pass(data: schemas.PasswordUpdate, db: Session = Depends(get_db
     crud.change_admin_password(db, data.new_password)
     return {"ok": True}
 
-# --- ARCHIVOS ESTÁTICOS ---
-os.makedirs("backend/static/uploads", exist_ok=True)
-app.mount("/static", StaticFiles(directory="backend/static"), name="static")
-
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
 async def upload_file(file: UploadFile = File(...)):
     file_location = f"backend/static/uploads/{file.filename}"
@@ -149,6 +141,28 @@ async def upload_file(file: UploadFile = File(...)):
         file_object.write(file.file.read())
     return {"filename": file.filename}
 
+# --- ARCHIVOS ESTÁTICOS ---
+
+# 1. Servir las subidas de imágenes
+os.makedirs("backend/static/uploads", exist_ok=True)
+app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+
+# 2. Servir la Web App (si existe la carpeta 'web')
+if os.path.exists("web"):
+    app.mount("/", StaticFiles(directory="web", html=True), name="web")
+
 @app.get("/")
 def read_root():
+    if os.path.exists("web/index.html"):
+        return FileResponse("web/index.html")
     return {"message": "API de Antojitos Doña Soco funcionando"}
+
+# Fallback para SPA
+@app.exception_handler(404)
+async def spa_fallback(request, exc):
+    # Si la ruta no empieza con /static o endpoints de la API, servimos index.html
+    api_paths = ("/menu", "/opciones", "/configuracion", "/pedidos", "/admin", "/upload")
+    if not request.url.path.startswith(api_paths) and not request.url.path.startswith("/static"):
+        if os.path.exists("web/index.html"):
+            return FileResponse("web/index.html")
+    return JSONResponse({"detail": "Not Found"}, status_code=404)

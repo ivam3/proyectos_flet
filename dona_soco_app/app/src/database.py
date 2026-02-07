@@ -303,7 +303,7 @@ def actualizar_estado_pedido(orden_id, nuevo_estado, motivo=None):
     if motivo: params["motivo"] = motivo
     
     try:
-        httpx.put(f"{API_URL}/pedidos/{orden_id}/estado", params=params)
+        httpx.put(f"{API_URL}/pedidos/{orden_id}/estado", params=params, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error estado: {e}")
@@ -312,7 +312,7 @@ def actualizar_estado_pedido(orden_id, nuevo_estado, motivo=None):
 def actualizar_pago_pedido(orden_id, metodo_pago, paga_con):
     data = {"metodo_pago": metodo_pago, "paga_con": paga_con}
     try:
-        httpx.put(f"{API_URL}/pedidos/{orden_id}/pago", json=data)
+        httpx.put(f"{API_URL}/pedidos/{orden_id}/pago", json=data, headers=HEADERS)
         return True
     except Exception as e:
         print(f"Error pago update: {e}")

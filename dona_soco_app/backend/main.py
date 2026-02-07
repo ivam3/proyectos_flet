@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
 
-from . import crud, models, schemas
+from backend import crud, models, schemas # Importar desde el paquete backend por error en deploy en VPS
 from .database import engine, get_db
 
 # Crear tablas automáticamente (en producción usar Alembic para migraciones)

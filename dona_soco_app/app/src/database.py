@@ -1,6 +1,7 @@
 import httpx
 import json
 import os
+from config import API_URL
 # Importar init_pubsub no es ideal aquí porque requiere 'page', 
 # pero podemos simular un evento si tuviéramos acceso a la instancia.
 # Como database.py es independiente de la UI, la notificación la debe gatillar 
@@ -10,7 +11,7 @@ import os
 # CONFIGURACIÓN DE CONEXIÓN
 # En producción/nube, cambiar esto por la URL de tu servidor (ej: https://dona-soco-api.railway.app)
 # Para pruebas locales en PC/Termux:
-API_URL = "https://dona-soco-app.onrender.com"
+#API_URL = "https://dona-soco-app.onrender.com"
 
 # Si estás en Android real y el servidor está en tu PC, usa la IP de tu PC (ej: http://192.168.1.50:8000)
 # Si el servidor corre en el mismo Termux que la app, localhost está bien.

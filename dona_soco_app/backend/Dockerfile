@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-COPY ../app/build/web ./web
+# Copiar el folder web que ahora reside dentro de backend/
+COPY web ./web
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -5,9 +5,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
+import mimetypes
 
 import crud, models, schemas
 from database import SessionLocal, engine, get_db
+
+# Asegurar que los tipos MIME estén registrados (crítico para .wasm y .js en Docker)
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('application/wasm', '.wasm')
 
 # --- SEGURIDAD ---
 API_KEY_NAME = "X-API-KEY"
@@ -149,20 +154,21 @@ app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 # 2. Servir la Web App (si existe la carpeta 'web')
 if os.path.exists("web"):
+    # Montamos la web en / para que index.html sea la raíz
+    # IMPORTANTE: StaticFiles se monta AL FINAL
     app.mount("/", StaticFiles(directory="web", html=True), name="web")
 
-@app.get("/")
-def read_root():
-    if os.path.exists("web/index.html"):
-        return FileResponse("web/index.html")
-    return {"message": "API de Antojitos Doña Soco funcionando"}
-
-# Fallback para SPA
+# Fallback para SPA (Manejo de rutas internas de Flet como /carrito o /seguimiento)
 @app.exception_handler(404)
 async def spa_fallback(request, exc):
-    # Si la ruta no empieza con /static o endpoints de la API, servimos index.html
-    api_paths = ("/menu", "/opciones", "/configuracion", "/pedidos", "/admin", "/upload")
-    if not request.url.path.startswith(api_paths) and not request.url.path.startswith("/static"):
+    api_paths = ("/menu", "/opciones", "/configuracion", "/pedidos", "/admin", "/upload", "/static")
+    if not request.url.path.startswith(api_paths):
         if os.path.exists("web/index.html"):
             return FileResponse("web/index.html")
     return JSONResponse({"detail": "Not Found"}, status_code=404)
+
+@app.get("/")
+async def read_root():
+    if os.path.exists("web/index.html"):
+        return FileResponse("web/index.html")
+    return {"message": "API de Antojitos Doña Soco funcionando"}

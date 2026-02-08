@@ -1,5 +1,4 @@
 import flet as ft
-import sqlite3
 import os
 import json
 import datetime
@@ -9,16 +8,7 @@ from components.notifier import init_pubsub, show_notification
 from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido, actualizar_estado_pedido
 
 # Adjust path to DB relative to src/views
-# Assuming DB_PATH is handled correctly in database.py, but this view imports DB_PATH constant?
-# No, database.py exports functions, but here it constructs DB_PATH manually. Bad practice.
-# Let's import DB_PATH from database if possible, or reconstruct it correctly.
-# The original code had: DB_PATH = os.path.join(os.path.dirname(__file__), "../../storage/data/dona_soco.db")
-# This is problematic on Android. We should use the functions from database.py that abstract the connection.
-# I will use database.conectar() logic or simply let database.py handle it.
-# However, this view uses raw SQL in `mostrar_pedido`. I should ideally refactor to use a database function.
-# For now, I will fix colors and try to rely on `database.py`'s connection logic.
-
-from database import conectar 
+# ... (rest of comments)
 
 def seguimiento_view(page: ft.Page):
     """Pantalla donde el cliente ve y recibe actualizaciones de un pedido específico."""

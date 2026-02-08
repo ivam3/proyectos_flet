@@ -23,6 +23,7 @@ def migrar():
         return
 
     print(f"🚀 Iniciando migración hacia {API_URL}...")
+    print(f"🔑 Usando API Key: {HEADERS.get('X-API-KEY')}")
     
     conn = sqlite3.connect(DB_LOCAL)
     conn.row_factory = sqlite3.Row

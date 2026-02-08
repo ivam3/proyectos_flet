@@ -10,23 +10,26 @@ import mimetypes
 import crud, models, schemas
 from database import SessionLocal, engine, get_db
 
-# Asegurar que los tipos MIME estén registrados (crítico para .wasm y .js en Docker)
+# Registro de tipos MIME para soporte Web estable
 mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('application/wasm', '.wasm')
 
-# --- SEGURIDAD ---
-API_KEY_NAME = "X-API-KEY"
+# --- SEGURIDAD ESTRICTA ---
+# Se requiere configurar API_SECRET_KEY en las variables de entorno de Railway
 API_KEY = os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella")
 
-async def verify_api_key(x_api_key: str = Header(None)):
-    if x_api_key != API_KEY:
+async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KEY")):
+    """Verifica que el cliente envíe la llave correcta en el encabezado X-API-KEY."""
+    if not x_api_key or x_api_key != API_KEY:
+        # El log de error solo es visible para ti en el panel de Railway
+        print(f"ALERTA SEGURIDAD: Acceso rechazado. Header: {x_api_key}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Acceso denegado: API Key inválida"
+            detail="Acceso denegado: Credenciales inválidas"
         )
     return x_api_key
 
-# Crear tablas automáticamente
+# Inicialización de Base de Datos
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Antojitos Doña Soco API")
@@ -146,29 +149,31 @@ async def upload_file(file: UploadFile = File(...)):
         file_object.write(file.file.read())
     return {"filename": file.filename}
 
-# --- ARCHIVOS ESTÁTICOS ---
+# --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 
-# 1. Servir las subidas de imágenes
 os.makedirs("backend/static/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
-# 2. Servir la Web App (si existe la carpeta 'web')
 if os.path.exists("web"):
-    # Montamos la web en / para que index.html sea la raíz
-    # IMPORTANTE: StaticFiles se monta AL FINAL
-    app.mount("/", StaticFiles(directory="web", html=True), name="web")
-
-# Fallback para SPA (Manejo de rutas internas de Flet como /carrito o /seguimiento)
-@app.exception_handler(404)
-async def spa_fallback(request, exc):
-    api_paths = ("/menu", "/opciones", "/configuracion", "/pedidos", "/admin", "/upload", "/static")
-    if not request.url.path.startswith(api_paths):
-        if os.path.exists("web/index.html"):
-            return FileResponse("web/index.html")
-    return JSONResponse({"detail": "Not Found"}, status_code=404)
+    app.mount("/app", StaticFiles(directory="web", html=True), name="web_app")
 
 @app.get("/")
 async def read_root():
     if os.path.exists("web/index.html"):
         return FileResponse("web/index.html")
     return {"message": "API de Antojitos Doña Soco funcionando"}
+
+@app.get("/{full_path:path}")
+async def catch_all(full_path: str):
+    # Primero buscamos archivos físicos en la carpeta web
+    file_path = os.path.join("web", full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # Si no es un archivo físico y no es ruta del API, servir index.html para SPA
+    api_paths = ("menu", "opciones", "configuracion", "pedidos", "admin", "upload", "static")
+    if not any(full_path.startswith(p) for p in api_paths):
+        if os.path.exists("web/index.html"):
+            return FileResponse("web/index.html")
+    
+    return JSONResponse({"detail": "Not Found"}, status_code=404)

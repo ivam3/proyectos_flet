@@ -16,7 +16,7 @@ except ImportError:
 
 class DBManager:
     def __init__(self):
-        self.client = httpx.Client(base_url=API_URL, headers=HEADERS, timeout=15.0)
+        self.client = httpx.Client(base_url=API_URL, headers=HEADERS, timeout=30.0)
 
     # --- MENU ---
     def get_all_menu(self):
@@ -31,7 +31,28 @@ class DBManager:
         r = self.client.post("/menu", json=data)
         return r.status_code in [200, 201]
 
-    # --- CONFIGURACION (Guisos y Salsas) ---
+    def update_item(self, item_id: int, data: Dict[str, Any]):
+        r = self.client.put(f"/menu/{item_id}", json=data)
+        return r.status_code == 200
+
+    # --- UPLOAD ---
+    def upload_image(self, file_path: str):
+        """Sube una imagen al servidor y devuelve el nombre guardado."""
+        if not os.path.exists(file_path):
+            return None, "Archivo no encontrado"
+        
+        files = {'file': (os.path.basename(file_path), open(file_path, 'rb'), 'image/jpeg')}
+        r = self.client.post("/upload", files=files)
+        if r.status_code == 200:
+            return r.json().get("filename"), None
+        return None, r.text
+
+    def delete_file(self, filename: str):
+        """Elimina un archivo del servidor."""
+        r = self.client.delete(f"/upload/{filename}")
+        return r.status_code == 200
+
+    # --- CONFIGURACION ---
     def get_config(self):
         r = self.client.get("/configuracion")
         return r.json()
@@ -67,33 +88,108 @@ class AdminShell(cmd.Cmd):
         super().__init__()
         self.mgr = DBManager()
 
-    # --- BACKUP & RESTORE ---
-    def do_backup(self, arg):
-        """Genera un backup local total en JSON: backup [nombre_archivo]"""
-        filename = arg if arg else "backup_full.json"
-        print(f"📦 Generando backup en {filename}...")
+    # --- GESTION DE IMAGENES ---
+    def do_upload(self, arg):
+        """Sube una imagen local al servidor: upload /ruta/a/la/imagen.jpg"""
+        if not arg:
+            print("❌ Uso: upload [ruta_local_imagen]")
+            return
+        
+        print(f"🚀 Subiendo {arg}...")
+        filename, error = self.mgr.upload_image(arg)
+        if filename:
+            print(f"✅ Imagen subida con éxito.")
+            print(f"🔗 Nombre en servidor: {filename}")
+            print(f"💡 Puedes usar este nombre al crear un platillo.")
+        else:
+            print(f"❌ Error al subir: {error}")
+
+    def do_rmfile(self, arg):
+        """Elimina un archivo del servidor: rmfile [nombre_archivo]"""
+        if not arg:
+            print("❌ Uso: rmfile [nombre_archivo]")
+            return
+        if self.mgr.delete_file(arg):
+            print(f"🗑️ Archivo '{arg}' eliminado del servidor.")
+        else:
+            print(f"❌ No se pudo eliminar el archivo.")
+
+    def do_importar(self, arg):
+        """Importa/Sincroniza platillos desde un JSON: importar [archivo.json]
+        Si el nombre ya existe en el servidor, lo actualiza. Si no, lo crea.
+        """
+        if not arg:
+            print("❌ Uso: importar [archivo.json]")
+            return
         try:
+            with open(arg, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            items_to_import = data["menu"] if isinstance(data, dict) and "menu" in data else data
+            
+            if not isinstance(items_to_import, list):
+                print("❌ El formato del JSON debe ser una lista de platillos.")
+                return
+
+            print("🔍 Obteniendo lista actual del servidor para sincronizar...")
+            current_menu = self.mgr.get_all_menu()
+            # Mapeo de nombre (minúsculas) -> ID
+            menu_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu}
+
+            print(f"📥 Procesando {len(items_to_import)} platillos...")
+            for item in items_to_import:
+                nombre_clean = item['nombre'].strip().lower()
+                
+                # Preparar datos (limpiar ID para evitar conflictos)
+                if "id" in item: del item["id"]
+                
+                if nombre_clean in menu_map:
+                    item_id = menu_map[nombre_clean]
+                    if self.mgr.update_item(item_id, item):
+                        print(f" 🔄 {item['nombre']} actualizado.")
+                    else:
+                        print(f" ❌ Error actualizando {item['nombre']}.")
+                else:
+                    if self.mgr.create_item(item):
+                        print(f" ✅ {item['nombre']} creado.")
+                    else:
+                        print(f" ❌ Error creando {item['nombre']}.")
+            print("🏁 Sincronización finalizada.")
+        except Exception as e:
+            print(f"❌ Error en importación: {e}")
+
+    # --- MENU CRUD ---
+    def do_additem(self, arg):
+        """Agrega un platillo manualmente: additem "Nombre" Precio "Imagen" "Desc" """
+        import shlex
+        try:
+            parts = shlex.split(arg)
+            if len(parts) < 2:
+                print("❌ Uso: additem [Nombre] [Precio] [Imagen] [Descripcion]")
+                return
+            
             data = {
-                "menu": self.mgr.get_all_menu(),
-                "configuracion": self.mgr.get_config(),
-                "grupos_extras": self.mgr.get_groups()
+                "nombre": parts[0],
+                "precio": float(parts[1]),
+                "imagen": parts[2] if len(parts) > 2 else "",
+                "descripcion": parts[3] if len(parts) > 3 else "",
+                "is_active": 1
             }
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-            print("✅ Backup completado con éxito.")
+            if self.mgr.create_item(data):
+                print(f"✅ Platillo '{data['nombre']}' creado.")
+            else:
+                print("❌ Error al crear platillo.")
         except Exception as e:
             print(f"❌ Error: {e}")
 
-    # --- MENU CRUD ---
     def do_ls(self, arg):
         """Lista todos los platillos: ls"""
         items = self.mgr.get_all_menu()
-        print(f"{'ID':<5} | {'Nombre':<30} | {'Precio':<8} | {'Extras (G/S)'}")
-        print("-" * 70)
+        print(f"{ 'ID':<5} | {'Nombre':<30} | {'Precio':<8} | {'Imagen'}")
+        print("-" * 75)
         for i in items:
-            g = "✅" if i.get("is_configurable") else "❌"
-            s = "✅" if i.get("is_configurable_salsa") else "❌"
-            print(f"{i['id']:<5} | {i['nombre'][:30]:<30} | ${i['precio']:<7.2f} | {g} / {s}")
+            img = i.get("imagen") or "---"
+            print(f"{i['id']:<5} | {i['nombre'][:30]:<30} | ${i['precio']:<7.2f} | {img}")
 
     def do_rm(self, arg):
         """Elimina un platillo por ID: rm [id]"""
@@ -103,11 +199,20 @@ class AdminShell(cmd.Cmd):
         else:
             print(f"❌ No se pudo eliminar.")
 
+    def do_wipe(self, arg):
+        """⚠️ BORRA TODO EL MENÚ: wipe"""
+        confirm = input("❗ ¿ESTÁS SEGURO? Esto borrará TODO el menú del servidor (s/n): ")
+        if confirm.lower() == 's':
+            items = self.mgr.get_all_menu()
+            for i in items:
+                self.mgr.delete_item(i["id"])
+            print("🧹 Servidor vaciado por completo.")
+
     # --- GRUPOS DE OPCIONES (Extras) ---
     def do_groups(self, arg):
         """Lista grupos de opciones extras: groups"""
         groups = self.mgr.get_groups()
-        print(f"{'ID':<5} | {'Nombre':<20} | {'Mult' :<4} | {'Obl' :<4} | {'Opciones'}")
+        print(f"{ 'ID':<5} | {'Nombre':<20} | {'Mult' :<4} | {'Obl' :<4} | {'Opciones'}")
         print("-" * 75)
         for g in groups:
             ops = json.loads(g['opciones'])
@@ -116,32 +221,23 @@ class AdminShell(cmd.Cmd):
             print(f"{g['id']:<5} | {g['nombre']:<20} | {m:<4} | {o:<4} | {', '.join(ops)}")
 
     def do_addgroup(self, arg):
-        """Agrega un grupo: addgroup Nombre Op1,Op2 [-m] [-o]
-        -m: Selección múltiple
-        -o: Obligatorio
-        Ej: addgroup Extras Queso,Tocino,Aguacate -m
-        """
-        import argparse
+        """Agrega un grupo: addgroup Nombre Op1,Op2 [-m] [-o]"""
         import shlex
-        
         try:
-            # Usamos shlex para permitir nombres con espacios si se ponen entre comillas
             parts = shlex.split(arg)
             if len(parts) < 2:
                 print("❌ Uso: addgroup [Nombre] [Op1,Op2...] [-m] [-o]")
                 return
-            
             nombre = parts[0]
             opciones = [o.strip() for o in parts[1].split(',')]
             multiple = 1 if "-m" in parts else 0
             obligatorio = 1 if "-o" in parts else 0
-            
             if self.mgr.create_group(nombre, opciones, multiple, obligatorio):
-                print(f"✅ Grupo '{nombre}' creado (Mult: {multiple}, Obl: {obligatorio}).")
+                print(f"✅ Grupo '{nombre}' creado.")
             else:
                 print("❌ Error al crear grupo.")
         except Exception as e:
-            print(f"❌ Error al procesar comando: {e}")
+            print(f"❌ Error: {e}")
 
     def do_rmgroup(self, arg):
         """Elimina un grupo por ID: rmgroup [id]"""
@@ -156,54 +252,61 @@ class AdminShell(cmd.Cmd):
         """Gestiona guisos: guisos (lista), guisos add Nombre, guisos rm Nombre"""
         config = self.mgr.get_config()
         guisos = json.loads(config.get("guisos_disponibles", "{}"))
-        
         if not arg:
             print(f"🥘 Guisos actuales: {', '.join(guisos.keys())}")
             return
-        
         parts = arg.split(' ', 1)
         cmd_type = parts[0].lower()
-        
         if cmd_type == "add" and len(parts) > 1:
             guisos[parts[1].strip()] = True
         elif cmd_type == "rm" and len(parts) > 1:
             guisos.pop(parts[1].strip(), None)
-        
         if self.mgr.update_config({"guisos_disponibles": json.dumps(guisos)}):
             print("✅ Guisos actualizados.")
         else:
-            print("❌ Error al actualizar configuración.")
+            print("❌ Error.")
 
     def do_salsas(self, arg):
         """Gestiona salsas: salsas (lista), salsas add Nombre, salsas rm Nombre"""
         config = self.mgr.get_config()
         salsas = json.loads(config.get("salsas_disponibles", "{}"))
-        
         if not arg:
             print(f"🌶️ Salsas actuales: {', '.join(salsas.keys())}")
             return
-        
         parts = arg.split(' ', 1)
         cmd_type = parts[0].lower()
-        
         if cmd_type == "add" and len(parts) > 1:
             salsas[parts[1].strip()] = True
         elif cmd_type == "rm" and len(parts) > 1:
             salsas.pop(parts[1].strip(), None)
-        
         if self.mgr.update_config({"salsas_disponibles": json.dumps(salsas)}):
             print("✅ Salsas actualizadas.")
         else:
-            print("❌ Error al actualizar configuración.")
+            print("❌ Error.")
 
-    # --- UTILIDADES ---
+    def do_backup(self, arg):
+        """Genera un backup local total en JSON: backup [nombre_archivo]"""
+        filename = arg if arg else "backup_full.json"
+        print(f"📦 Generando backup en {filename}...")
+        try:
+            data = {
+                "menu": self.mgr.get_all_menu(),
+                "configuracion": self.mgr.get_config(),
+                "grupos_extras": self.mgr.get_groups()
+            }
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            print("✅ Backup completado.")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
     def do_ping(self, arg):
         """Verifica conexión con el API: ping"""
         try:
-            r = httpx.get(API_URL, headers=HEADERS)
-            print(f"📡 API Online: {API_URL} (Status: {r.status_code})")
+            r = self.mgr.client.get("/")
+            print(f"📡 API Online (Status: {r.status_code})")
         except Exception as e:
-            print(f"🛑 Error de conexión: {e}")
+            print(f"🛑 Error: {e}")
 
     def do_exit(self, arg):
         """Salir de la shell: exit"""

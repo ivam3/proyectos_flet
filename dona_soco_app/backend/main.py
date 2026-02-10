@@ -149,6 +149,14 @@ async def upload_file(file: UploadFile = File(...)):
         file_object.write(file.file.read())
     return {"filename": file.filename}
 
+@app.delete("/upload/{filename}", dependencies=[Depends(verify_api_key)])
+async def delete_file(filename: str):
+    file_location = f"backend/static/uploads/{filename}"
+    if os.path.exists(file_location):
+        os.remove(file_location)
+        return {"ok": True, "message": f"Archivo {filename} eliminado"}
+    raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
 # --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 
 os.makedirs("backend/static/uploads", exist_ok=True)

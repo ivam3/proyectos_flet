@@ -221,3 +221,14 @@ def update_pago_pedido(db: Session, orden_id: int, metodo_pago: str, paga_con: f
         db.commit()
         return True
     return False
+
+def delete_pedido(db: Session, orden_id: int):
+    orden = db.query(models.Orden).filter(models.Orden.id == orden_id).first()
+    if orden:
+        # Eliminar detalles y historial primero (SQLAlchemy lo hace si hay cascade, pero aseguramos)
+        db.query(models.OrdenDetalle).filter(models.OrdenDetalle.orden_id == orden_id).delete()
+        db.query(models.HistorialEstado).filter(models.HistorialEstado.orden_id == orden_id).delete()
+        db.delete(orden)
+        db.commit()
+        return True
+    return False

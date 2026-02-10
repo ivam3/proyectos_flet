@@ -118,6 +118,13 @@ def update_pago(orden_id: int, data: schemas.PagoUpdate, db: Session = Depends(g
          raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return {"ok": True}
 
+@app.delete("/pedidos/{orden_id}", dependencies=[Depends(verify_api_key)])
+def delete_pedido(orden_id: int, db: Session = Depends(get_db)):
+    success = crud.delete_pedido(db, orden_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    return {"ok": True}
+
 @app.put("/admin/menu/visibilidad-global", dependencies=[Depends(verify_api_key)])
 def toggle_global_visibility(is_active: int, db: Session = Depends(get_db)):
     crud.update_all_platillos_visibility(db, is_active)

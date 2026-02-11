@@ -79,6 +79,15 @@ def create_grupo_opciones(db: Session, grupo: schemas.GrupoOpcionesCreate):
     db.refresh(db_grupo)
     return db_grupo
 
+def update_grupo_opciones(db: Session, grupo_id: int, grupo: schemas.GrupoOpcionesCreate):
+    db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
+    if db_grupo:
+        for key, value in grupo.dict().items():
+            setattr(db_grupo, key, value)
+        db.commit()
+        db.refresh(db_grupo)
+    return db_grupo
+
 def delete_grupo_opciones(db: Session, grupo_id: int):
     db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
     if db_grupo:

@@ -74,6 +74,13 @@ def read_grupos_opciones(db: Session = Depends(get_db)):
 def create_grupo_opciones(grupo: schemas.GrupoOpcionesCreate, db: Session = Depends(get_db)):
     return crud.create_grupo_opciones(db, grupo)
 
+@app.put("/opciones/{grupo_id}", response_model=schemas.GrupoOpciones, dependencies=[Depends(verify_api_key)])
+def update_grupo_opciones(grupo_id: int, grupo: schemas.GrupoOpcionesCreate, db: Session = Depends(get_db)):
+    db_grupo = crud.update_grupo_opciones(db, grupo_id, grupo)
+    if not db_grupo:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    return db_grupo
+
 @app.delete("/opciones/{grupo_id}", dependencies=[Depends(verify_api_key)])
 def delete_grupo_opciones(grupo_id: int, db: Session = Depends(get_db)):
     success = crud.delete_grupo_opciones(db, grupo_id)

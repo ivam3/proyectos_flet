@@ -76,6 +76,16 @@ class DBManager:
         r = self.client.post("/opciones", json=data)
         return r.status_code in [200, 201]
 
+    def update_group(self, group_id: int, nombre: str, opciones: List[str], multiple: int = 0, obligatorio: int = 0):
+        data = {
+            "nombre": nombre,
+            "opciones": json.dumps(opciones),
+            "seleccion_multiple": multiple,
+            "obligatorio": obligatorio
+        }
+        r = self.client.put(f"/opciones/{group_id}", json=data)
+        return r.status_code == 200
+
     def delete_group(self, group_id: int):
         r = self.client.delete(f"/opciones/{group_id}")
         return r.status_code == 200
@@ -124,9 +134,7 @@ class AdminShell(cmd.Cmd):
             print(f"❌ No se pudo eliminar el archivo.")
 
     def do_importar(self, arg):
-        """Importa/Sincroniza platillos desde un JSON: importar [archivo.json]
-        Si el nombre ya existe en el servidor, lo actualiza. Si no, lo crea.
-        """
+        """Importa/Sincroniza TODO desde un JSON (Menú, Configuración, Grupos): importar [archivo.json]"""
         if not arg:
             print("❌ Uso: importar [archivo.json]")
             return
@@ -134,36 +142,70 @@ class AdminShell(cmd.Cmd):
             with open(arg, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            items_to_import = data["menu"] if isinstance(data, dict) and "menu" in data else data
-            
-            if not isinstance(items_to_import, list):
-                print("❌ El formato del JSON debe ser una lista de platillos.")
-                return
-
-            print("🔍 Obteniendo lista actual del servidor para sincronizar...")
-            current_menu = self.mgr.get_all_menu()
-            # Mapeo de nombre (minúsculas) -> ID
-            menu_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu}
-
-            print(f"📥 Procesando {len(items_to_import)} platillos...")
-            for item in items_to_import:
-                nombre_clean = item['nombre'].strip().lower()
-                
-                # Preparar datos (limpiar ID para evitar conflictos)
-                if "id" in item: del item["id"]
-                
-                if nombre_clean in menu_map:
-                    item_id = menu_map[nombre_clean]
-                    if self.mgr.update_item(item_id, item):
-                        print(f" 🔄 {item['nombre']} actualizado.")
-                    else:
-                        print(f" ❌ Error actualizando {item['nombre']}.")
+            # 1. IMPORTAR CONFIGURACION
+            if isinstance(data, dict) and "configuracion" in data:
+                print("⚙️  Sincronizando configuración...")
+                cfg = data["configuracion"]
+                # Limpiar campos no deseados
+                cfg_payload = {k: v for k, v in cfg.items() if k not in ["id", "admin_password"]}
+                if self.mgr.update_config(cfg_payload):
+                    print(" ✅ Configuración actualizada.")
                 else:
-                    if self.mgr.create_item(item):
-                        print(f" ✅ {item['nombre']} creado.")
+                    print(" ❌ Error al actualizar configuración.")
+
+            # 2. IMPORTAR GRUPOS DE EXTRAS
+            if isinstance(data, dict) and "grupos_extras" in data:
+                print("➕ Sincronizando grupos de extras...")
+                current_groups = self.mgr.get_groups()
+                group_map = {g['nombre'].strip().lower(): g['id'] for g in current_groups}
+                
+                for g in data["grupos_extras"]:
+                    name_clean = g['nombre'].strip().lower()
+                    ops = json.loads(g['opciones']) if isinstance(g['opciones'], str) else g['opciones']
+                    m = g.get('seleccion_multiple', 0)
+                    o = g.get('obligatorio', 0)
+                    
+                    if name_clean in group_map:
+                        if self.mgr.update_group(group_map[name_clean], g['nombre'], ops, m, o):
+                            print(f" 🔄 Grupo '{g['nombre']}' actualizado.")
+                        else:
+                            print(f" ❌ Error actualizando grupo '{g['nombre']}'.")
                     else:
-                        print(f" ❌ Error creando {item['nombre']}.")
-            print("🏁 Sincronización finalizada.")
+                        if self.mgr.create_group(g['nombre'], ops, m, o):
+                            print(f" ✅ Grupo '{g['nombre']}' creado.")
+                        else:
+                            print(f" ❌ Error creando grupo '{g['nombre']}'.")
+
+            # 3. IMPORTAR MENU
+            items_to_import = []
+            if isinstance(data, dict) and "menu" in data:
+                items_to_import = data["menu"]
+            elif isinstance(data, list):
+                items_to_import = data
+
+            if items_to_import:
+                print("🔍 Sincronizando menú...")
+                current_menu = self.mgr.get_all_menu()
+                menu_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu}
+
+                print(f"📥 Procesando {len(items_to_import)} platillos...")
+                for item in items_to_import:
+                    nombre_clean = item['nombre'].strip().lower()
+                    if "id" in item: del item["id"]
+                    
+                    if nombre_clean in menu_map:
+                        item_id = menu_map[nombre_clean]
+                        if self.mgr.update_item(item_id, item):
+                            print(f" 🔄 {item['nombre']} actualizado.")
+                        else:
+                            print(f" ❌ Error actualizando {item['nombre']}.")
+                    else:
+                        if self.mgr.create_item(item):
+                            print(f" ✅ {item['nombre']} creado.")
+                        else:
+                            print(f" ❌ Error creando {item['nombre']}.")
+            
+            print("🏁 Importación finalizada.")
         except Exception as e:
             print(f"❌ Error en importación: {e}")
 

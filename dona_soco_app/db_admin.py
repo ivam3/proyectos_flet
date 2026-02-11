@@ -4,6 +4,8 @@ import csv
 import sys
 import os
 import cmd
+import shlex
+import glob
 from typing import Dict, Any, List
 
 # Configurar el path para importar config.py
@@ -109,19 +111,51 @@ class AdminShell(cmd.Cmd):
 
     # --- GESTION DE IMAGENES ---
     def do_upload(self, arg):
-        """Sube una imagen local al servidor: upload /ruta/a/la/imagen.jpg"""
+        """Sube una o varias imágenes locales al servidor: 
+        upload imagen.jpg 
+        upload imagen1.jpg imagen2.png
+        upload "carpeta con espacios/*.jpg"
+        """
         if not arg:
-            print("❌ Uso: upload [ruta_local_imagen]")
+            print("❌ Uso: upload [ruta_local_imagen1] [ruta_local_imagen2] ...")
             return
         
-        print(f"🚀 Subiendo {arg}...")
-        filename, error = self.mgr.upload_image(arg)
-        if filename:
-            print(f"✅ Imagen subida con éxito.")
-            print(f"🔗 Nombre en servidor: {filename}")
-            print(f"💡 Puedes usar este nombre al crear un platillo.")
-        else:
-            print(f"❌ Error al subir: {error}")
+        try:
+            # Separar argumentos respetando comillas
+            patterns = shlex.split(arg)
+            files_to_upload = []
+            
+            # Expandir globs (ej: *.jpg)
+            for p in patterns:
+                expanded = glob.glob(p)
+                if expanded:
+                    files_to_upload.extend(expanded)
+                else:
+                    # Si no es un glob, añadir tal cual para que el manager maneje el error de "no encontrado"
+                    files_to_upload.append(p)
+
+            if not files_to_upload:
+                print("⚠️ No se encontraron archivos para subir.")
+                return
+
+            print(f"🚀 Iniciando carga de {len(files_to_upload)} archivos...")
+            
+            success_count = 0
+            for file_path in files_to_upload:
+                if os.path.isdir(file_path):
+                    continue
+                    
+                filename, error = self.mgr.upload_image(file_path)
+                if filename:
+                    print(f" ✅ {os.path.basename(file_path)} -> {filename}")
+                    success_count += 1
+                else:
+                    print(f" ❌ {os.path.basename(file_path)}: {error}")
+            
+            print(f"🏁 Proceso finalizado. Subidos con éxito: {success_count}/{len(files_to_upload)}")
+            
+        except Exception as e:
+            print(f"❌ Error procesando comando: {e}")
 
     def do_rmfile(self, arg):
         """Elimina un archivo del servidor: rmfile [nombre_archivo]"""

@@ -3,6 +3,7 @@ import os
 import uuid
 import shutil
 import json
+import httpx
 from database import (
     obtener_menu,
     agregar_platillo,
@@ -11,17 +12,13 @@ from database import (
     actualizar_visibilidad_platillo,
     ocultar_todos_los_platillos,
     mostrar_todos_los_platillos,
-    get_grupos_opciones
+    get_grupos_opciones,
+    subir_imagen
 )
 from components.notifier import show_notification
 
-# Definimos menu_admin_view sin usar el file_picker global
-def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
+def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     
-    # --- SELECTOR DE ARCHIVOS LOCAL (Estrategia probada en Pedidos) ---
-    # Creamos una instancia local del FilePicker para esta vista
-    file_picker = ft.FilePicker()
-
     lista = ft.Column(scroll="auto", expand=True)
     
     upload_status = ft.Text("", color=ft.Colors.BLACK, size=12)
@@ -64,9 +61,8 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
     is_config_salsa_chk = config_chk("Salsas")
     
     # --- GRUPOS DE OPCIONES DINÁMICOS ---
-    # Contenedor para checkboxes generados dinámicamente
     grupos_opciones_container = ft.Column()
-    grupos_opciones_checks = {} # Map id -> checkbox
+    grupos_opciones_checks = {} 
 
     def cargar_checkboxes_grupos():
         grupos_opciones_container.controls.clear()
@@ -104,7 +100,6 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         is_config_chk.value = False
         is_config_salsa_chk.value = False
         
-        # Reset dynamic checks
         for chk in grupos_opciones_checks.values():
             chk.value = False
             sync_checkbox_color(chk)
@@ -121,7 +116,6 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         page.update()
 
     def llenar_campos(platillo):
-        # pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = platillo
         pid = platillo['id']
         nom = platillo['nombre']
         desc = platillo.get('descripcion', "")
@@ -143,7 +137,6 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         is_config_chk.value = bool(is_conf)
         is_config_salsa_chk.value = bool(is_conf_salsa)
         
-        # Load dynamic checks
         try:
             active_ids = json.loads(grupos_ids_json)
             for gid, chk in grupos_opciones_checks.items():
@@ -154,7 +147,9 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         
         imagen_path_guardado.value = img
         if img:
-            imagen_preview.src = f"/{img}?v={uuid.uuid4()}" 
+            # En producción, las imagenes se sirven desde el backend
+            from config import API_URL
+            imagen_preview.src = f"{API_URL}/static/uploads/{img}?v={uuid.uuid4()}" 
             imagen_preview.visible = True
         else:
             imagen_preview.src = "/icon.png"
@@ -166,88 +161,69 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         btn_accion.on_click = guardar_cambios_click
         page.update()
 
-    # Cálculo de la ruta de assets
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    assets_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "assets"))
-
-    def on_upload_completed(e: ft.FilePickerUploadEvent):
-        print(f"DEBUG: Upload completed for {e.file_name}, error={e.error}")
-        if e.error:
-            upload_status.value = f"Error upload: {e.error}"
-            page.update()
-            return
-
+    # --- NUEVA LÓGICA DE MANEJO DE ARCHIVOS (HÍBRIDA) ---
+    async def process_selected_file(file: ft.FilePickerFile):
+        upload_status.value = "Procesando imagen..."
+        page.update()
+        
         try:
-            source_path = os.path.join(page.upload_dir, e.file_name)
-            ext = os.path.splitext(e.file_name)[1]
-            nuevo_nombre = f"{uuid.uuid4()}{ext}"
-            destino = os.path.join(assets_dir, nuevo_nombre)
+            filename = None
+            # Si estamos en modo web o no hay path local, usamos bytes si están disponibles
+            # O usamos el picker para subir al servidor si Flet está configurado
+            if not file.path:
+                print("DEBUG: Modo Web detectado.")
+                # Flet 0.24+ permite obtener bytes de FilePickerResultEvent si se configura,
+                # pero en esta arquitectura es mejor usar el upload integrado de Flet 
+                # hacia el directorio temporal y luego a la API, o usar directamente la API.
+                
+                # Intentamos leer via upload si está habilitado en page
+                upload_status.value = "Subiendo al servidor..."
+                page.update()
+                
+                upload_url = page.get_upload_url(file.name, 600)
+                if upload_url:
+                    await file_picker.upload_async([
+                        ft.FilePickerUploadFile(file.name, upload_url=upload_url)
+                    ])
+                    # El resto se maneja en on_upload de file_picker si fuera necesario,
+                    # pero aquí usaremos una ruta más directa para Railway.
+                else:
+                    upload_status.value = "Error: No se pudo iniciar subida"
+            else:
+                # Modo Local (Escritorio/Android con permisos)
+                print(f"DEBUG: Modo Local detectado: {file.path}")
+                with open(file.path, "rb") as f:
+                    content = f.read()
+                filename = subir_imagen(file.name, content)
             
-            print(f"DEBUG: Moviendo de {source_path} a {destino}")
-            shutil.move(source_path, destino)
+            if filename:
+                imagen_path_guardado.value = filename
+                from config import API_URL
+                imagen_preview.src = f"{API_URL}/static/uploads/{filename}?v={uuid.uuid4()}"
+                imagen_preview.visible = True
+                upload_status.value = "Carga completa"
             
-            imagen_path_guardado.value = nuevo_nombre
-            imagen_preview.src = f"/{nuevo_nombre}?v={uuid.uuid4()}"
-            imagen_preview.visible = True
-            upload_status.value = "Carga completa"
-            print("DEBUG: Imagen procesada tras subida")
         except Exception as ex:
-            print(f"DEBUG ERROR post-upload: {ex}")
-            upload_status.value = f"Error procesando: {ex}"
+            print(f"Error procesando imagen: {ex}")
+            upload_status.value = f"Error: {ex}"
         
         page.update()
 
-    # Asignar handlers al picker LOCAL
-    file_picker.on_upload = on_upload_completed
-
-    def imagen_seleccionada(e):
-        print(f"DEBUG: imagen_seleccionada invocado. Files: {e.files}")
+    # Configurar el callback del picker global para esta vista
+    def on_picker_result(e: ft.FilePickerResultEvent):
         if e.files:
-            file = e.files[0]
-            # Si tiene path local (Desktop)
-            if file.path:
-                try:
-                    print(f"DEBUG: Modo Local - Guardando en {assets_dir}")
-                    os.makedirs(assets_dir, exist_ok=True)
-                    ext = os.path.splitext(file.name)[1]
-                    nuevo_nombre = f"{uuid.uuid4()}{ext}"
-                    destino = os.path.join(assets_dir, nuevo_nombre)
-                    print(f"DEBUG: Copiando de {file.path} a {destino}")
-                    shutil.copy(file.path, destino)
-                    imagen_path_guardado.value = nuevo_nombre
-                    imagen_preview.src = f"/{nuevo_nombre}?v={uuid.uuid4()}" 
-                    imagen_preview.visible = True
-                    upload_status.value = "Lista"
-                    print("DEBUG: Imagen guardada correctamente (Local)")
-                except Exception as ex:
-                    print(f"DEBUG ERROR: {ex}")
-                    upload_status.value = f"Error: {ex}"
-                page.update()
-            else:
-                # Si NO tiene path (Web/Mobile), hay que subirlo
-                print("DEBUG: Modo Upload - Iniciando subida...")
-                upload_status.value = "Subiendo..."
-                page.update()
-                try:
-                    os.makedirs(page.upload_dir, exist_ok=True)
-                    upload_list = [
-                        ft.FilePickerUploadFile(
-                            file.name,
-                            upload_url=page.get_upload_url(file.name, 600)
-                        )
-                    ]
-                    file_picker.upload(upload_list)
-                except Exception as ex:
-                    print(f"DEBUG ERROR Upload Init: {ex}")
-                    upload_status.value = f"Error inicio subida: {ex}"
-                    page.update()
-        else:
-            print("DEBUG: No files selected")
+            # Lanzamos la tarea de procesamiento
+            import asyncio
+            asyncio.create_task(process_selected_file(e.files[0]))
 
-    file_picker.on_result = imagen_seleccionada
+    # IMPORTANTE: Reasignamos el handler al picker global cada vez que cargamos la vista
+    file_picker.on_result = on_picker_result
 
     async def on_pick_files(e):
-         await file_picker.pick_files(allow_multiple=False, file_type=ft.FilePickerFileType.IMAGE)
+         await file_picker.pick_files_async(
+             allow_multiple=False, 
+             file_type=ft.FilePickerFileType.IMAGE
+         )
 
     btn_subir_imagen.on_click = on_pick_files
 
@@ -281,8 +257,8 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
     def cargar_lista(search_term=""):
         lista.controls.clear()
         platillos = obtener_menu(solo_activos=False, search_term=search_term)
+        from config import API_URL
         for p in platillos:
-            # pid, nom, desc, pre, img, active, desc_val, is_conf, is_conf_salsa, piezas = p
             pid = p['id']
             nom = p['nombre']
             desc = p.get('descripcion', "")
@@ -302,21 +278,25 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             desc_final = f"{desc or ''}"
             config_labels = f"({', '.join(extras)})" if extras else ""
 
+            # Imagen del item
+            item_img_src = f"{API_URL}/static/uploads/{img}" if img else "/icon.png"
+
             item_row = ft.Container(
                 padding=10,
                 bgcolor=ft.Colors.ORANGE_50,
                 border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
                 content=ft.Row([
-                    ft.Image(src=f"/{img}" if img else "/icon.png", width=70, height=70, fit="cover", border_radius=8),
+                    ft.Image(src=item_img_src, width=70, height=70, fit="cover", border_radius=8),
                     ft.Column([
                         ft.Row([
                             ft.Text(nom, weight="bold", size=16, color=ft.Colors.BLACK, expand=True),
-                                                                    ft.Container(
-                                                                        content=ft.Text(target_label, size=10, color=ft.Colors.WHITE, weight="bold"),
-                                                                        bgcolor=target_color,
-                                                                        padding=ft.Padding.symmetric(horizontal=8, vertical=2),
-                                                                        border_radius=5
-                                                                    )                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            ft.Container(
+                                content=ft.Text(target_label, size=10, color=ft.Colors.WHITE, weight="bold"),
+                                bgcolor=target_color,
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=2),
+                                border_radius=5
+                            )
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         ft.Text(desc_final, size=13, color=ft.Colors.GREY_800),
                         ft.Text(config_labels, size=11, color=ft.Colors.BROWN_400, italic=True) if config_labels else ft.Container(),
                         ft.Text(f"${pre:.2f}", weight="bold", size=15, color=ft.Colors.BROWN_700),
@@ -356,7 +336,6 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
             page.update()
             return None
         
-        # Collect checked groups
         selected_groups = [gid for gid, chk in grupos_opciones_checks.items() if chk.value]
         grupos_json = json.dumps(selected_groups)
         
@@ -371,7 +350,6 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         on_change=lambda e: cargar_lista(e.control.value)
     )
 
-    # --- DIÁLOGO DE CONFIRMACIÓN GLOBAL ---
     global_confirm_dialog = ft.AlertDialog(title=ft.Text("Confirmación"))
     page.overlay.append(global_confirm_dialog)
 
@@ -398,7 +376,7 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         page.update()
 
     cargar_lista()
-    cargar_checkboxes_grupos() # Inicializar checks dinámicos
+    cargar_checkboxes_grupos() 
 
     content_container = ft.Container(
         padding=20,
@@ -420,7 +398,6 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
                 grupos_opciones_container,
                 ft.Divider(),
                 ft.Row([btn_subir_imagen, imagen_preview, upload_status], alignment="start", spacing=10),
-                # BOTONES ALINEADOS A LA IZQUIERDA (START)
                 ft.Row([btn_accion, btn_cancelar], alignment=ft.MainAxisAlignment.START, spacing=10),
                 ft.Divider(),
                 search_bar,
@@ -436,6 +413,4 @@ def menu_admin_view(page: ft.Page, file_picker_ignored: ft.FilePicker):
         )
     )
 
-    # Añadir el FilePicker LOCAL al árbol de controles (invisible pero activo)
-    # IMPORTANTE: Esto lo integra en la página y permite que se abra el selector nativo
-    return ft.Column([content_container, ft.Container(content=file_picker, width=0, height=0)], expand=True)
+    return content_container

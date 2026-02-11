@@ -34,6 +34,19 @@ def verificar_admin_login(password):
         print(f"Error login: {e}")
         return False
 
+def subir_imagen(file_name, file_bytes):
+    """Sube una imagen al backend y retorna el nombre del archivo guardado."""
+    try:
+        files = {"file": (file_name, file_bytes)}
+        response = httpx.post(f"{API_URL}/upload", files=files, headers=HEADERS)
+        if response.status_code == 200:
+            return response.json().get("filename")
+        print(f"Error subiendo imagen: {response.status_code} - {response.text}")
+        return None
+    except Exception as e:
+        print(f"Error en subir_imagen: {e}")
+        return None
+
 def cambiar_admin_password(new_password):
     try:
         response = httpx.post(f"{API_URL}/admin/change-password", json={"new_password": new_password}, headers=HEADERS)

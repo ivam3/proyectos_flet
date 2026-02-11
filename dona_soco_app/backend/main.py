@@ -158,14 +158,14 @@ def admin_change_pass(data: schemas.PasswordUpdate, db: Session = Depends(get_db
 
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
 async def upload_file(file: UploadFile = File(...)):
-    file_location = f"backend/static/uploads/{file.filename}"
+    file_location = os.path.join(UPLOAD_DIR, file.filename)
     with open(file_location, "wb+") as file_object:
         file_object.write(file.file.read())
     return {"filename": file.filename}
 
 @app.delete("/upload/{filename}", dependencies=[Depends(verify_api_key)])
 async def delete_file(filename: str):
-    file_location = f"backend/static/uploads/{filename}"
+    file_location = os.path.join(UPLOAD_DIR, filename)
     if os.path.exists(file_location):
         os.remove(file_location)
         return {"ok": True, "message": f"Archivo {filename} eliminado"}
@@ -173,29 +173,74 @@ async def delete_file(filename: str):
 
 # --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 
-os.makedirs("backend/static/uploads", exist_ok=True)
-app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+
+
+# Carpeta de subidas (asegurar que coincida con el volumen de Railway)
+
+# Recomendado montar volumen en: /app/static/uploads
+
+UPLOAD_DIR = "static/uploads"
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+
+# Montar archivos estáticos del API (imagenes, etc)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+
+# Montar el frontend de Flet
 
 if os.path.exists("web"):
-    app.mount("/app", StaticFiles(directory="web", html=True), name="web_app")
+
+    app.mount("/frontend", StaticFiles(directory="web", html=True), name="web_app")
+
+
 
 @app.get("/")
+
 async def read_root():
+
     if os.path.exists("web/index.html"):
+
         return FileResponse("web/index.html")
+
     return {"message": "API de Antojitos Doña Soco funcionando"}
 
+
+
 @app.get("/{full_path:path}")
+
 async def catch_all(full_path: str):
-    # Primero buscamos archivos físicos en la carpeta web
-    file_path = os.path.join("web", full_path)
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        return FileResponse(file_path)
-    
-    # Si no es un archivo físico y no es ruta del API, servir index.html para SPA
+
+    # Si la ruta empieza con static o api paths conocidos, dejar que FastAPI maneje el 404 normal
+
     api_paths = ("menu", "opciones", "configuracion", "pedidos", "admin", "upload", "static")
-    if not any(full_path.startswith(p) for p in api_paths):
-        if os.path.exists("web/index.html"):
-            return FileResponse("web/index.html")
+
+    if any(full_path.startswith(p) for p in api_paths):
+
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+
+
+
+    # Buscar archivos físicos en la carpeta web
+
+    file_path = os.path.join("web", full_path)
+
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+
+        return FileResponse(file_path)
+
     
+
+    # Si no es un archivo físico, servir index.html para SPA (rutas de Flet)
+
+    if os.path.exists("web/index.html"):
+
+        return FileResponse("web/index.html")
+
+    
+
     return JSONResponse({"detail": "Not Found"}, status_code=404)

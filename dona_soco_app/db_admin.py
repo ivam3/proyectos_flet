@@ -80,6 +80,15 @@ class DBManager:
         r = self.client.delete(f"/opciones/{group_id}")
         return r.status_code == 200
 
+    # --- PEDIDOS ---
+    def get_pedidos(self, limit: int = 50):
+        r = self.client.get("/pedidos", params={"limit": limit})
+        return r.json()
+
+    def delete_pedido(self, orden_id: int):
+        r = self.client.delete(f"/pedidos/{orden_id}")
+        return r.status_code == 200
+
 class AdminShell(cmd.Cmd):
     intro = '🛠️ Sistema de Administración Doña Soco. Escribe "help" o "?" para listar comandos.\n'
     prompt = '(ds-admin) '
@@ -283,6 +292,46 @@ class AdminShell(cmd.Cmd):
             print("✅ Salsas actualizadas.")
         else:
             print("❌ Error.")
+
+    # --- GESTION DE PEDIDOS ---
+    def do_pedidos(self, arg):
+        """Lista el historial de pedidos: pedidos [limite]"""
+        limit = int(arg) if arg and arg.isdigit() else 50
+        pedidos = self.mgr.get_pedidos(limit=limit)
+        
+        if not pedidos:
+            print("📭 No hay pedidos en el historial.")
+            return
+
+        print(f"{ 'ID':<5} | {'Cliente':<20} | {'Total':<8} | {'Estado':<12} | {'Fecha'}")
+        print("-" * 80)
+        for p in pedidos:
+            # Formatear fecha simple: 2024-05-20T10:00:00 -> 20/05 10:00
+            fecha_raw = p.get("fecha", "")
+            fecha_fmt = fecha_raw[8:10] + "/" + fecha_raw[5:7] + " " + fecha_raw[11:16] if len(fecha_raw) > 16 else "---"
+            
+            print(f"{p['id']:<5} | {p['nombre_cliente'][:20]:<20} | ${p['total']:<7.2f} | {p['estado']:<12} | {fecha_fmt}")
+
+    def do_rmpedido(self, arg):
+        """Elimina un pedido por ID: rmpedido [id]"""
+        if not arg:
+            print("❌ Uso: rmpedido [id]")
+            return
+        if self.mgr.delete_pedido(int(arg)):
+            print(f"🗑️ Pedido {arg} eliminado.")
+        else:
+            print(f"❌ No se pudo eliminar el pedido.")
+
+    def do_wipe_pedidos(self, arg):
+        """⚠️ BORRA TODO EL HISTORIAL DE PEDIDOS: wipe_pedidos"""
+        confirm = input("❗ ¿ESTÁS SEGURO? Esto borrará TODO el historial de pedidos (s/n): ")
+        if confirm.lower() == 's':
+            pedidos = self.mgr.get_pedidos(limit=1000)
+            count = 0
+            for p in pedidos:
+                if self.mgr.delete_pedido(p["id"]):
+                    count += 1
+            print(f"🧹 Historial vaciado: {count} pedidos eliminados.")
 
     def do_backup(self, arg):
         """Genera un backup local total en JSON: backup [nombre_archivo]"""

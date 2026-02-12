@@ -6,9 +6,20 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
 import mimetypes
+import shutil
 
 import crud, models, schemas
 from database import SessionLocal, engine, get_db
+
+# --- PERSISTENCIA DE BASE DE DATOS (AUTO-SEEDING) ---
+# Si la base de datos no existe en el volumen persistente pero sí en la raíz, moverla.
+DB_SOURCE = "backend_dona_soco.db"
+DB_DESTINATION = "static/uploads/backend_dona_soco.db"
+
+if not os.path.exists(DB_DESTINATION) and os.path.exists(DB_SOURCE):
+    print(f"DEBUG: Moviendo base de datos inicial a volumen persistente: {DB_DESTINATION}")
+    os.makedirs("static/uploads", exist_ok=True)
+    shutil.copy(DB_SOURCE, DB_DESTINATION)
 
 # Registro de tipos MIME para soporte Web estable
 mimetypes.add_type('application/javascript', '.js')
@@ -37,11 +48,21 @@ app = FastAPI(title="Antojitos Doña Soco API")
 # --- MIDDLEWARE DE SEGURIDAD GLOBAL (CRÍTICO PARA FLET WEB) ---
 @app.middleware("http")
 async def add_security_headers(request, call_next):
+    # Interceptar peticiones al service worker para anularlo
+    if "flutter_service_worker.js" in request.url.path:
+        from fastapi.responses import Response
+        return Response(
+            content="", 
+            media_type="application/javascript",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+        )
+
     response = await call_next(request)
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-    # Evitar cacheo agresivo durante el despliegue para evitar 304 inconsistentes
-    if request.url.path.endswith((".js", ".wasm", ".zip", "index.html")):
+    
+    # Prevenir cacheo de archivos de ejecución
+    if request.url.path.endswith((".js", ".wasm", ".zip", ".html")):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 

@@ -173,74 +173,70 @@ async def delete_file(filename: str):
 
 # --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 
-
-
-# Carpeta de subidas (asegurar que coincida con el volumen de Railway)
-
-# Recomendado montar volumen en: /app/static/uploads
-
+# Carpeta de subidas
 UPLOAD_DIR = "static/uploads"
-
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Clase personalizada para servir archivos con cabeceras de aislamiento (Requerido por Flet Web)
+class FletStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        return response
 
-
-# Montar archivos estáticos del API (imagenes, etc)
-
+# Montar archivos estáticos del API
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
-
 # Montar el frontend de Flet
-
 if os.path.exists("web"):
-
-    app.mount("/frontend", StaticFiles(directory="web", html=True), name="web_app")
-
-
+    app.mount("/frontend", FletStaticFiles(directory="web", html=True), name="web_app")
 
 @app.get("/")
-
 async def read_root():
-
     if os.path.exists("web/index.html"):
-
-        return FileResponse("web/index.html")
-
+        return FileResponse(
+            "web/index.html",
+            headers={
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Embedder-Policy": "require-corp"
+            }
+        )
     return {"message": "API de Antojitos Doña Soco funcionando"}
 
-
-
 @app.get("/{full_path:path}")
-
 async def catch_all(full_path: str):
-
     # Si la ruta empieza con static o api paths conocidos, dejar que FastAPI maneje el 404 normal
-
     api_paths = ("menu", "opciones", "configuracion", "pedidos", "admin", "upload", "static")
-
     if any(full_path.startswith(p) for p in api_paths):
-
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 
-
-
     # Buscar archivos físicos en la carpeta web
-
     file_path = os.path.join("web", full_path)
-
     if os.path.exists(file_path) and os.path.isfile(file_path):
-
-        return FileResponse(file_path)
-
-    
+        media_type = None
+        if file_path.endswith(".js"):
+            media_type = "application/javascript"
+        elif file_path.endswith(".wasm"):
+            media_type = "application/wasm"
+            
+        return FileResponse(
+            file_path, 
+            media_type=media_type,
+            headers={
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Embedder-Policy": "require-corp"
+            }
+        )
 
     # Si no es un archivo físico, servir index.html para SPA (rutas de Flet)
-
     if os.path.exists("web/index.html"):
-
-        return FileResponse("web/index.html")
-
-    
+        return FileResponse(
+            "web/index.html",
+            headers={
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Embedder-Policy": "require-corp"
+            }
+        )
 
     return JSONResponse({"detail": "Not Found"}, status_code=404)

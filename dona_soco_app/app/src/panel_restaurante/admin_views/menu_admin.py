@@ -227,8 +227,14 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
 
     # IMPORTANTE: Reasignamos el handler al picker global cada vez que cargamos la vista
     file_picker.on_result = on_picker_result
+    # Forzar actualización para que el cliente reconozca el nuevo handler
+    try:
+        file_picker.update()
+    except:
+        pass
 
     async def on_pick_files(e):
+         print("DEBUG: Intentando abrir selector de archivos...")
          await file_picker.pick_files(
              allow_multiple=False, 
              file_type=ft.FilePickerFileType.IMAGE

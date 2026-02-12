@@ -255,8 +255,7 @@ def obtener_pedidos(limit=100, offset=0, start_date=None, end_date=None, search_
         response = httpx.get(f"{API_URL}/pedidos", params=params, headers=HEADERS)
         if response.status_code == 200:
             pedidos = response.json()
-            # ...
-            return resultado
+            return pedidos
         return []
     except Exception as e:
         print(f"Error obtener pedidos: {e}")

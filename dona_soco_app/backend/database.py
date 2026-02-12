@@ -11,8 +11,9 @@ if DATABASE_URL:
         pool_pre_ping=True
     )
 else:
-    # Local → SQLite
-    DATABASE_URL = "sqlite:///./backend_dona_soco.db"
+    # Local / Railway SQLite → Usar carpeta 'static' que suele ser el volumen
+    os.makedirs("static", exist_ok=True)
+    DATABASE_URL = "sqlite:///./static/backend_dona_soco.db"
     engine = create_engine(
         DATABASE_URL,
         connect_args={"check_same_thread": False}

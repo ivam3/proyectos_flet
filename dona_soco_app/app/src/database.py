@@ -169,12 +169,12 @@ def obtener_menu(solo_activos=True, search_term=None):
         params["search"] = search_term
     
     try:
-        response = httpx.get(f"{API_URL}/menu", params=params, headers=HEADERS)
+        response = httpx.get(f"{API_URL}/menu", params=params, headers=HEADERS, timeout=10.0)
         if response.status_code == 200:
-            return response.json() # Retorna lista de dicts
+            return response.json() 
         return []
     except Exception as e:
-        print(f"Error obtener menu: {e}")
+        print(f"Error crítico obtener menu: {e}")
         return []
 
 # --- CONFIGURACION ---

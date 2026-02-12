@@ -68,34 +68,35 @@ def cargar_menu(page: ft.Page):
                     ft.Text(f"${precio_final:.0f}", weight="bold", size=14, color=ft.Colors.RED_700 if descuento > 0 else ft.Colors.ORANGE_800)
                 ], spacing=0)
 
-                                # Lógica para determinar el origen de la imagen
-                                if imagen:
-                                    if imagen.startswith(("http://", "https://")):
-                                        img_src = imagen
-                                    elif "." in imagen and not imagen.startswith("/"):
-                                        # Si es una imagen subida por el API (nombre.jpg)
-                                        # Opcional: Podrías usar API_URL directamente aquí si quieres forzar carga externa
-                                        from config import API_URL
-                                        img_src = f"{API_URL}/static/uploads/{imagen}"
-                                    else:
-                                        img_src = f"/{imagen}"
-                                else:
-                                    img_src = "/icon.png"
-                
-                                menu_grid.controls.append(
-                                    ft.Card(
-                                        elevation=3,
-                                        content=ft.Container(
-                                            padding=8,
-                                            content=ft.Column(
-                                                alignment=ft.MainAxisAlignment.START,
-                                                spacing=4,
-                                                controls=[
-                                                    ft.Container(
-                                                        content=ft.Stack([
-                                                            ft.Image(src=img_src, fit="cover", width=1000, height=img_height),
-                                                            ft.Container(
-                                                                content=ft.Text(f"-{descuento:.0f}%", color="white", size=9, weight="bold"),                                                bgcolor=ft.Colors.RED, padding=4, border_radius=ft.BorderRadius.only(top_left=8, bottom_right=8),
+                # Lógica para determinar el origen de la imagen
+                if imagen:
+                    if imagen.startswith(("http://", "https://")):
+                        img_src = imagen
+                    elif "." in imagen and not imagen.startswith("/"):
+                        # Si es una imagen subida por el API (nombre.jpg)
+                        # Opcional: Podrías usar API_URL directamente aquí si quieres forzar carga externa
+                        from config import API_URL
+                        img_src = f"{API_URL}/static/uploads/{imagen}"
+                    else:
+                        img_src = f"/{imagen}"
+                else:
+                    img_src = "/icon.png"
+
+                menu_grid.controls.append(
+                    ft.Card(
+                        elevation=3,
+                        content=ft.Container(
+                            padding=8,
+                            content=ft.Column(
+                                alignment=ft.MainAxisAlignment.START,
+                                spacing=4,
+                                controls=[
+                                    ft.Container(
+                                        content=ft.Stack([
+                                            ft.Image(src=img_src, fit="cover", width=1000, height=img_height),
+                                            ft.Container(
+                                                content=ft.Text(f"-{descuento:.0f}%", color="white", size=9, weight="bold"),
+                                                bgcolor=ft.Colors.RED, padding=4, border_radius=ft.BorderRadius.only(top_left=8, bottom_right=8),
                                                 visible=descuento > 0
                                             )
                                         ]),

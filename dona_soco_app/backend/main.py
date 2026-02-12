@@ -34,6 +34,17 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Antojitos Doña Soco API")
 
+# --- MIDDLEWARE DE SEGURIDAD GLOBAL (CRÍTICO PARA FLET WEB) ---
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    # Evitar cacheo agresivo durante el despliegue para evitar 304 inconsistentes
+    if request.url.path.endswith((".js", ".wasm", ".zip", "index.html")):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -219,6 +230,8 @@ async def catch_all(full_path: str):
             media_type = "application/javascript"
         elif file_path.endswith(".wasm"):
             media_type = "application/wasm"
+        elif file_path.endswith(".zip"):
+            media_type = "application/zip"
             
         return FileResponse(
             file_path, 

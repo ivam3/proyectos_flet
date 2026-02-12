@@ -169,26 +169,32 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         try:
             filename = None
             # Si estamos en modo web o no hay path local, usamos bytes si están disponibles
-            # O usamos el picker para subir al servidor si Flet está configurado
             if not file.path:
-                print("DEBUG: Modo Web detectado.")
-                # Flet 0.24+ permite obtener bytes de FilePickerResultEvent si se configura,
-                # pero en esta arquitectura es mejor usar el upload integrado de Flet 
-                # hacia el directorio temporal y luego a la API, o usar directamente la API.
-                
-                # Intentamos leer via upload si está habilitado en page
-                upload_status.value = "Subiendo al servidor..."
+                print("DEBUG: Modo Web detectado. Iniciando transferencia interna...")
+                upload_status.value = "Subiendo..."
                 page.update()
                 
                 upload_url = page.get_upload_url(file.name, 600)
                 if upload_url:
-                    await file_picker.upload_async([
+                    await file_picker.upload([
                         ft.FilePickerUploadFile(file.name, upload_url=upload_url)
                     ])
-                    # El resto se maneja en on_upload de file_picker si fuera necesario,
-                    # pero aquí usaremos una ruta más directa para Railway.
+                    
+                    # En Pyodide/Web, esperamos a que el archivo aparezca en page.upload_dir
+                    import asyncio
+                    local_path = os.path.join(page.upload_dir, file.name)
+                    
+                    # Reintentos para dar tiempo a la escritura en disco virtual
+                    for _ in range(15):
+                        if os.path.exists(local_path):
+                            print(f"DEBUG: Archivo detectado en {local_path}. Enviando a API...")
+                            with open(local_path, "rb") as f:
+                                content = f.read()
+                            filename = subir_imagen(file.name, content)
+                            break
+                        await asyncio.sleep(0.4)
                 else:
-                    upload_status.value = "Error: No se pudo iniciar subida"
+                    upload_status.value = "Error: Configuración de subida inválida"
             else:
                 # Modo Local (Escritorio/Android con permisos)
                 print(f"DEBUG: Modo Local detectado: {file.path}")
@@ -199,18 +205,21 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
             if filename:
                 imagen_path_guardado.value = filename
                 from config import API_URL
+                # Forzar recarga con timestamp o UUID para evitar caché del navegador
                 imagen_preview.src = f"{API_URL}/static/uploads/{filename}?v={uuid.uuid4()}"
                 imagen_preview.visible = True
                 upload_status.value = "Carga completa"
+            else:
+                upload_status.value = "Error al procesar imagen en servidor"
             
         except Exception as ex:
-            print(f"Error procesando imagen: {ex}")
+            print(f"Error crítico procesando imagen: {ex}")
             upload_status.value = f"Error: {ex}"
         
         page.update()
 
     # Configurar el callback del picker global para esta vista
-    def on_picker_result(e: ft.FilePickerResultEvent):
+    def on_picker_result(e):
         if e.files:
             # Lanzamos la tarea de procesamiento
             import asyncio
@@ -220,7 +229,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     file_picker.on_result = on_picker_result
 
     async def on_pick_files(e):
-         await file_picker.pick_files_async(
+         await file_picker.pick_files(
              allow_multiple=False, 
              file_type=ft.FilePickerFileType.IMAGE
          )

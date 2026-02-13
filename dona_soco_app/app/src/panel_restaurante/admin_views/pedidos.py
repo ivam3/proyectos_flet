@@ -156,6 +156,13 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 
                 if es_escritorio_o_web:
                     print("DEBUG: Modo Web/Escritorio detectado. Usando FilePicker.")
+                    
+                    # Asegurarse de que el picker esté en la página (usando .page que funciona aunque esté en un Container)
+                    if not file_picker.page:
+                        # Si no tiene página, lo añadimos al overlay (envuelto para evitar franja roja)
+                        page.overlay.append(ft.Container(content=file_picker, visible=False))
+                        page.update()
+                        
                     show_notification(page, f"Abriendo selector...", ft.Colors.BLUE_GREY_700)
                     
                     await file_picker.save_file(
@@ -304,6 +311,12 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
             if es_escritorio_o_web:
                 print("DEBUG: Modo Web/Escritorio detectado (PDF). Usando FilePicker.")
+                
+                # Asegurarse de que el picker esté en la página
+                if not file_picker.page:
+                    page.overlay.append(ft.Container(content=file_picker, visible=False))
+                    page.update()
+                    
                 await file_picker.save_file(
                     dialog_title=f"Guardar PDF #{pedido['id']}",
                     file_name=filename,

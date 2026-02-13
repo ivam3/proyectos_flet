@@ -135,8 +135,8 @@ def main(page: ft.Page):
         nonlocal admin_mode
         admin_mode = False
         show_snackbar("Sesión de administrador cerrada")
-        page.overlay.clear()
-        page.overlay.append(dialog)
+        # No limpiamos todo el overlay para no perder los FilePickers globales
+        dialog.open = False
         await page.push_route("/menu")
         page.update()
 
@@ -174,6 +174,12 @@ def main(page: ft.Page):
             content_area.content = create_checkout_view(page, show_snackbar, nav)
         elif route.startswith("/admin"):
             if admin_mode:
+                # Asegurar que los pickers estén en la página (usando .page que funciona aunque esté en un Container)
+                if not global_file_picker.page:
+                    page.overlay.append(ft.Container(content=global_file_picker, visible=False))
+                if not export_file_picker.page:
+                    page.overlay.append(ft.Container(content=export_file_picker, visible=False))
+                
                 nav.selected_index = 3
                 content_area.content = create_admin_panel_view(
                     page, 
@@ -238,7 +244,5 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
     os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
-    # Inicio de la aplicación con renderizado optimizado para su construccion en formato .APK para Android
-    # ft.app(target=main, assets_dir=assets_path)
-    # Inicio de la aplicación con renderizado optimizado para web y soporte completo de CanvasKi
+    # Inicio de la aplicación con ft.run y canvas_kit
     ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")

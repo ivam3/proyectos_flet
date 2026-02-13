@@ -167,50 +167,35 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         page.update()
         
         try:
-            filename = None
-            # Si estamos en modo web o no hay path local, usamos bytes si están disponibles
-            if not file.path:
-                print("DEBUG: Modo Web detectado. Iniciando transferencia interna...")
-                upload_status.value = "Subiendo..."
-                page.update()
-                
-                upload_url = page.get_upload_url(file.name, 600)
-                if upload_url:
-                    await file_picker.upload([
-                        ft.FilePickerUploadFile(file.name, upload_url=upload_url)
-                    ])
-                    
-                    # En Pyodide/Web, esperamos a que el archivo aparezca en page.upload_dir
-                    import asyncio
-                    local_path = os.path.join(page.upload_dir, file.name)
-                    
-                    # Reintentos para dar tiempo a la escritura en disco virtual
-                    for _ in range(15):
-                        if os.path.exists(local_path):
-                            print(f"DEBUG: Archivo detectado en {local_path}. Enviando a API...")
-                            with open(local_path, "rb") as f:
-                                content = f.read()
-                            filename = subir_imagen(file.name, content)
-                            break
-                        await asyncio.sleep(0.4)
-                else:
-                    upload_status.value = "Error: Configuración de subida inválida"
-            else:
-                # Modo Local (Escritorio/Android con permisos)
+            content = None
+            # 1. Intentar obtener bytes directamente (Ideal para Web/Pyodide)
+            if hasattr(file, "bytes") and file.bytes:
+                print("DEBUG: Usando bytes directos del archivo (Modo Web).")
+                content = file.bytes
+            
+            # 2. Si no hay bytes pero hay path (Modo Local/Android)
+            elif file.path:
                 print(f"DEBUG: Modo Local detectado: {file.path}")
                 with open(file.path, "rb") as f:
                     content = f.read()
-                filename = subir_imagen(file.name, content)
             
-            if filename:
-                imagen_path_guardado.value = filename
-                from config import API_URL
-                # Forzar recarga con timestamp o UUID para evitar caché del navegador
-                imagen_preview.src = f"{API_URL}/static/uploads/{filename}?v={uuid.uuid4()}"
-                imagen_preview.visible = True
-                upload_status.value = "Carga completa"
+            if content:
+                upload_status.value = "Subiendo al servidor..."
+                page.update()
+                
+                filename = subir_imagen(file.name, content)
+                
+                if filename:
+                    imagen_path_guardado.value = filename
+                    from config import API_URL
+                    # Forzar recarga con timestamp o UUID para evitar caché del navegador
+                    imagen_preview.src = f"{API_URL}/static/uploads/{filename}?v={uuid.uuid4()}"
+                    imagen_preview.visible = True
+                    upload_status.value = "Carga completa"
+                else:
+                    upload_status.value = "Error: El servidor rechazó la imagen"
             else:
-                upload_status.value = "Error al procesar imagen en servidor"
+                upload_status.value = "Error: No se pudo leer el contenido del archivo"
             
         except Exception as ex:
             print(f"Error crítico procesando imagen: {ex}")

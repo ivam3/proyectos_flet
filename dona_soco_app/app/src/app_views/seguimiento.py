@@ -404,7 +404,7 @@ def seguimiento_view(page: ft.Page):
                         
                         ft.Text(f"Fecha: {fecha}", color=ft.Colors.BLACK),
                         ft.Text(f"Estado actual: {estado.upper()}", color=color_estado_actual, size=16, weight="bold"),
-                        ft.Text(f"Motivo: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700, visible=(estado == "Cancelado" and bool(pedido['motivo_cancelacion']))),
+                        ft.Text(f"Motivo: {pedido.get('motivo_cancelacion', '')}", color=ft.Colors.RED_700, visible=(estado == "Cancelado" and bool(pedido.get('motivo_cancelacion')))),
                         ft.Divider(),
                         ft.Text("Productos:", weight="bold", color=ft.Colors.BLACK),
                         productos_info,

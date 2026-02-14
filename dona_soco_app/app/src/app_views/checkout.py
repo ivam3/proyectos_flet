@@ -225,74 +225,84 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         return True
 
     async def confirmar_pedido(e):
-        btn_confirmar.disabled = True
-        page.update()
-
-        if not validar_campos():
-            btn_confirmar.disabled = False
+        try:
+            btn_confirmar.disabled = True
+            btn_confirmar.text = "Procesando..."
             page.update()
-            return
 
-        items = user_cart.get_items()
-        if not items:
-            show_snackbar("El carrito está vacío.", ft.Colors.RED)
-            # Volver al carrito o navegar
-            nav.selected_index = 1
-            await page.push_route("/carrito") 
-            return
-
-        if pickup_checkbox.value:
-            direccion_completa = "Entrega en restaurante"
-            total_final_confirm = total # Sin envío
-        else:
-            direccion_completa = f"{calle_field.value.strip()}, {colonia_field.value.strip()}, C.P. {cp_field.value}"
-            total_final_confirm = total + COSTO_ENVIO
-
-        nombre, telefono, referencias = nombre_field.value.strip(), telefono_field.value.strip(), referencias_field.value.strip()
-        
-        metodo = metodo_pago_group.value
-        paga_con = float(paga_con_field.value) if metodo == "efectivo" else 0.0
-        
-        exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total_final_confirm, items, metodo, paga_con)
-
-        if exito:
-            # Enviar notificación en tiempo real a los admins
-            try:
-                pubsub = init_pubsub(page)
-                pubsub.send_all("nuevo_pedido")
-            except Exception as e:
-                print(f"Error enviando notificacion: {e}")
-
-        dlg_content = ft.Column([
-                ft.Text("Tu pedido ha sido enviado correctamente."),
-                ft.Text("Usa este código para darle seguimiento:"),
-                ft.Text(f"{codigo_seguimiento}", weight=ft.FontWeight.BOLD, size=20, selectable=True, text_align=ft.TextAlign.CENTER),
-            ], tight=True, alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER) if exito else ft.Text("Ocurrió un error al guardar tu pedido. Por favor, intenta de nuevo.")
-        
-        # Definimos el diálogo
-        dlg = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("✅ Pedido Registrado" if exito else "❌ Error en el Pedido"),
-            content=ft.Container(content=dlg_content, width=300, padding=10),
-            actions_alignment=ft.MainAxisAlignment.END,
-            shape=ft.RoundedRectangleBorder(radius=10),
-        )
-
-        # Definimos la acción del botón Aceptar
-        async def on_accept(ev):
-            if exito:
-                await _ir_a_seguimiento(ev, codigo_seguimiento, dlg)
-            else:
-                dlg.open = False
-                btn_confirmar.disabled = False # Re-enable if error
+            if not validar_campos():
+                btn_confirmar.disabled = False
+                btn_confirmar.text = "Confirmar Pedido"
                 page.update()
+                return
 
-        dlg.actions = [ft.FilledButton(content=ft.Text("Aceptar"), on_click=on_accept, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))]
+            items = user_cart.get_items()
+            if not items:
+                show_snackbar("El carrito está vacío.", ft.Colors.RED)
+                # Volver al carrito o navegar
+                nav.selected_index = 1
+                await page.push_route("/carrito") 
+                return
 
-        # USAMOS OVERLAY PARA ASEGURAR VISIBILIDAD
-        page.overlay.append(dlg)
-        dlg.open = True
-        page.update()
+            if pickup_checkbox.value:
+                direccion_completa = "Entrega en restaurante"
+                total_final_confirm = total # Sin envío
+            else:
+                direccion_completa = f"{calle_field.value.strip()}, {colonia_field.value.strip()}, C.P. {cp_field.value}"
+                total_final_confirm = total + COSTO_ENVIO
+
+            nombre, telefono, referencias = nombre_field.value.strip(), telefono_field.value.strip(), referencias_field.value.strip()
+            
+            metodo = metodo_pago_group.value
+            paga_con = float(paga_con_field.value) if metodo == "efectivo" else 0.0
+            
+            exito, codigo_seguimiento = guardar_pedido(nombre, telefono, direccion_completa, referencias, total_final_confirm, items, metodo, paga_con)
+
+            if exito:
+                # Enviar notificación en tiempo real a los admins
+                try:
+                    pubsub = init_pubsub(page)
+                    pubsub.send_all("nuevo_pedido")
+                except Exception as e:
+                    print(f"Error enviando notificacion: {e}")
+
+            dlg_content = ft.Column([
+                    ft.Text("Tu pedido ha sido enviado correctamente."),
+                    ft.Text("Usa este código para darle seguimiento:"),
+                    ft.Text(f"{codigo_seguimiento}", weight=ft.FontWeight.BOLD, size=20, selectable=True, text_align=ft.TextAlign.CENTER),
+                ], tight=True, alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER) if exito else ft.Text("Ocurrió un error al guardar tu pedido. Por favor, intenta de nuevo.")
+            
+            # Definimos el diálogo
+            dlg = ft.AlertDialog(
+                modal=True,
+                title=ft.Text("✅ Pedido Registrado" if exito else "❌ Error en el Pedido"),
+                content=ft.Container(content=dlg_content, width=300, padding=10),
+                actions_alignment=ft.MainAxisAlignment.END,
+                shape=ft.RoundedRectangleBorder(radius=10),
+            )
+
+            # Definimos la acción del botón Aceptar
+            async def on_accept(ev):
+                if exito:
+                    await _ir_a_seguimiento(ev, codigo_seguimiento, dlg)
+                else:
+                    dlg.open = False
+                    btn_confirmar.disabled = False # Re-enable if error
+                    btn_confirmar.text = "Confirmar Pedido"
+                    page.update()
+
+            dlg.actions = [ft.FilledButton(content=ft.Text("Aceptar"), on_click=on_accept, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))]
+
+            # USAMOS OVERLAY PARA ASEGURAR VISIBILIDAD
+            page.overlay.append(dlg)
+            dlg.open = True
+            page.update()
+        except Exception as ex:
+            print(f"ERROR CRÍTICO CHECKOUT: {ex}")
+            show_snackbar(f"Error al procesar pedido: {ex}", ft.Colors.RED)
+            btn_confirmar.disabled = False
+            btn_confirmar.text = "Confirmar Pedido"
+            page.update()
 
     if not lista_cps:
         cp_field.disabled = True

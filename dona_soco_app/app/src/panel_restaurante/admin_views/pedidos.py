@@ -159,8 +159,8 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                     
                     # Asegurarse de que el picker esté en la página (usando .page que funciona aunque esté en un Container)
                     if not file_picker.page:
-                        # Si no tiene página, lo añadimos al overlay (envuelto para evitar franja roja)
-                        page.overlay.append(ft.Container(content=file_picker, visible=False))
+                        # Si no tiene página, lo añadimos al overlay (quasi-visible)
+                        page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
                         page.update()
                         
                     show_notification(page, f"Abriendo selector...", ft.Colors.BLUE_GREY_700)
@@ -314,7 +314,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 
                 # Asegurarse de que el picker esté en la página
                 if not file_picker.page:
-                    page.overlay.append(ft.Container(content=file_picker, visible=False))
+                    page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
                     page.update()
                     
                 await file_picker.save_file(
@@ -390,7 +390,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             motivo_widget = ft.Column([
                 ft.Divider(),
                 ft.Text("❌ PEDIDO CANCELADO", color=ft.Colors.RED, weight="bold"),
-                ft.Text(f"Motivo: {pedido['motivo_cancelacion']}", color=ft.Colors.RED_700)
+                ft.Text(f"Motivo: {pedido.get('motivo_cancelacion', '')}", color=ft.Colors.RED_700)
             ])
 
         details_dialog.title = ft.Text(f"Pedido #{pedido['id']}", color=ft.Colors.BLACK)

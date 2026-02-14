@@ -211,7 +211,28 @@ def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, t
 
 # --- PEDIDOS ---
 def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metodo_pago, paga_con):
-    # ... (formateo de items)
+    # Formateo de items para la API del backend
+    detalles_backend = []
+    for item in items:
+        # Estandarizar recuperación de detalles y notas
+        detalles = item.get("details") or item.get("detalles") or ""
+        comentario = item.get("comentario") or ""
+        
+        nombre_producto = item["nombre"]
+        
+        extras = []
+        if detalles: extras.append(detalles)
+        if comentario: extras.append(f"Nota: {comentario}")
+        
+        if extras:
+             nombre_producto += f" ({' | '.join(extras)})"
+             
+        detalles_backend.append({
+            "producto": nombre_producto,
+            "cantidad": item["cantidad"],
+            "precio_unitario": item["precio"]
+        })
+
     orden_data = {
         "nombre_cliente": nombre,
         "telefono": telefono,
@@ -233,16 +254,28 @@ def guardar_pedido(nombre, telefono, direccion, referencias, total, items, metod
         print(f"Error guardar pedido: {e}")
         return False, None
 
+def _formatear_pedido(pedido):
+    """Añade el campo detalles_productos (string concatenado) para compatibilidad con el frontend."""
+    if not pedido:
+        return pedido
+    
+    detalles = pedido.get("detalles", [])
+    items_strings = []
+    for d in detalles:
+        items_strings.append(f"{d['producto']} (x{d['cantidad']} - ${d['precio_unitario']:.2f})")
+    
+    pedido["detalles_productos"] = " | ".join(items_strings)
+    return pedido
+
 def obtener_pedido_por_codigo(telefono, codigo):
     try:
         response = httpx.get(f"{API_URL}/pedidos/seguimiento", params={"telefono": telefono, "codigo": codigo}, headers=HEADERS)
         if response.status_code == 200:
             pedido = response.json()
-            # ...
-            return pedido
+            return _formatear_pedido(pedido)
         return None
     except Exception as e:
-        print(f"Error tracking: {e} | DATA: {pedido if 'pedido' in locals() else 'No data'}")
+        print(f"Error tracking: {e}")
         return None
 
 def obtener_pedidos(limit=100, offset=0, start_date=None, end_date=None, search_term=None):
@@ -255,7 +288,7 @@ def obtener_pedidos(limit=100, offset=0, start_date=None, end_date=None, search_
         response = httpx.get(f"{API_URL}/pedidos", params=params, headers=HEADERS)
         if response.status_code == 200:
             pedidos = response.json()
-            return pedidos
+            return [_formatear_pedido(p) for p in pedidos]
         return []
     except Exception as e:
         print(f"Error obtener pedidos: {e}")

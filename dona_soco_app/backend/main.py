@@ -238,32 +238,29 @@ async def read_root():
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
-    # Si la ruta empieza con static o api paths conocidos, dejar que FastAPI maneje el 404 normal
-    api_paths = ("menu", "opciones", "configuracion", "pedidos", "admin", "upload", "static")
-    if any(full_path.startswith(p) for p in api_paths):
-        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    # Si la ruta parece ser un archivo estático (tiene extensión), intentar servirlo
+    if "." in full_path:
+        file_path = os.path.join("web", full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            media_type = None
+            if file_path.endswith(".js"):
+                media_type = "application/javascript"
+            elif file_path.endswith(".wasm"):
+                media_type = "application/wasm"
+            elif file_path.endswith(".zip"):
+                media_type = "application/zip"
+                
+            return FileResponse(
+                file_path, 
+                media_type=media_type,
+                headers={
+                    "Cross-Origin-Opener-Policy": "same-origin",
+                    "Cross-Origin-Embedder-Policy": "require-corp"
+                }
+            )
 
-    # Buscar archivos físicos en la carpeta web
-    file_path = os.path.join("web", full_path)
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        media_type = None
-        if file_path.endswith(".js"):
-            media_type = "application/javascript"
-        elif file_path.endswith(".wasm"):
-            media_type = "application/wasm"
-        elif file_path.endswith(".zip"):
-            media_type = "application/zip"
-            
-        return FileResponse(
-            file_path, 
-            media_type=media_type,
-            headers={
-                "Cross-Origin-Opener-Policy": "same-origin",
-                "Cross-Origin-Embedder-Policy": "require-corp"
-            }
-        )
-
-    # Si no es un archivo físico, servir index.html para SPA (rutas de Flet)
+    # Para cualquier otra ruta (como /menu, /admin, /seguimiento), servir index.html
+    # Esto permite que el enrutador de Flet maneje la navegación tras el reload.
     if os.path.exists("web/index.html"):
         return FileResponse(
             "web/index.html",

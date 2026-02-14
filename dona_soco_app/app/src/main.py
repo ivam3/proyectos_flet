@@ -96,11 +96,13 @@ def main(page: ft.Page):
 
     global_file_picker = ft.FilePicker()
     global_file_picker.on_result = global_file_picker_handler
-    page.overlay.append(ft.Container(content=global_file_picker, visible=False))
+    # En build web, visible=False puede hacer que el control no se inicialice.
+    # Usamos un contenedor casi invisible (1x1 px) pero técnicamente visible.
+    page.overlay.append(ft.Container(content=global_file_picker, width=1, height=1, opacity=0))
     page.session.file_picker = global_file_picker
 
     export_file_picker = ft.FilePicker()
-    page.overlay.append(ft.Container(content=export_file_picker, visible=False))
+    page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
     
     admin_field = ft.TextField(password=True, hint_text="Clave")
 
@@ -174,11 +176,11 @@ def main(page: ft.Page):
             content_area.content = create_checkout_view(page, show_snackbar, nav)
         elif route.startswith("/admin"):
             if admin_mode:
-                # Asegurar que los pickers estén en la página (usando .page que funciona aunque esté en un Container)
+                # Asegurar que los pickers estén en la página
                 if not global_file_picker.page:
-                    page.overlay.append(ft.Container(content=global_file_picker, visible=False))
+                    page.overlay.append(ft.Container(content=global_file_picker, width=1, height=1, opacity=0))
                 if not export_file_picker.page:
-                    page.overlay.append(ft.Container(content=export_file_picker, visible=False))
+                    page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
                 
                 nav.selected_index = 3
                 content_area.content = create_admin_panel_view(

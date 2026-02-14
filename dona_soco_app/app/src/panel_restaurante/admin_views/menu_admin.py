@@ -212,7 +212,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
 
     # IMPORTANTE: Reasignamos el handler al picker global cada vez que cargamos la vista
     if not file_picker.page:
-        page.overlay.append(ft.Container(content=file_picker, visible=False))
+        page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
         
     file_picker.on_result = on_picker_result
     # Forzar actualización para que el cliente reconozca el nuevo handler

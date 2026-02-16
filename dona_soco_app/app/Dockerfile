@@ -3,11 +3,13 @@ FROM nginx:alpine
 # Copiar el build del frontend
 COPY build/web /usr/share/nginx/html
 
-# Copiar la configuración de Nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf.template
+# Copiar la configuración
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# Instalar 'gettext' para usar 'envsubst' y procesar el puerto dinámico
-RUN apk add --no-cache gettext
+# Nginx Alpine ya incluye soporte para plantillas en /etc/nginx/templates/*.template
+# Automáticamente procesará el puerto ${PORT} si existe la variable de entorno
+ENV PORT=8080
 
-# Comando para inyectar el puerto de Railway en la config y arrancar Nginx
-CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]

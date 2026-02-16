@@ -10,22 +10,20 @@ from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pa
 # Adjust path to DB relative to src/views
 # ... (rest of comments)
 
-def seguimiento_view(page: ft.Page):
+def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
     """Pantalla donde el cliente ve y recibe actualizaciones de un pedido específico."""
 
     pubsub = init_pubsub(page)
     
     # --- LÓGICA DE PLATAFORMA ---
     plat = str(page.platform).lower() if page.platform else ""
-    # Forzar modo móvil si la plataforma contiene 'android' o 'ios', ignorando page.web
-    es_movil = "android" in plat or "ios" in plat
-    es_escritorio_o_web = (page.web or plat in ["windows", "macos", "linux"]) and not es_movil
+    es_web = page.web
+    # Forzar modo móvil solo si es aplicación NATIVA (APK/IPA)
+    es_movil_nativo = ("android" in plat or "ios" in plat) and not es_web
     
-    print(f"DEBUG: Iniciando Seguimiento | Plataforma: {plat} | Es Movil: {es_movil} | Modo Web/Desktop activo: {es_escritorio_o_web}")
+    print(f"DEBUG: Seguimiento | Plat: {plat} | Web: {es_web} | Móvil Nativo: {es_movil_nativo}")
 
     # --- LÓGICA PDF Y ARCHIVOS ---
-    export_file_picker = None
-
     def on_file_picker_result(e):
         if e.path:
              show_notification(page, f"Archivo guardado exitosamente.", ft.Colors.GREEN)
@@ -33,15 +31,10 @@ def seguimiento_view(page: ft.Page):
              show_notification(page, "Operación cancelada.", ft.Colors.GREY_700)
         page.update()
 
-    # SOLO agregamos el FilePicker si estamos en Desktop/Web
-    if es_escritorio_o_web:
-        print("DEBUG: Inicializando FilePicker (Entorno Web/Escritorio)")
-        export_file_picker = ft.FilePicker()
+    if export_file_picker:
         export_file_picker.on_result = on_file_picker_result
-        # Usamos un contenedor casi invisible (1x1 px) pero técnicamente visible para el DOM web
-        page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
     else:
-        print("DEBUG: Omitiendo FilePicker (Entorno Android/Móvil Nativo)")
+        print("DEBUG: No se recibió FilePicker global")
 
     error_dialog = ft.AlertDialog(title=ft.Text("Error"), content=ft.Text(""))
     success_dialog = ft.AlertDialog(
@@ -137,9 +130,8 @@ def seguimiento_view(page: ft.Page):
             pdf_bytes = pdf.output()
             filename = f"pedido_{pedido['id']}.pdf"
             
-            # --- SELECTOR DE ESTRATEGIA (Usando banderas pre-calculadas) ---
-            print(f"DEBUG: Ejecutando estrategia para plataforma: {plat} | Web/Desktop: {es_escritorio_o_web}")
-            es_web = page.web
+            # --- SELECTOR DE ESTRATEGIA ---
+            print(f"DEBUG: Ejecutando estrategia | Web: {es_web} | Nativo: {not es_web}")
 
             # 1. Escritura Directa para Escritorio Nativo
             if plat in ["windows", "macos", "linux"] and not es_web:
@@ -152,14 +144,18 @@ def seguimiento_view(page: ft.Page):
                 except Exception as e:
                     print(f"DEBUG: Fallo guardado directo PDF en PC: {e}")
 
-            # 2. FilePicker para Web o Fallback de Escritorio
+            # 2. FilePicker para Web (Cualquier dispositivo) o Fallback
             if es_web or plat in ["windows", "macos", "linux"]:
                 if export_file_picker:
-                    print("DEBUG: Usando FilePicker (Web/Escritorio)")
-                    if not export_file_picker.page:
-                        page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
+                    print("DEBUG: Usando FilePicker")
                     
-                    page.update()
+                    # Garantizar que el control esté en el overlay antes de la acción
+                    if not export_file_picker.page:
+                         page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
+                    
+                    # IMPORTANTE: Forzar actualización del estado del control antes de invocar el diálogo del sistema
+                    page.update() 
+                    
                     await export_file_picker.save_file(
                         dialog_title=f"Guardar PDF #{pedido['id']}",
                         file_name=filename,
@@ -167,10 +163,10 @@ def seguimiento_view(page: ft.Page):
                         src_bytes=pdf_bytes
                     )
                 else:
-                    print("DEBUG ERROR: Se detectó Desktop pero export_file_picker es None")
-                    mostrar_error("Error interno: Selector de archivos no inicializado.")
+                    print("DEBUG ERROR: No se encontró export_file_picker")
+                    mostrar_error("Error interno: Selector de archivos no disponible.")
             else:
-                print("DEBUG: Usando Escritura Directa (Android/Móvil)")
+                print("DEBUG: Usando Escritura Directa (Móvil Nativo)")
                 guardar_archivo_android(filename, pdf_bytes)
             
         except Exception as ex:

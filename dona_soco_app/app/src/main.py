@@ -167,7 +167,7 @@ def main(page: ft.Page):
         route = e.route
         if route.startswith("/seguimiento"):
             nav.selected_index = 2
-            content_area.content = seguimiento_view(page)
+            content_area.content = seguimiento_view(page, export_file_picker)
         elif route.startswith("/carrito"):
             nav.selected_index = 1
             content_area.content = create_carrito_view(page, show_snackbar, nav)

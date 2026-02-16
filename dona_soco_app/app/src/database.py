@@ -304,8 +304,8 @@ def obtener_datos_exportacion(search_term=None):
     Simula la consulta SQL de exportación obteniendo todos los datos y desnormalizándolos.
     """
     try:
-        # Pedir muchos pedidos
-        response = httpx.get(f"{API_URL}/pedidos", params={"limit": 5000, "search": search_term}, headers=HEADERS)
+        # Pedir muchos pedidos con timeout extendido
+        response = httpx.get(f"{API_URL}/pedidos", params={"limit": 5000, "search": search_term}, headers=HEADERS, timeout=30.0)
         if response.status_code != 200:
             return []
         

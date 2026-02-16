@@ -134,16 +134,32 @@ def seguimiento_view(page: ft.Page):
             pdf.set_font("helvetica", 'B', 16)
             pdf.cell(0, 10, text=f"Total: ${pedido['total']:.2f}", align='R', new_x="LMARGIN", new_y="NEXT")
 
-            pdf_bytes = bytes(pdf.output())
-            
+            pdf_bytes = pdf.output()
             filename = f"pedido_{pedido['id']}.pdf"
             
             # --- SELECTOR DE ESTRATEGIA (Usando banderas pre-calculadas) ---
             print(f"DEBUG: Ejecutando estrategia para plataforma: {plat} | Web/Desktop: {es_escritorio_o_web}")
+            es_web = page.web
 
-            if es_escritorio_o_web:
+            # 1. Escritura Directa para Escritorio Nativo
+            if plat in ["windows", "macos", "linux"] and not es_web:
+                try:
+                    ruta_descargas = os.path.join(os.path.expanduser("~"), "Downloads", filename)
+                    with open(ruta_descargas, "wb") as f:
+                        f.write(pdf_bytes)
+                    show_notification(page, f"Comprobante guardado en Descargas.", ft.Colors.GREEN)
+                    return
+                except Exception as e:
+                    print(f"DEBUG: Fallo guardado directo PDF en PC: {e}")
+
+            # 2. FilePicker para Web o Fallback de Escritorio
+            if es_web or plat in ["windows", "macos", "linux"]:
                 if export_file_picker:
                     print("DEBUG: Usando FilePicker (Web/Escritorio)")
+                    if not export_file_picker.page:
+                        page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
+                    
+                    page.update()
                     await export_file_picker.save_file(
                         dialog_title=f"Guardar PDF #{pedido['id']}",
                         file_name=filename,

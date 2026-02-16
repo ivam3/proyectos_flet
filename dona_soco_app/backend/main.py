@@ -209,20 +209,8 @@ async def delete_file(filename: str):
 UPLOAD_DIR = "static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Clase personalizada para servir archivos con cabeceras de aislamiento (Requerido por Flet Web)
-class FletStaticFiles(StaticFiles):
-    async def get_response(self, path: str, scope):
-        response = await super().get_response(path, scope)
-        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-        return response
-
-# Montar archivos estáticos del API
+# Montar archivos estáticos del API (para imágenes subidas)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Montar el frontend de Flet
-if os.path.exists("web"):
-    app.mount("/frontend", FletStaticFiles(directory="web", html=True), name="web_app")
 
 @app.get("/")
 async def read_root():
@@ -231,42 +219,44 @@ async def read_root():
             "web/index.html",
             headers={
                 "Cross-Origin-Opener-Policy": "same-origin",
-                "Cross-Origin-Embedder-Policy": "require-corp"
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cache-Control": "no-cache, no-store, must-revalidate"
             }
         )
     return {"message": "API de Antojitos Doña Soco funcionando"}
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
-    # Si la ruta parece ser un archivo estático (tiene extensión), intentar servirlo
-    if "." in full_path:
-        file_path = os.path.join("web", full_path)
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            media_type = None
-            if file_path.endswith(".js"):
-                media_type = "application/javascript"
-            elif file_path.endswith(".wasm"):
-                media_type = "application/wasm"
-            elif file_path.endswith(".zip"):
-                media_type = "application/zip"
-                
-            return FileResponse(
-                file_path, 
-                media_type=media_type,
-                headers={
-                    "Cross-Origin-Opener-Policy": "same-origin",
-                    "Cross-Origin-Embedder-Policy": "require-corp"
-                }
-            )
+    # 1. Ignorar rutas de la API
+    if full_path.startswith(("menu", "opciones", "configuracion", "pedidos", "admin", "upload", "static")):
+        # Si llegamos aquí es porque no coincidió con ninguna ruta definida arriba
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
 
-    # Para cualquier otra ruta (como /menu, /admin, /seguimiento), servir index.html
-    # Esto permite que el enrutador de Flet maneje la navegación tras el reload.
+    # 2. Intentar servir archivos estáticos del build de Flet
+    file_path = os.path.join("web", full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        media_type, _ = mimetypes.guess_type(file_path)
+        # Ajustes manuales para tipos críticos
+        if file_path.endswith(".js"): media_type = "application/javascript"
+        elif file_path.endswith(".wasm"): media_type = "application/wasm"
+        
+        return FileResponse(
+            file_path, 
+            media_type=media_type,
+            headers={
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Embedder-Policy": "require-corp"
+            }
+        )
+
+    # 3. Redirección SPA: Para cualquier otra ruta (ej: /seguimiento, /admin), servir index.html
     if os.path.exists("web/index.html"):
         return FileResponse(
             "web/index.html",
             headers={
                 "Cross-Origin-Opener-Policy": "same-origin",
-                "Cross-Origin-Embedder-Policy": "require-corp"
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cache-Control": "no-cache, no-store, must-revalidate"
             }
         )
 

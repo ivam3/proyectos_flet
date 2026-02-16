@@ -305,7 +305,7 @@ def obtener_datos_exportacion(search_term=None):
     """
     try:
         # Pedir muchos pedidos
-        response = httpx.get(f"{API_URL}/pedidos", params={"limit": 5000, "search": search_term})
+        response = httpx.get(f"{API_URL}/pedidos", params={"limit": 5000, "search": search_term}, headers=HEADERS)
         if response.status_code != 200:
             return []
         

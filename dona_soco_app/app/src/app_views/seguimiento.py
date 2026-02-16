@@ -34,13 +34,12 @@ def seguimiento_view(page: ft.Page):
         page.update()
 
     # SOLO agregamos el FilePicker si estamos en Desktop/Web
-    # Lo agregaremos a la vista (no al overlay) para evitar errores y simplificar ciclo de vida
-    picker_container = ft.Container(visible=False)
     if es_escritorio_o_web:
         print("DEBUG: Inicializando FilePicker (Entorno Web/Escritorio)")
         export_file_picker = ft.FilePicker()
         export_file_picker.on_result = on_file_picker_result
-        picker_container.content = export_file_picker
+        # Usamos un contenedor casi invisible (1x1 px) pero técnicamente visible para el DOM web
+        page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
     else:
         print("DEBUG: Omitiendo FilePicker (Entorno Android/Móvil Nativo)")
 
@@ -470,6 +469,5 @@ def seguimiento_view(page: ft.Page):
             ft.IconButton(icon=ft.Icons.REFRESH, on_click=lambda _: buscar_pedidos(None), tooltip="Actualizar estado")
         ]),
         ft.Divider(),
-        resultado_container,
-        picker_container
+        resultado_container
     ], scroll="auto", expand=True)

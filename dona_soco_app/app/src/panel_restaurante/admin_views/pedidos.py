@@ -152,19 +152,26 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 
                 # --- SELECTOR DE ESTRATEGIA ---
                 plat = str(page.platform).lower() if page.platform else ""
-                es_escritorio_o_web = page.web or plat in ["windows", "macos", "linux"]
+                es_web = page.web
                 
-                if es_escritorio_o_web:
-                    print("DEBUG: Modo Web/Escritorio detectado. Usando FilePicker.")
-                    
-                    # Asegurarse de que el picker esté en la página (usando .page que funciona aunque esté en un Container)
+                # 1. Escritura Directa para Escritorio Nativo (Homologación solicitada)
+                if plat in ["windows", "macos", "linux"] and not es_web:
+                    try:
+                        ruta_descargas = os.path.join(os.path.expanduser("~"), "Downloads", filename)
+                        with open(ruta_descargas, "wb") as f:
+                            f.write(content_bytes)
+                        show_notification(page, f"Reporte guardado en Descargas.", ft.Colors.GREEN)
+                        return
+                    except Exception as e:
+                        print(f"DEBUG: Fallo guardado directo en PC: {e}")
+
+                # 2. FilePicker para Web o Fallback de Escritorio
+                if es_web or plat in ["windows", "macos", "linux"]:
+                    print("DEBUG: Usando FilePicker.")
                     if not file_picker.page:
-                        # Si no tiene página, lo añadimos al overlay (quasi-visible)
                         page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
-                        page.update()
-                        
-                    show_notification(page, f"Abriendo selector...", ft.Colors.BLUE_GREY_700)
                     
+                    page.update()
                     await file_picker.save_file(
                         dialog_title=f"Guardar {file_ext.upper()}",
                         file_name=filename,
@@ -172,7 +179,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                         src_bytes=content_bytes
                     )
                 else:
-                    print("DEBUG: Modo Móvil detectado. Usando Escritura Directa.")
+                    print("DEBUG: Modo Móvil Nativo detectado. Usando Escritura Directa.")
                     guardar_archivo_android(filename, content_bytes)
             else:
                 raise Exception("No se encontraron datos")
@@ -301,22 +308,31 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             pdf.set_font("helvetica", 'B', 16)
             pdf.cell(0, 10, text=f"Total: ${pedido['total']:.2f}", align='R', new_x="LMARGIN", new_y="NEXT")
 
-            pdf_bytes = bytes(pdf.output())
-            
+            pdf_bytes = pdf.output()
             filename = f"pedido_{pedido['id']}.pdf"
             
             # --- SELECTOR DE ESTRATEGIA ---
             plat = str(page.platform).lower() if page.platform else ""
-            es_escritorio_o_web = page.web or plat in ["windows", "macos", "linux"]
+            es_web = page.web
 
-            if es_escritorio_o_web:
-                print("DEBUG: Modo Web/Escritorio detectado (PDF). Usando FilePicker.")
-                
-                # Asegurarse de que el picker esté en la página
+            # 1. Escritura Directa para Escritorio Nativo
+            if plat in ["windows", "macos", "linux"] and not es_web:
+                try:
+                    ruta_descargas = os.path.join(os.path.expanduser("~"), "Downloads", filename)
+                    with open(ruta_descargas, "wb") as f:
+                        f.write(pdf_bytes)
+                    show_notification(page, f"PDF guardado en Descargas.", ft.Colors.GREEN)
+                    return
+                except Exception as e:
+                    print(f"DEBUG: Fallo guardado directo PDF en PC: {e}")
+
+            # 2. FilePicker para Web o Fallback de Escritorio
+            if es_web or plat in ["windows", "macos", "linux"]:
+                print("DEBUG: Usando FilePicker (PDF).")
                 if not file_picker.page:
                     page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
-                    page.update()
-                    
+                
+                page.update()
                 await file_picker.save_file(
                     dialog_title=f"Guardar PDF #{pedido['id']}",
                     file_name=filename,
@@ -324,7 +340,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                     src_bytes=pdf_bytes
                 )
             else:
-                print("DEBUG: Modo Móvil detectado (PDF). Usando Escritura Directa.")
+                print("DEBUG: Modo Móvil Nativo detectado (PDF). Usando Escritura Directa.")
                 guardar_archivo_android(filename, pdf_bytes)
             
         except Exception as ex:

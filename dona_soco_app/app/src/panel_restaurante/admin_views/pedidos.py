@@ -168,10 +168,15 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 # 2. FilePicker para Web o Fallback de Escritorio
                 if es_web or plat in ["windows", "macos", "linux"]:
                     print("DEBUG: Usando FilePicker.")
+                    
+                    # Asegurarse de que el picker esté en la página (usando .page que funciona aunque esté en un Container)
                     if not file_picker.page:
+                        # Si no tiene página, lo añadimos al overlay (quasi-visible)
                         page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
                     
                     page.update()
+                    show_notification(page, f"Abriendo selector...", ft.Colors.BLUE_GREY_700)
+                    
                     await file_picker.save_file(
                         dialog_title=f"Guardar {file_ext.upper()}",
                         file_name=filename,

@@ -152,6 +152,7 @@ def configuracion_view(page: ft.Page):
         if nombre and nombre not in guisos_chk:
             crear_item_row(nombre, True, guisos_chk, guisos_list_col)
             nuevo_guiso_input.value = ""
+            show_notification(page, f"'{nombre}' añadido a la lista. Recuerda GUARDAR al final.", ft.Colors.BLUE_400)
             page.update()
         else:
             if nombre in guisos_chk:
@@ -179,6 +180,7 @@ def configuracion_view(page: ft.Page):
         if nombre and nombre not in salsas_chk:
             crear_item_row(nombre, True, salsas_chk, salsas_list_col)
             nueva_salsa_input.value = ""
+            show_notification(page, f"'{nombre}' añadida a la lista. Recuerda GUARDAR al final.", ft.Colors.BLUE_400)
             page.update()
         else:
             if nombre in salsas_chk:
@@ -275,12 +277,12 @@ def configuracion_view(page: ft.Page):
         ops_json = json.dumps(ops_list)
         
         if create_grupo_opciones(nombre_grupo_field.value, ops_json):
-            show_notification(page, "Grupo agregado", ft.Colors.GREEN_700)
+            show_notification(page, "Grupo agregado exitosamente", ft.Colors.GREEN_700)
             nombre_grupo_field.value = ""
             opciones_grupo_field.value = ""
             cargar_grupos_opciones()
         else:
-            show_notification(page, "Error al crear grupo", ft.Colors.RED)
+            show_notification(page, "Error al crear grupo. Verifique permisos o conexión (API 401?)", ft.Colors.RED)
 
     def borrar_grupo_click(gid):
         if delete_grupo_opciones(gid):

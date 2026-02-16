@@ -227,16 +227,14 @@ async def read_root():
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
-    # 1. Ignorar rutas de la API
-    if full_path.startswith(("menu", "opciones", "configuracion", "pedidos", "admin", "upload", "static")):
-        # Si llegamos aquí es porque no coincidió con ninguna ruta definida arriba
+    # 1. Rutas de API y Estáticos del Backend: Dejar que FastAPI las maneje normalmente
+    if full_path.startswith(("menu", "opciones", "configuracion", "pedidos", "admin/", "upload", "static")):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 
-    # 2. Intentar servir archivos estáticos del build de Flet
+    # 2. Intentar servir archivos estáticos reales del build de Flet (js, css, wasm, etc)
     file_path = os.path.join("web", full_path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         media_type, _ = mimetypes.guess_type(file_path)
-        # Ajustes manuales para tipos críticos
         if file_path.endswith(".js"): media_type = "application/javascript"
         elif file_path.endswith(".wasm"): media_type = "application/wasm"
         
@@ -249,10 +247,13 @@ async def catch_all(full_path: str):
             }
         )
 
-    # 3. Redirección SPA: Para cualquier otra ruta (ej: /seguimiento, /admin), servir index.html
-    if os.path.exists("web/index.html"):
+    # 3. REDIRECCIÓN SPA (CRÍTICO): Para cualquier otra ruta (ej: /seguimiento, /admin, /carrito), 
+    # incluso si el navegador la pide directamente tras un reload, servimos el index.html.
+    # El enrutador interno de Flet leerá la URL y cargará la vista correcta.
+    index_path = "web/index.html"
+    if os.path.exists(index_path):
         return FileResponse(
-            "web/index.html",
+            index_path,
             headers={
                 "Cross-Origin-Opener-Policy": "same-origin",
                 "Cross-Origin-Embedder-Policy": "require-corp",
@@ -260,4 +261,4 @@ async def catch_all(full_path: str):
             }
         )
 
-    return JSONResponse({"detail": "Not Found"}, status_code=404)
+    return JSONResponse({"detail": "Frontend not found"}, status_code=404)

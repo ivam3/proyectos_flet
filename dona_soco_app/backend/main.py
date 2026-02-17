@@ -43,6 +43,28 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KE
 # Inicialización de Base de Datos
 models.Base.metadata.create_all(bind=engine)
 
+# --- MIGRACIÓN MANUAL (Asegurar columnas nuevas) ---
+def ensure_columns():
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        columns_to_add = {
+            "is_configurable": "INTEGER DEFAULT 0",
+            "is_configurable_salsa": "INTEGER DEFAULT 0",
+            "piezas": "INTEGER DEFAULT 1",
+            "printer_target": "VARCHAR DEFAULT 'cocina'",
+            "grupos_opciones_ids": "TEXT DEFAULT '[]'"
+        }
+        for col, type_def in columns_to_add.items():
+            try:
+                conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
+                conn.commit()
+                print(f"DEBUG: Columna '{col}' añadida con éxito.")
+            except Exception:
+                # Si falla es porque la columna ya existe, lo cual es normal después de la primera vez
+                pass
+
+ensure_columns()
+
 app = FastAPI(title="Antojitos Doña Soco API")
 
 # --- MIDDLEWARE DE SEGURIDAD GLOBAL (CRÍTICO PARA FLET WEB) ---
@@ -82,7 +104,13 @@ def read_menu(solo_activos: bool = True, search: Optional[str] = None, db: Sessi
 
 @app.post("/menu", response_model=schemas.Menu, dependencies=[Depends(verify_api_key)])
 def create_menu_item(item: schemas.MenuCreate, db: Session = Depends(get_db)):
-    return crud.create_platillo(db, item)
+    try:
+        return crud.create_platillo(db, item)
+    except Exception as e:
+        print(f"ERROR CRÍTICO CREANDO PLATILLO: {e}")
+        # Intentar ver si es un error de integridad de base de datos
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @app.put("/menu/{item_id}", response_model=schemas.Menu, dependencies=[Depends(verify_api_key)])
 def update_menu_item(item_id: int, item: schemas.MenuCreate, db: Session = Depends(get_db)):

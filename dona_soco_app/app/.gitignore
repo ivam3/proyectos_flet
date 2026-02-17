@@ -160,6 +160,7 @@ cython_debug/
 
 # Flet
 storage/
+build/
 *.db
 *.bak
 *.json.bk

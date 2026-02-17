@@ -190,10 +190,33 @@ def admin_change_pass(data: schemas.PasswordUpdate, db: Session = Depends(get_db
 
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
 async def upload_file(file: UploadFile = File(...)):
-    file_location = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_location, "wb+") as file_object:
-        file_object.write(file.file.read())
-    return {"filename": file.filename}
+    from PIL import Image
+    import io
+    
+    # 1. Leer contenido de forma asíncrona
+    content = await file.read()
+    
+    # 2. Generar nombre con extensión .webp
+    base_name = os.path.splitext(file.filename)[0]
+    filename = f"{base_name}.webp"
+    file_location = os.path.join(UPLOAD_DIR, filename)
+    
+    try:
+        # 3. Abrir imagen desde memoria y convertir a WebP
+        img = Image.open(io.BytesIO(content))
+        # Convertir a RGB si es necesario (ej: de RGBA o CMYK)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+            
+        # 4. Guardar optimizada
+        img.save(file_location, "WEBP", quality=80, method=6)
+        return {"filename": filename}
+    except Exception as e:
+        print(f"Error procesando imagen: {e}")
+        # Fallback: guardar tal cual si Pillow falla (aunque no es lo ideal)
+        with open(file_location, "wb+") as file_object:
+            file_object.write(content)
+        return {"filename": filename}
 
 @app.delete("/upload/{filename}", dependencies=[Depends(verify_api_key)])
 async def delete_file(filename: str):
@@ -202,6 +225,13 @@ async def delete_file(filename: str):
         os.remove(file_location)
         return {"ok": True, "message": f"Archivo {filename} eliminado"}
     raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+@app.get("/upload/list", dependencies=[Depends(verify_api_key)])
+async def list_uploads():
+    """Retorna una lista de todos los archivos en la carpeta de subidas."""
+    if not os.path.exists(UPLOAD_DIR):
+        return {"files": []}
+    return {"files": os.listdir(UPLOAD_DIR)}
 
 # --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 

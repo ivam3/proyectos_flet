@@ -56,7 +56,7 @@ def cambiar_admin_password(new_password):
         return False
 
 # --- MENU ---
-def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina"):
+def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina", categoria_id=None):
     data = {
         "nombre": nombre,
         "descripcion": descripcion,
@@ -68,6 +68,7 @@ def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_config
         "piezas": piezas,
         "grupos_opciones_ids": grupos_opciones_ids,
         "printer_target": printer_target,
+        "categoria_id": categoria_id,
         "is_active": 1
     }
     try:
@@ -77,7 +78,7 @@ def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_config
         print(f"Error agregar platillo: {e}")
         return False
 
-def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina"):
+def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina", categoria_id=None):
     data = {
         "nombre": nombre,
         "descripcion": descripcion,
@@ -88,7 +89,8 @@ def actualizar_platillo(platillo_id, nombre, descripcion, precio, imagen, descue
         "is_configurable_salsa": is_configurable_salsa,
         "piezas": piezas,
         "grupos_opciones_ids": grupos_opciones_ids,
-        "printer_target": printer_target
+        "printer_target": printer_target,
+        "categoria_id": categoria_id
     }
     try:
         httpx.put(f"{API_URL}/menu/{platillo_id}", json=data, headers=HEADERS)

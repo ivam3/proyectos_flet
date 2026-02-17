@@ -40,15 +40,17 @@ def create_admin_panel_view(page: ft.Page, logout_func, file_picker, export_file
         admin_content_area.content = get_or_create_view("config")
         admin_content_area.update()
 
-    # Cargar vista inicial (Menú) de forma diferida
-    # Usamos un pequeño delay para permitir que el marco del panel se pinte primero
+    # Cargar vista inicial (Menú) de forma diferida pero compatible con Web
     def initial_load():
         admin_content_area.content = get_or_create_view("menu")
-        admin_content_area.update()
+        try:
+            admin_content_area.update()
+        except:
+            pass
     
-    import threading
-    import time
-    threading.Timer(0.1, initial_load).start()
+    # En lugar de threading.Timer, ejecutamos la carga inicial directamente.
+    # Dado que get_or_create_view ahora es rápido, no bloqueará la UI.
+    initial_load()
 
     # Layout de la vista del panel de administración
     admin_panel_layout = ft.Column(

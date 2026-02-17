@@ -43,6 +43,28 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         label_style=ft.TextStyle(color=ft.Colors.BLACK),
     )
 
+    categoria_dd = ft.Dropdown(
+        label="Categoría",
+        options=[],
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
+
+    def cargar_categorias():
+        from database import get_configuracion
+        config = get_configuracion()
+        categorias = []
+        if config and config.get("categorias_disponibles"):
+            try:
+                categorias = json.loads(config["categorias_disponibles"])
+            except:
+                pass
+        
+        categoria_dd.options = [ft.dropdown.Option(None, "Sin Categoría")]
+        for cat in categorias:
+            categoria_dd.options.append(ft.dropdown.Option(cat))
+        page.update()
+
     def sync_checkbox_color(chk: ft.Checkbox):
         chk.fill_color = ft.Colors.BROWN_700 if chk.value else ft.Colors.WHITE
     
@@ -97,6 +119,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         descuento_field.value = "0"
         piezas_field.value = "1"
         printer_target_dd.value = "cocina"
+        categoria_dd.value = None
         is_config_chk.value = False
         is_config_salsa_chk.value = False
         
@@ -113,6 +136,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         btn_accion.text = "Guardar"
         btn_accion.icon = ft.Icons.SAVE
         btn_accion.on_click = agregar_click
+        cargar_categorias() # Refrescar lista de categorias
         page.update()
 
     def llenar_campos(platillo):
@@ -126,6 +150,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         is_conf_salsa = platillo.get('is_configurable_salsa', 0)
         piezas = platillo.get('piezas', 1)
         printer_target = platillo.get('printer_target', 'cocina')
+        cat_id = platillo.get('categoria_id') # Este es el string de la categoria ahora
         grupos_ids_json = platillo.get('grupos_opciones_ids', "[]")
 
         nombre_field.value = nom
@@ -134,6 +159,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         descuento_field.value = str(desc_val)
         piezas_field.value = str(piezas)
         printer_target_dd.value = printer_target
+        categoria_dd.value = cat_id
         is_config_chk.value = bool(is_conf)
         is_config_salsa_chk.value = bool(is_conf_salsa)
         
@@ -159,6 +185,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         btn_accion.text = "Actualizar"
         btn_accion.icon = ft.Icons.EDIT
         btn_accion.on_click = guardar_cambios_click
+        cargar_categorias() # Refrescar lista
         page.update()
 
     # --- NUEVA LÓGICA DE MANEJO DE ARCHIVOS (HÍBRIDA) ---
@@ -342,7 +369,8 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         selected_groups = [gid for gid, chk in grupos_opciones_checks.items() if chk.value]
         grupos_json = json.dumps(selected_groups)
         
-        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz, grupos_json, printer_target_dd.value
+        # El campo categoria_id en la API recibirá el string de la categoria
+        return nombre_field.value, descripcion_field.value, p, imagen_path_guardado.value, d, int(is_config_chk.value), int(is_config_salsa_chk.value), pz, grupos_json, printer_target_dd.value, categoria_dd.value
 
     search_bar = ft.TextField(
         hint_text="Buscar platillo...",
@@ -379,7 +407,8 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         page.update()
 
     cargar_lista()
-    cargar_checkboxes_grupos() 
+    cargar_checkboxes_grupos()
+    cargar_categorias() 
 
     content_container = ft.Container(
         padding=20,
@@ -396,6 +425,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                 descuento_field,
                 piezas_field,
                 printer_target_dd,
+                categoria_dd,
                 ft.Column([is_config_chk, is_config_salsa_chk], spacing=0),
                 ft.Text("Opciones Extras (Configurado en Ajustes):", size=14, weight="bold", color=ft.Colors.BLACK),
                 grupos_opciones_container,

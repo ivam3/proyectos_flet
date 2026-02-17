@@ -3,13 +3,26 @@ import flet as ft
 from database import obtener_menu, get_configuracion
 
 def cargar_menu(page: ft.Page):
-    """Carga y muestra los platillos del menú con una barra de búsqueda."""
+    """Carga y muestra los platillos del menú con pestañas por categoría."""
     
     user_cart = page.session.cart
     main_content = ft.Container(expand=True)
+    
+    # Estado del filtro actual
+    current_category = None # None significa 'Todos'
 
-    def update_menu_list(search_term=""):
-        platillos = obtener_menu(solo_activos=True, search_term=search_term)
+    def update_menu_list(search_term="", category=None):
+        nonlocal current_category
+        current_category = category
+        
+        platillos_all = obtener_menu(solo_activos=True, search_term=search_term)
+        
+        # Filtrado por categoría
+        if category:
+            platillos = [p for p in platillos_all if p.get('categoria_id') == category]
+        else:
+            platillos = platillos_all
+
         platillos.sort(key=lambda x: x.get('descuento', 0) or 0, reverse=True)
 
         # Responsive: Ratio y Columnas
@@ -103,7 +116,7 @@ def cargar_menu(page: ft.Page):
                                         height=img_height, border_radius=8, clip_behavior=ft.ClipBehavior.HARD_EDGE,
                                     ),
                                     ft.Text(nombre, weight=ft.FontWeight.BOLD, size=13, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS, color=ft.Colors.BLACK),
-                                    ft.Text(descripcion or "", size=11, color=ft.Colors.GREY_800, max_lines=10, overflow=ft.TextOverflow.FADE),
+                                    ft.Text(descripcion or "", size=11, color=ft.Colors.GREY_800, max_lines=4, overflow=ft.TextOverflow.ELLIPSIS),
                                     ft.Container(expand=True),
                                     ft.Row(
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -131,7 +144,7 @@ def cargar_menu(page: ft.Page):
     page.on_resized = on_page_resize
 
     def handle_search_change(e):
-        update_menu_list(e.control.value)
+        update_menu_list(e.control.value, current_category)
 
     search_bar = ft.TextField(
         label="Buscar...", prefix_icon=ft.Icons.SEARCH,
@@ -141,12 +154,45 @@ def cargar_menu(page: ft.Page):
         label_style=ft.TextStyle(color=ft.Colors.GREY_700)
     )
 
+    # --- SISTEMA DE CATEGORÍAS (COMPATIBLE) ---
+    categorias_row = ft.Row(scroll="auto", spacing=5)
+    
+    def on_category_click(category_name):
+        update_menu_list(search_bar.value, category_name)
+        refresh_categories_ui()
+
+    def build_category_button(name, is_all=False):
+        is_selected = (is_all and current_category is None) or (name == current_category)
+        return ft.TextButton(
+            content=ft.Text(name, color=ft.Colors.BROWN_700 if is_selected else ft.Colors.BLACK, 
+                           weight="bold" if is_selected else "normal"),
+            on_click=lambda _: on_category_click(None if is_all else name)
+        )
+
+    def refresh_categories_ui():
+        categorias_row.controls.clear()
+        categorias_row.controls.append(build_category_button("Todos", is_all=True))
+        
+        config = get_configuracion()
+        if config and config.get("categorias_disponibles"):
+            import json
+            try:
+                cats = json.loads(config["categorias_disponibles"])
+                for c in cats:
+                    categorias_row.controls.append(build_category_button(c))
+            except:
+                pass
+        page.update()
+
     update_menu_list()
+    refresh_categories_ui()
 
     return ft.Column(
         expand=True,
+        spacing=0,
         controls=[
             ft.Container(content=search_bar, padding=ft.Padding.only(left=15, right=15, top=10, bottom=5)),
+            ft.Container(content=categorias_row, padding=ft.Padding.only(left=15, right=15, bottom=5)),
             main_content
         ]
     )

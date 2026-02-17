@@ -101,6 +101,7 @@ class ConfiguracionBase(BaseModel):
     contactos: Optional[str] = None # JSON string
     guisos_disponibles: Optional[str] = None
     salsas_disponibles: Optional[str] = None
+    categorias_disponibles: Optional[str] = None
     costo_envio: Optional[float] = 20.0
 
 class ConfiguracionUpdate(ConfiguracionBase):

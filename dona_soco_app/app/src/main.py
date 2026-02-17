@@ -17,27 +17,47 @@ except Exception as e:
 # -----------------------------------
 
 import flet as ft
-from flet_core import Audio
 from config import APP_NAME
-from database import crear_tablas, verificar_admin_login
-from app_views.carrito import create_carrito_view
-from app_views.seguimiento import seguimiento_view
-from app_views.menu import cargar_menu
-from app_views.checkout import create_checkout_view
-from components.notifier import init_pubsub, show_notification
-from panel_restaurante.admin_panel import create_admin_panel_view
-from components.cart import Cart
-
 
 def main(page: ft.Page):
+    # --- PANTALLA DE CARGA INICIAL ---
+    loading_screen = ft.Column(
+        [
+            ft.ProgressRing(color=ft.Colors.ORANGE),
+            ft.Text("Cargando Doña Soco App...", size=16, weight="bold"),
+            ft.Text("Esto puede tardar unos segundos la primera vez", size=12, color=ft.Colors.GREY_700)
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True
+    )
+    page.add(loading_screen)
+    page.update()
+
+    # --- IMPORTACIONES LOCALES (Optimizan el arranque) ---
+    import os
+    from flet_core import Audio
+    from database import crear_tablas, verificar_admin_login
+    from app_views.carrito import create_carrito_view
+    from app_views.seguimiento import seguimiento_view
+    from app_views.menu import cargar_menu
+    from app_views.checkout import create_checkout_view
+    from components.notifier import init_pubsub, show_notification
+    from panel_restaurante.admin_panel import create_admin_panel_view
+    from components.cart import Cart
+
     crear_tablas()
 
     if not hasattr(page.session, "cart"):
         page.session.cart = Cart()
 
     page.title = APP_NAME
-    page.window_favicon_path = "favicon.png"
+    page.window_favicon_path = "favicon.png" # Mantener favicon.png (ya optimizado)
     page.favicon = "favicon.png"
+
+    # --- CONFIGURACIÓN DE PÁGINA ---
+    page.theme_mode = ft.ThemeMode.LIGHT
+    # ... (resto de la configuración de tema igual)
 
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
     
@@ -202,7 +222,7 @@ def main(page: ft.Page):
     top_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Image(src="icon.png", width=60, height=60),
+                ft.Image(src="icon.webp", width=60, height=60),
                 ft.Text(APP_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
             ],
             alignment=ft.MainAxisAlignment.START,
@@ -227,6 +247,8 @@ def main(page: ft.Page):
 
     content_area.content = cargar_menu(page)
 
+    # --- QUITAR PANTALLA DE CARGA Y MOSTRAR APP ---
+    page.clean()
     page.add(
         ft.SafeArea(
             ft.Column(

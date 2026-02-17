@@ -58,10 +58,16 @@ def ensure_columns():
             try:
                 conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
                 conn.commit()
-                print(f"DEBUG: Columna '{col}' añadida con éxito.")
             except Exception:
-                # Si falla es porque la columna ya existe, lo cual es normal después de la primera vez
                 pass
+        
+        # Migración para la tabla configuracion
+        try:
+            conn.execute(text("ALTER TABLE configuracion ADD COLUMN categorias_disponibles TEXT DEFAULT '[]'"))
+            conn.commit()
+            print("DEBUG: Columna 'categorias_disponibles' añadida con éxito.")
+        except Exception:
+            pass
 
 ensure_columns()
 

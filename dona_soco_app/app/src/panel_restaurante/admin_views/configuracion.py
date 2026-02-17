@@ -190,6 +190,31 @@ def configuracion_view(page: ft.Page):
 
     btn_add_salsa = ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.GREEN, on_click=agregar_salsa_action)
 
+    # --- Configuración de Categorías ---
+    label_categorias = ft.Text(
+        "Categorías del Menú",
+        size=18,
+        weight=ft.FontWeight.BOLD,
+        color=ft.Colors.BLACK,
+    )
+
+    categorias_chk = {}
+    categorias_list_col = ft.Column()
+    
+    nueva_categoria_input = ft.TextField(hint_text="Nueva Categoría (ej: Tacos)", text_style=ft.TextStyle(color=ft.Colors.BLACK), hint_style=ft.TextStyle(color=ft.Colors.GREY), expand=True)
+
+    def agregar_categoria_action(e):
+        nombre = nueva_categoria_input.value.strip()
+        if nombre and nombre not in categorias_chk:
+            crear_item_row(nombre, True, categorias_chk, categorias_list_col)
+            nueva_categoria_input.value = ""
+            show_notification(page, f"Categoría '{nombre}' añadida. Recuerda GUARDAR al final.", ft.Colors.BLUE_400)
+            page.update()
+        else:
+            show_notification(page, "Nombre inválido o ya existe", ft.Colors.ORANGE)
+
+    btn_add_categoria = ft.IconButton(icon=ft.Icons.ADD_CIRCLE, icon_color=ft.Colors.GREEN, on_click=agregar_categoria_action)
+
     def crear_item_row(name, val, target_dict, target_col):
         chk = ft.Checkbox(
             label=name,
@@ -346,6 +371,13 @@ def configuracion_view(page: ft.Page):
         for name, val in salsas_data.items():
             crear_item_row(name, val, salsas_chk, salsas_list_col)
 
+        categorias_list_col.controls.clear()
+        categorias_chk.clear()
+        categorias_data = safe_json_load("categorias_disponibles", [])
+        # Es una lista, convertimos a dict para compatibilidad con crear_item_row
+        for name in categorias_data:
+            crear_item_row(name, True, categorias_chk, categorias_list_col)
+
         page.update()
 
     # --------- RESTO DEL CÓDIGO ORIGINAL (BOTONES INTACTOS) ---------
@@ -376,6 +408,8 @@ def configuracion_view(page: ft.Page):
 
         guisos_json = json.dumps({k: v.value for k, v in guisos_chk.items()})
         salsas_json = json.dumps({k: v.value for k, v in salsas_chk.items()})
+        # Guardamos solo los nombres de las categorías activas
+        categorias_json = json.dumps([k for k, v in categorias_chk.items() if v.value])
 
         try:
             c_envio = float(costo_envio_field.value)
@@ -390,7 +424,8 @@ def configuracion_view(page: ft.Page):
             contactos_json,
             guisos_json,
             salsas_json,
-            costo_envio=c_envio
+            costo_envio=c_envio,
+            categorias_disponibles=categorias_json
         ):
             show_notification(page, "Configuración guardada correctamente", ft.Colors.GREEN_700)
         else:
@@ -463,6 +498,10 @@ def configuracion_view(page: ft.Page):
                 ft.Row([nombre_grupo_field, opciones_grupo_field], spacing=10),
                 btn_add_grupo,
                 lista_grupos_col,
+                ft.Divider(),
+                label_categorias,
+                ft.Row([nueva_categoria_input, btn_add_categoria]),
+                categorias_list_col,
                 ft.Divider(),
                 label_guisos,
                 ft.Row([nuevo_guiso_input, btn_add_guiso]),

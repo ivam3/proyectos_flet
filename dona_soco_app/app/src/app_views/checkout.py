@@ -95,6 +95,14 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         on_change=on_metodo_pago_change
     )
 
+    pago_container = ft.Column([
+        ft.Divider(height=20),
+        ft.Text("Método de Pago", size=18, weight="bold"),
+        metodo_pago_group,
+        paga_con_field,
+        info_tarjetas,
+    ], visible=True)
+
     # --- CAMPOS DEL FORMULARIO ---
     nombre_field = ft.TextField(label="Nombre completo", autofocus=True, border_radius=10)
     telefono_field = ft.TextField(label="Teléfono de contacto", keyboard_type=ft.KeyboardType.PHONE, border_radius=10)
@@ -145,11 +153,12 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
     def on_pickup_change(e):
         is_pickup = pickup_checkbox.value
         
-        # Ocultar/Mostrar campos de dirección
+        # Ocultar/Mostrar campos de dirección y pago
         calle_field.visible = not is_pickup
         colonia_field.visible = not is_pickup
         cp_field.visible = not is_pickup
         referencias_field.visible = not is_pickup
+        pago_container.visible = not is_pickup
         
         # Actualizar costos
         costo_actual = 0.0 if is_pickup else COSTO_ENVIO
@@ -328,12 +337,7 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             colonia_field,
             cp_field,
             referencias_field,
-            
-            ft.Divider(height=20),
-            ft.Text("Método de Pago", size=18, weight="bold"),
-            metodo_pago_group,
-            paga_con_field,
-            info_tarjetas,
+            pago_container,
             
             ft.Divider(height=20),
             ft.Column([

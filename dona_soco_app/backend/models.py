@@ -52,6 +52,7 @@ class Configuracion(Base):
     admin_password = Column(String, nullable=True)
     guisos_disponibles = Column(Text, nullable=True)
     salsas_disponibles = Column(Text, nullable=True)
+    categorias_disponibles = Column(Text, nullable=True) # JSON list: '["Tacos", "Burgers"]'
     costo_envio = Column(Float, default=20.0)
 
 class Orden(Base):

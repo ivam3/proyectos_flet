@@ -160,3 +160,12 @@ cython_debug/
 
 # Flet
 storage/
+build/
+*.db
+*.bak
+*.json.bk
+backend_dona_soco.db
+initial_data.db
+uploads/
+/src/uploads/
+/src/__pycache__/

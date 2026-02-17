@@ -80,7 +80,7 @@ def cargar_menu(page: ft.Page):
                     else:
                         img_src = f"/{imagen}"
                 else:
-                    img_src = "/icon.png"
+                    img_src = "/icon.webp"
 
                 menu_grid.controls.append(
                     ft.Card(

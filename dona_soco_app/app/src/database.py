@@ -188,7 +188,7 @@ def get_configuracion():
         print(f"Error obtener config: {e}")
         return {}
 
-def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None, guisos_disponibles=None, salsas_disponibles=None, costo_envio=20.0):
+def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, tipos_tarjeta=None, contactos=None, guisos_disponibles=None, salsas_disponibles=None, costo_envio=20.0, categorias_disponibles=None):
     data = {
         "horario": horario,
         "codigos_postales": codigos_postales,
@@ -197,6 +197,7 @@ def update_configuracion(horario, codigos_postales, metodos_pago_activos=None, t
         "contactos": contactos,
         "guisos_disponibles": guisos_disponibles,
         "salsas_disponibles": salsas_disponibles,
+        "categorias_disponibles": categorias_disponibles,
         "costo_envio": costo_envio
     }
     # Limpiar nones para no sobreescribir con null

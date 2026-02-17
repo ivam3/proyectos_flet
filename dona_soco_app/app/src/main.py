@@ -222,7 +222,7 @@ def main(page: ft.Page):
     top_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Image(src="icon.webp", width=60, height=60),
+                ft.Image(src="icon.png", width=60, height=60),
                 ft.Text(APP_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
             ],
             alignment=ft.MainAxisAlignment.START,

@@ -6,6 +6,7 @@ import os
 import cmd
 import shlex
 import glob
+import shutil
 from typing import Dict, Any, List
 
 # Configurar el path para importar config.py
@@ -101,6 +102,10 @@ class DBManager:
         r = self.client.delete(f"/pedidos/{orden_id}")
         return r.status_code == 200
 
+    def get_upload_list(self):
+        r = self.client.get("/upload/list")
+        return r.json().get("files", [])
+
 class AdminShell(cmd.Cmd):
     intro = '🛠️ Sistema de Administración Doña Soco. Escribe "help" o "?" para listar comandos.\n'
     prompt = '(ds-admin) '
@@ -157,15 +162,156 @@ class AdminShell(cmd.Cmd):
         except Exception as e:
             print(f"❌ Error procesando comando: {e}")
 
-    def do_rmfile(self, arg):
-        """Elimina un archivo del servidor: rmfile [nombre_archivo]"""
+    def do_rmupload(self, arg):
+        """Elimina una imagen del servidor: rmupload [nombre_archivo.webp]"""
         if not arg:
-            print("❌ Uso: rmfile [nombre_archivo]")
+            print("❌ Uso: rmupload [nombre_archivo]")
             return
         if self.mgr.delete_file(arg):
             print(f"🗑️ Archivo '{arg}' eliminado del servidor.")
         else:
             print(f"❌ No se pudo eliminar el archivo.")
+
+    def do_migrate_webp(self, arg):
+        """Automatiza la migración de TODO el menú a WebP:
+        1. Descarga imágenes actuales (JPG/PNG).
+        2. Las resube (el servidor las convierte a WebP).
+        3. Actualiza el Menú con los nuevos nombres.
+        """
+        print("🔍 Iniciando migración masiva a WebP...")
+        menu = self.mgr.get_all_menu()
+        count = 0
+        
+        # Carpeta temporal para la migración
+        tmp_dir = "tmp_migration"
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        for item in menu:
+            img_name = item.get("imagen")
+            if img_name and not img_name.endswith(".webp"):
+                print(f"📦 Procesando: {item['nombre']} ({img_name})")
+                
+                try:
+                    # 1. Descargar
+                    img_url = f"{API_URL}/static/uploads/{img_name}"
+                    r_img = httpx.get(img_url)
+                    if r_img.status_code != 200:
+                        print(f"  ❌ No se pudo descargar {img_name}")
+                        continue
+                    
+                    local_path = os.path.join(tmp_dir, img_name)
+                    with open(local_path, "wb") as f:
+                        f.write(r_img.content)
+                    
+                    # 2. Resubir (activará la conversión automática en el backend)
+                    new_name, error = self.mgr.upload_image(local_path)
+                    
+                    if new_name:
+                        # 3. Actualizar Item en DB
+                        item["imagen"] = new_name
+                        # Limpiar campos de SQLAlchemy si existen
+                        item_payload = {k: v for k, v in item.items() if k not in ["id", "historial", "detalles"]}
+                        if self.mgr.update_item(item["id"], item_payload):
+                            print(f"  ✅ DB Actualizada para {item['nombre']} -> {new_name}")
+                            # Eliminar el viejo del servidor
+                            if new_name != img_name:
+                                if self.mgr.delete_file(img_name):
+                                    print(f"  🗑️ Original '{img_name}' eliminado del servidor.")
+                                else:
+                                    print(f"  ⚠️ No se pudo eliminar '{img_name}' del servidor (posiblemente ya no existía).")
+                            count += 1
+                        else:
+                            print(f"  ❌ Error actualizando base de datos para {item['nombre']}")
+                    else:
+                        print(f"  ❌ Error al subir/convertir: {error}")
+                        
+                except Exception as ex:
+                    print(f"  ❌ Error crítico: {ex}")
+
+        print(f"🏁 Migración finalizada. {count} imágenes optimizadas.")
+        # Limpiar carpeta temporal
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def do_ls_uploads(self, arg):
+        """Lista todos los archivos de imagen en el servidor: ls_uploads"""
+        files = self.mgr.get_upload_list()
+        print(f"📂 Archivos en el servidor ({len(files)}):")
+        for f in sorted(files):
+            print(f"  - {f}")
+
+    def do_clean_uploads(self, arg):
+        """Elimina archivos del servidor que no están en el menú o no son WebP: clean_uploads"""
+        print("🧹 Iniciando limpieza de archivos huérfanos...")
+        
+        # 1. Obtener lista de archivos en el servidor
+        server_files = self.mgr.get_upload_list()
+        
+        # 2. Obtener lista de imágenes usadas en el menú
+        menu = self.mgr.get_all_menu()
+        used_images = {item.get("imagen") for item in menu if item.get("imagen")}
+        
+        # 3. Identificar archivos a eliminar
+        to_delete = []
+        for f in server_files:
+            # Si no es webp O no está en el menú, se va
+            if not f.endswith(".webp") or f not in used_images:
+                to_delete.append(f)
+        
+        if not to_delete:
+            print("✨ El servidor ya está limpio. No hay archivos huérfanos.")
+            return
+
+        print(f"Se encontraron {len(to_delete)} archivos para eliminar.")
+        confirm = input(f"¿Deseas eliminar estos {len(to_delete)} archivos permanentemente? (s/n): ")
+        
+        if confirm.lower() == 's':
+            success = 0
+            for f in to_delete:
+                if self.mgr.delete_file(f):
+                    print(f"  🗑️ {f} eliminado.")
+                    success += 1
+                else:
+                    print(f"  ❌ Falló eliminación de {f}.")
+            print(f"🏁 Limpieza completada. {success} archivos borrados.")
+        else:
+            print("🚫 Operación cancelada.")
+
+    def do_backupimg(self, arg):
+        """Descarga todas las imágenes del servidor a una carpeta local: backupimg [nombre_carpeta]"""
+        target_dir = arg if arg else "backup_images"
+        print(f"📥 Iniciando backup de imágenes en '{target_dir}'...")
+        
+        try:
+            # 1. Obtener lista de archivos
+            files = self.mgr.get_upload_list()
+            if not files:
+                print("📭 No hay archivos en el servidor para respaldar.")
+                return
+
+            # 2. Crear carpeta local
+            os.makedirs(target_dir, exist_ok=True)
+            print(f"📦 Se encontraron {len(files)} archivos en el servidor.")
+            
+            success = 0
+            for f in files:
+                url = f"{API_URL}/static/uploads/{f}"
+                try:
+                    # Usamos un timeout amplio por si hay imágenes pesadas
+                    r = httpx.get(url, timeout=60.0)
+                    if r.status_code == 200:
+                        with open(os.path.join(target_dir, f), "wb") as img_file:
+                            img_file.write(r.content)
+                        print(f"  ✅ Descargado: {f}")
+                        success += 1
+                    else:
+                        print(f"  ❌ Error {r.status_code} al descargar: {f}")
+                except Exception as e:
+                    print(f"  ❌ Fallo en {f}: {e}")
+            
+            print(f"🏁 Proceso finalizado. Se respaldaron {success}/{len(files)} archivos en '{os.path.abspath(target_dir)}'.")
+            
+        except Exception as e:
+            print(f"❌ Error crítico durante el backup: {e}")
 
     def do_importar(self, arg):
         """Importa/Sincroniza TODO desde un JSON (Menú, Configuración, Grupos): importar [archivo.json]"""

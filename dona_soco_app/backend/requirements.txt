@@ -5,3 +5,4 @@ pydantic>=2.7.0
 python-multipart
 psycopg2-binary
 python-dotenv
+Pillow

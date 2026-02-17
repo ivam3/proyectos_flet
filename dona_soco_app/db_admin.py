@@ -32,10 +32,14 @@ class DBManager:
 
     def create_item(self, data: Dict[str, Any]):
         r = self.client.post("/menu", json=data)
+        if r.status_code not in [200, 201]:
+            print(f"    ⚠️ Detalle error: {r.text}")
         return r.status_code in [200, 201]
 
     def update_item(self, item_id: int, data: Dict[str, Any]):
         r = self.client.put(f"/menu/{item_id}", json=data)
+        if r.status_code != 200:
+            print(f"    ⚠️ Detalle error: {r.text}")
         return r.status_code == 200
 
     # --- UPLOAD ---
@@ -345,6 +349,14 @@ class AdminShell(cmd.Cmd):
                     m = g.get('seleccion_multiple', 0)
                     o = g.get('obligatorio', 0)
                     
+                    # Payload limpio sin ID para evitar conflictos
+                    g_payload = {
+                        "nombre": g['nombre'],
+                        "opciones": json.dumps(ops),
+                        "seleccion_multiple": m,
+                        "obligatorio": o
+                    }
+                    
                     if name_clean in group_map:
                         if self.mgr.update_group(group_map[name_clean], g['nombre'], ops, m, o):
                             print(f" 🔄 Grupo '{g['nombre']}' actualizado.")
@@ -371,19 +383,41 @@ class AdminShell(cmd.Cmd):
                 print(f"📥 Procesando {len(items_to_import)} platillos...")
                 for item in items_to_import:
                     nombre_clean = item['nombre'].strip().lower()
-                    if "id" in item: del item["id"]
+                    
+                    # --- FILTRADO ESTRICTO DE CAMPOS (MenuCreate Schema) ---
+                    campos_validos = [
+                        "nombre", "descripcion", "precio", "descuento", "imagen", 
+                        "is_active", "is_configurable", "is_configurable_salsa", 
+                        "piezas", "printer_target", "grupos_opciones_ids"
+                    ]
+                    item_clean = {k: v for k, v in item.items() if k in campos_validos}
+                    
+                    # --- AUTO-CORRECCIÓN DE DATOS ---
+                    # 1. Forzar extensión .webp
+                    img = item_clean.get("imagen", "")
+                    if img and not img.endswith(".webp") and "." in img:
+                        item_clean["imagen"] = os.path.splitext(img)[0] + ".webp"
+                    
+                    # 2. Asegurar campos obligatorios con valores por defecto
+                    if "printer_target" not in item_clean: item_clean["printer_target"] = "cocina"
+                    if "grupos_opciones_ids" not in item_clean: item_clean["grupos_opciones_ids"] = "[]"
+                    if "piezas" not in item_clean: item_clean["piezas"] = 1
+                    if "is_active" not in item_clean: item_clean["is_active"] = 1
+                    if "is_configurable" not in item_clean: item_clean["is_configurable"] = 0
+                    if "is_configurable_salsa" not in item_clean: item_clean["is_configurable_salsa"] = 0
+                    if "descuento" not in item_clean: item_clean["descuento"] = 0.0
                     
                     if nombre_clean in menu_map:
                         item_id = menu_map[nombre_clean]
-                        if self.mgr.update_item(item_id, item):
-                            print(f" 🔄 {item['nombre']} actualizado.")
+                        if self.mgr.update_item(item_id, item_clean):
+                            print(f" 🔄 {item_clean['nombre']} actualizado.")
                         else:
-                            print(f" ❌ Error actualizando {item['nombre']}.")
+                            print(f" ❌ Error actualizando {item_clean['nombre']}.")
                     else:
-                        if self.mgr.create_item(item):
-                            print(f" ✅ {item['nombre']} creado.")
+                        if self.mgr.create_item(item_clean):
+                            print(f" ✅ {item_clean['nombre']} creado.")
                         else:
-                            print(f" ❌ Error creando {item['nombre']}.")
+                            print(f" ❌ Error creando {item_clean['nombre']}.")
             
             print("🏁 Importación finalizada.")
         except Exception as e:

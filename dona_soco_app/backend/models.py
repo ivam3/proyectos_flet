@@ -7,7 +7,7 @@ class Menu(Base):
     __tablename__ = "menu"
 
     id = Column(Integer, primary_key=True, index=True)
-    categoria_id = Column(Integer, nullable=True) # Mantenemos compatibilidad aunque no se use mucho
+    categoria_id = Column(String, nullable=True) # Cambiado a String para almacenar el nombre de la categoría
     nombre = Column(String, index=True)
     descripcion = Column(String, nullable=True)
     precio = Column(Float)

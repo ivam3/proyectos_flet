@@ -15,13 +15,13 @@ class MenuBase(BaseModel):
     piezas: Optional[int] = 1
     printer_target: Optional[str] = "cocina"
     grupos_opciones_ids: Optional[str] = "[]"
+    categoria_id: Optional[str] = None
 
 class MenuCreate(MenuBase):
     pass
 
 class Menu(MenuBase):
     id: int
-    categoria_id: Optional[int] = None
 
     class Config:
         from_attributes = True # Antes orm_mode = True

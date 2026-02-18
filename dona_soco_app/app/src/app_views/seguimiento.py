@@ -45,8 +45,8 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             # Convertir bytes a base64
             b64 = base64.b64encode(content_bytes).decode()
             url = f"data:{mime_type};base64,{b64}"
-            # _self evita que se abra una pestaña nueva en blanco
-            await page.launch_url(url, web_window_name="_self")
+            # En esta versión el argumento es web_popup_window_name
+            await page.launch_url(url, web_popup_window_name="_self")
             show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
         except Exception as e:
             print(f"Error en descarga web: {e}")

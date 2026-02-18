@@ -24,7 +24,7 @@ def main(page: ft.Page):
     loading_screen = ft.Column(
         [
             ft.ProgressRing(color=ft.Colors.ORANGE),
-            ft.Text("Cargando Doña Soco App...", size=16, weight="bold"),
+            ft.Text(f"Cargando {APP_NAME} ...", size=16, weight="bold", text_align=ft.TextAlign.CENTER),
             ft.Text("Esto puede tardar unos segundos la primera vez", size=12, color=ft.Colors.GREY_700)
         ],
         alignment=ft.MainAxisAlignment.CENTER,

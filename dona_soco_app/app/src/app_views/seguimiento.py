@@ -37,6 +37,19 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
         print("DEBUG: No se recibió FilePicker global")
 
     error_dialog = ft.AlertDialog(title=ft.Text("Error"), content=ft.Text(""))
+    
+    async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
+        """Método infalible para descargas en la web usando Base64."""
+        import base64
+        try:
+            b64 = base64.b64encode(content_bytes).decode()
+            url = f"data:{mime_type};base64,{b64}"
+            await page.launch_url(url)
+            show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
+        except Exception as e:
+            print(f"Error en descarga web: {e}")
+            show_notification(page, "Error al procesar descarga.", ft.Colors.RED)
+
     success_dialog = ft.AlertDialog(
         title=ft.Text("Descarga Exitosa", color=ft.Colors.GREEN), 
         content=ft.Text(""),
@@ -144,18 +157,17 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
                 except Exception as e:
                     print(f"DEBUG: Fallo guardado directo PDF en PC: {e}")
 
-            # 2. FilePicker para Web (Cualquier dispositivo) o Fallback
-            if es_web or plat in ["windows", "macos", "linux"]:
+            # 2. Descarga Directa para Web (Solución al bloqueo de FilePicker)
+            if es_web:
+                print("DEBUG: Usando descarga Base64 (Web).")
+                await descargar_archivo_web(filename, pdf_bytes, "application/pdf")
+            elif plat in ["windows", "macos", "linux"]:
                 if export_file_picker:
                     print("DEBUG: Usando FilePicker")
-                    
-                    # Garantizar que el control esté en el overlay antes de la acción
                     if not export_file_picker.page:
-                         page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
+                        page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
                     
-                    # IMPORTANTE: Forzar actualización del estado del control antes de invocar el diálogo del sistema
-                    page.update() 
-                    
+                    page.update()
                     await export_file_picker.save_file(
                         dialog_title=f"Guardar PDF #{pedido['id']}",
                         file_name=filename,

@@ -105,6 +105,19 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         else:
             mostrar_error("No se pudo guardar el archivo. Verifique permisos de almacenamiento.")
 
+    async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
+        """Método infalible para descargas en la web usando Base64."""
+        import base64
+        try:
+            b64 = base64.b64encode(content_bytes).decode()
+            url = f"data:{mime_type};base64,{b64}"
+            # Abrir en una pestaña nueva/descargar
+            await page.launch_url(url)
+            show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
+        except Exception as e:
+            print(f"Error en descarga web: {e}")
+            show_notification(page, "Error al procesar descarga.", ft.Colors.RED)
+
     async def iniciar_exportacion(extension="csv"):
         print(f"DEBUG: Iniciando exportación {extension}")
         show_notification(page, f"Generando datos {extension.upper()}...", ft.Colors.BLUE_GREY_700)
@@ -124,6 +137,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             
             content_bytes = None
             file_ext = extension
+            mime = "text/csv"
 
             if extension == "csv":
                 output = io.StringIO()
@@ -134,6 +148,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 content_bytes = output.getvalue().encode('utf-8')
                 output.close()
                 file_ext = "csv"
+                mime = "text/csv"
             elif extension == "xlsm":
                 wb = openpyxl.Workbook()
                 ws = wb.active
@@ -146,6 +161,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 content_bytes = output.getvalue()
                 output.close()
                 file_ext = "xlsx" 
+                mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             
             if content_bytes:
                 filename = f"reporte_{timestamp}.{file_ext}"
@@ -154,7 +170,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 plat = str(page.platform).lower() if page.platform else ""
                 es_web = page.web
                 
-                # 1. Escritura Directa para Escritorio Nativo (Homologación solicitada)
+                # 1. Escritura Directa para Escritorio Nativo
                 if plat in ["windows", "macos", "linux"] and not es_web:
                     try:
                         ruta_descargas = os.path.join(os.path.expanduser("~"), "Downloads", filename)
@@ -165,20 +181,13 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                     except Exception as e:
                         print(f"DEBUG: Fallo guardado directo en PC: {e}")
 
-                # 2. FilePicker para Web o Fallback de Escritorio
-                if es_web or plat in ["windows", "macos", "linux"]:
-                    print("DEBUG: Usando FilePicker.")
-                    
-                    # Asegurarse de que el picker esté en la página (usando .page que funciona aunque esté en un Container)
-                    if not file_picker.page:
-                        # Si no tiene página, lo añadimos al overlay (quasi-visible)
-                        page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
-                    
-                    page.update()
-                    show_notification(page, f"Abriendo selector...", ft.Colors.BLUE_GREY_700)
-                    
+                # 2. Descarga Directa para Web (Solución al bloqueo de FilePicker)
+                if es_web:
+                    print("DEBUG: Usando descarga Base64 (Web).")
+                    await descargar_archivo_web(filename, content_bytes, mime)
+                elif plat in ["windows", "macos", "linux"]:
+                    # Fallback FilePicker para escritorio nativo si falló el directo
                     await file_picker.save_file(
-                        dialog_title=f"Guardar {file_ext.upper()}",
                         file_name=filename,
                         allowed_extensions=[file_ext],
                         src_bytes=content_bytes
@@ -331,15 +340,13 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 except Exception as e:
                     print(f"DEBUG: Fallo guardado directo PDF en PC: {e}")
 
-            # 2. FilePicker para Web o Fallback de Escritorio
-            if es_web or plat in ["windows", "macos", "linux"]:
-                print("DEBUG: Usando FilePicker (PDF).")
-                if not file_picker.page:
-                    page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
-                
-                page.update()
+            # 2. Descarga Directa para Web
+            if es_web:
+                print("DEBUG: Usando descarga Base64 (PDF).")
+                await descargar_archivo_web(filename, pdf_bytes, "application/pdf")
+            elif plat in ["windows", "macos", "linux"]:
+                # Fallback FilePicker para nativo
                 await file_picker.save_file(
-                    dialog_title=f"Guardar PDF #{pedido['id']}",
                     file_name=filename,
                     allowed_extensions=["pdf"],
                     src_bytes=pdf_bytes

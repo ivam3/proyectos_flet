@@ -162,7 +162,8 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             # 2. Descarga Directa para Web (Solución al bloqueo de FilePicker)
             if es_web:
                 print("DEBUG: Usando descarga Base64 (Web).")
-                await descargar_archivo_web(filename, pdf_bytes, "application/pdf")
+                # Forzamos descarga con application/octet-stream
+                await descargar_archivo_web(filename, pdf_bytes, "application/octet-stream")
             elif plat in ["windows", "macos", "linux"]:
                 if export_file_picker:
                     print("DEBUG: Usando FilePicker")

@@ -210,6 +210,11 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
             mostrar_alerta("El teléfono debe tener 10 dígitos.")
             return False
         
+        # Si es Pickup, no validamos método de pago (se paga en sucursal)
+        if pickup_checkbox.value:
+            metodo_pago_group.value = "Pago en sucursal"
+            return True
+
         if not metodo_pago_group.value:
             mostrar_alerta("Selecciona un método de pago.")
             return False

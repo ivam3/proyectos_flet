@@ -63,5 +63,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add dona_soco_app/app/build/web 
-          git commit -m "actions: Filters by category were added 5" || echo "No changes to commit"
+          git commit -m "actions: Payment method for pickup was omitted" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main

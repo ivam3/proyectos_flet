@@ -343,8 +343,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             # 2. Descarga Directa para Web
             if es_web:
                 print("DEBUG: Usando descarga Base64 (PDF).")
-                # Usamos application/octet-stream para forzar descarga y evitar visor PDF negro
-                await descargar_archivo_web(filename, pdf_bytes, "application/octet-stream")
+                await descargar_archivo_web(filename, pdf_bytes, "application/pdf")
             elif plat in ["windows", "macos", "linux"]:
                 # Fallback FilePicker para nativo
                 await file_picker.save_file(

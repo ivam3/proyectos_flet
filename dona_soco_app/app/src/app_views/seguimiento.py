@@ -39,14 +39,13 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
     error_dialog = ft.AlertDialog(title=ft.Text("Error"), content=ft.Text(""))
     
     async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
-        """Método definitivo para descargas en la web usando un trigger de JavaScript."""
+        """Método definitivo para descargas en la web usando un trigger de JavaScript compatible con Flet 0.80.1."""
         import base64
         try:
             # Convertir bytes a base64
             b64 = base64.b64encode(content_bytes).decode()
             
             # Script JS para descargar sin abrir pestañas nuevas
-            # Crea un link invisible, le asigna el blob y lo 'clica'
             js_script = f"""
             var link = document.createElement('a');
             link.href = 'data:{mime_type};base64,{b64}';
@@ -55,8 +54,8 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             link.click();
             document.body.removeChild(link);
             """
-            page.run_javascript(js_script)
-            show_notification(page, f"Preparando descarga: {filename}", ft.Colors.GREEN)
+            page.window.run_javascript(js_script)
+            show_notification(page, f"Iniciando descarga: {filename}", ft.Colors.GREEN)
         except Exception as e:
             print(f"Error en descarga web JS: {e}")
             show_notification(page, "Error al procesar descarga.", ft.Colors.RED)

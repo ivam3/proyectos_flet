@@ -106,16 +106,22 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             mostrar_error("No se pudo guardar el archivo. Verifique permisos de almacenamiento.")
 
     async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
-        """Método infalible para descargas en la web usando Base64."""
+        """Método definitivo para descargas en la web usando un trigger de JavaScript."""
         import base64
         try:
             b64 = base64.b64encode(content_bytes).decode()
-            url = f"data:{mime_type};base64,{b64}"
-            # Abrir en una pestaña nueva/descargar
-            await page.launch_url(url)
-            show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
+            js_script = f"""
+            var link = document.createElement('a');
+            link.href = 'data:{mime_type};base64,{b64}';
+            link.download = '{filename}';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            """
+            page.run_javascript(js_script)
+            show_notification(page, f"Preparando descarga: {filename}", ft.Colors.GREEN)
         except Exception as e:
-            print(f"Error en descarga web: {e}")
+            print(f"Error en descarga web JS: {e}")
             show_notification(page, "Error al procesar descarga.", ft.Colors.RED)
 
     async def iniciar_exportacion(extension="csv"):

@@ -247,6 +247,18 @@ def main(page: ft.Page):
 
     content_area.content = cargar_menu(page)
 
+    # --- FUNCIÓN DE DESCARGA WEB (ROBUSTA) ---
+    def web_download(filename, content_base64):
+        page.run_javascript(f"""
+            var link = document.createElement('a');
+            link.href = 'data:application/octet-stream;base64,{content_base64}';
+            link.download = '{filename}';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        """)
+    page.session.web_download = web_download
+
     # --- QUITAR PANTALLA DE CARGA Y MOSTRAR APP ---
     page.clean()
     page.add(

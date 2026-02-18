@@ -106,23 +106,16 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             mostrar_error("No se pudo guardar el archivo. Verifique permisos de almacenamiento.")
 
     async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
-        """Método definitivo para descargas en la web usando un trigger de JavaScript compatible con Flet 0.80.1."""
+        """Método compatible con Flet 0.24.1 usando launch_url en la misma ventana."""
         import base64
         try:
             b64 = base64.b64encode(content_bytes).decode()
-            js_script = f"""
-            var link = document.createElement('a');
-            link.href = 'data:{mime_type};base64,{b64}';
-            link.download = '{filename}';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            """
-            # En Flet 0.80.1, run_javascript está bajo page.window
-            page.window.run_javascript(js_script)
-            show_notification(page, f"Iniciando descarga: {filename}", ft.Colors.GREEN)
+            url = f"data:{mime_type};base64,{b64}"
+            # _self evita que se abra una pestaña nueva en blanco
+            await page.launch_url(url, web_window_name="_self")
+            show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
         except Exception as e:
-            print(f"Error en descarga web JS: {e}")
+            print(f"Error en descarga web: {e}")
             show_notification(page, "Error al procesar descarga.", ft.Colors.RED)
 
     async def iniciar_exportacion(extension="csv"):

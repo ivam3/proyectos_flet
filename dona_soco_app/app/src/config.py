@@ -3,12 +3,12 @@
 
 import os
 
-APP_NAME = "Antojitos Doña Soco"
+APP_NAME = "Antojitos Doña Soco DEV"
 COMPANY_NAME = "Antojitos Doña Soco" # Usado en reportes y encabezados
 
 # URL de la API, cambiar si se usa localmente
 API_URL = os.getenv(
-        "API_URL", "https://dona-soco-api.up.railway.app"
+        "API_URL", "https://dona-soco-api-dev.up.railway.app"
         )
 
 # Seguridad de la API

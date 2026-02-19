@@ -111,7 +111,7 @@ def get_configuracion(db: Session):
             tipos_tarjeta='["Visa", "Mastercard"]',
             contactos='{"telefono": "", "email": "", "whatsapp": "", "direccion": ""}',
             guisos_disponibles='{"Asado": true, "Deshebrada": true}',
-            salsas_disponibles='{"Verde": true, "Roja": true, "Sin salsa": true}',
+            salsas_disponibles='{"SIN SALSA": true, "Verde": true, "Roja": true}'
         )
         db.add(config)
         db.commit()

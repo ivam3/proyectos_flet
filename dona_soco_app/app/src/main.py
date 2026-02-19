@@ -219,18 +219,97 @@ def main(page: ft.Page):
 
     page.on_route_change = handle_route_change
 
+    # --- FETCH CONFIG PARA BOTONES SOCIALES ---
+    from database import get_configuracion
+    import json
+    config_header = get_configuracion()
+    contactos_header = {}
+    if config_header and 'contactos' in config_header:
+        try:
+            contactos_header = json.loads(config_header['contactos'])
+        except:
+            pass
+
+    def create_social_menu():
+        async def launch_social_url(url):
+            await page.launch_url(url)
+
+        menu_items = []
+        
+        # WhatsApp
+        wa = contactos_header.get("whatsapp")
+        if wa:
+            link_wa = f"https://wa.me/{wa}" if not wa.startswith("http") else wa
+            menu_items.append(
+                ft.PopupMenuItem(
+                    content=ft.Text("WhatsApp"), 
+                    icon=ft.Icons.CHAT_BUBBLE_OUTLINE, 
+                    on_click=lambda _: page.run_task(launch_social_url, link_wa)
+                )
+            )
+        
+        # Facebook
+        fb = contactos_header.get("facebook")
+        if fb:
+            menu_items.append(
+                ft.PopupMenuItem(
+                    content=ft.Text("Facebook"), 
+                    icon=ft.Icons.FACEBOOK, 
+                    on_click=lambda _: page.run_task(launch_social_url, fb)
+                )
+            )
+        
+        # Instagram
+        insta = contactos_header.get("instagram")
+        if insta:
+            menu_items.append(
+                ft.PopupMenuItem(
+                    content=ft.Text("Instagram"), 
+                    icon=ft.Icons.CAMERA_ALT, 
+                    on_click=lambda _: page.run_task(launch_social_url, insta)
+                )
+            )
+
+        # X (Twitter)
+        x_url = contactos_header.get("x")
+        if x_url:
+            menu_items.append(
+                ft.PopupMenuItem(
+                    content=ft.Text("X (Twitter)"), 
+                    icon=ft.Icons.SHARE, 
+                    on_click=lambda _: page.run_task(launch_social_url, x_url)
+                )
+            )
+            
+        return ft.PopupMenuButton(
+            items=menu_items,
+            icon=ft.Icons.MORE_VERT,
+            icon_color=ft.Colors.BLACK,
+            tooltip="Redes Sociales"
+        ) if menu_items else ft.Container()
+
     top_bar = ft.Container(
         content=ft.Row(
             [
-                ft.Image(src="icon.png", width=60, height=60),
-                ft.Text(APP_NAME, size=22, weight="bold", color=ft.Colors.BLACK, expand=True, text_align=ft.TextAlign.CENTER),
+                ft.Container(
+                    content=ft.Image(src="icon.png", width=35, height=35),
+                    on_click=activar_admin,
+                    ink=True,
+                    border_radius=18
+                ),
+                ft.Container(
+                    content=ft.Text(APP_NAME, size=18, weight="bold", color=ft.Colors.BLACK, overflow=ft.TextOverflow.ELLIPSIS),
+                    alignment=ft.alignment.Alignment(0, 0),
+                    expand=True,
+                    on_click=activar_admin,
+                    padding=ft.Padding.symmetric(horizontal=10)
+                ),
+                create_social_menu()
             ],
-            alignment=ft.MainAxisAlignment.START,
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        on_click=activar_admin,
-        ink=True,
-        padding=15,
+        padding=ft.Padding.only(left=10, right=5, top=5, bottom=5),
         bgcolor=ft.Colors.ORANGE_100,
         border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.BLACK_12))
     )
@@ -280,5 +359,5 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
     os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
-    # Inicio de la aplicación con ft.run y canvas_kit
-    ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")
+    # Inicio de la aplicación con ft.run y auto-renderer para mejor compatibilidad
+    ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="auto")

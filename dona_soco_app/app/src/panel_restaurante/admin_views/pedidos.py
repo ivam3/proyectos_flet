@@ -1,5 +1,7 @@
 import flet as ft
-from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion, obtener_menu
+import json
+from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion, obtener_menu, get_configuracion
+from config import COMPANY_NAME
 from components.notifier import init_pubsub, play_notification_sound, show_notification # Importar herramientas de notificación
 import math
 import csv
@@ -106,13 +108,17 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             mostrar_error("No se pudo guardar el archivo. Verifique permisos de almacenamiento.")
 
     async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
-        """Método compatible con Flet 0.24.1 usando launch_url en la misma ventana."""
+        """Método compatible con Flet 0.24.1 usando launch_url.
+        Nota: Archivos muy grandes pueden causar desconexión del WebSocket en modo web."""
         import base64
         try:
+            size_kb = len(content_bytes) / 1024
+            print(f"DEBUG: Preparando descarga Web ({size_kb:.2f} KB)")
             b64 = base64.b64encode(content_bytes).decode()
             url = f"data:{mime_type};base64,{b64}"
             # En esta versión el argumento es web_popup_window_name
             await page.launch_url(url, web_popup_window_name="_self")
+            
             show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
         except Exception as e:
             print(f"Error en descarga web: {e}")
@@ -285,11 +291,32 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         show_notification(page, "Generando PDF...", ft.Colors.BLUE_GREY_700)
 
         try:
+            # Obtener configuración para el pie de página
+            config = get_configuracion()
+            contactos = {}
+            if config and 'contactos' in config.keys() and config['contactos']:
+                try:
+                    contactos = json.loads(config['contactos'])
+                except:
+                    pass
+
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("helvetica", size=12)
             pdf.set_margins(10, 10, 10)
             
+            # --- ENCABEZADO CON LOGO ---
+            try:
+                # Intentar localizar logo.jpg en assets
+                # La estructura es app/src/panel_restaurante/admin_views/pedidos.py
+                # El logo está en app/src/assets/logo.jpg
+                logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "assets", "logo.jpg")
+                if os.path.exists(logo_path):
+                    pdf.image(logo_path, x=10, y=8, w=30)
+                    pdf.ln(20) # Espacio para el logo
+            except Exception as e:
+                print(f"DEBUG: No se pudo cargar el logo en PDF: {e}")
+
             pdf.set_font("helvetica", 'B', 16)
             pdf.cell(0, 10, text=f"Detalle del Pedido #{pedido['id']}", align='C', new_x="LMARGIN", new_y="NEXT")
             pdf.ln(5)
@@ -304,8 +331,8 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             pdf.set_font("helvetica", size=12)
             pdf.cell(0, 8, text=f"Nombre: {pedido['nombre_cliente']}", new_x="LMARGIN", new_y="NEXT")
             
-            direccion = (pedido['direccion'] or "").encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(w=pdf.epw, h=8, text=f"Dirección: {direccion}")
+            direccion_cliente = (pedido['direccion'] or "").encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(w=pdf.epw, h=8, text=f"Dirección: {direccion_cliente}")
             pdf.ln(5)
             
             pdf.set_font("helvetica", 'B', 14)
@@ -321,6 +348,20 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             pdf.ln(5)
             pdf.set_font("helvetica", 'B', 16)
             pdf.cell(0, 10, text=f"Total: ${pedido['total']:.2f}", align='R', new_x="LMARGIN", new_y="NEXT")
+
+            # --- PIE DE PÁGINA CON DATOS DEL NEGOCIO ---
+            pdf.ln(10)
+            pdf.set_font("helvetica", 'I', 10)
+            pdf.divider_y = pdf.get_y()
+            pdf.line(10, pdf.divider_y, 200, pdf.divider_y)
+            pdf.ln(2)
+            pdf.cell(0, 5, text=f"{COMPANY_NAME}", align='C', new_x="LMARGIN", new_y="NEXT")
+            
+            tel_negocio = contactos.get('telefono', 'N/A')
+            dir_negocio = contactos.get('direccion', 'N/A').encode('latin-1', 'replace').decode('latin-1')
+            
+            pdf.cell(0, 5, text=f"Tel: {tel_negocio}", align='C', new_x="LMARGIN", new_y="NEXT")
+            pdf.multi_cell(w=pdf.epw, h=5, text=f"Dirección: {dir_negocio}", align='C')
 
             pdf_bytes = pdf.output()
             filename = f"pedido_{pedido['id']}.pdf"

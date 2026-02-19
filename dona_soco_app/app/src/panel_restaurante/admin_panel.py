@@ -10,22 +10,18 @@ def create_admin_panel_view(page: ft.Page, logout_func, file_picker, export_file
     # Contenedor principal de contenido
     admin_content_area = ft.Container(expand=True)
     
-    # Cache de vistas para evitar recargas innecesarias al swichear entre ellas
-    views_cache = {}
-
     def get_or_create_view(view_type):
-        if view_type not in views_cache:
-            show_notification(page, "Cargando sección...", ft.Colors.BLUE_GREY_700)
-            if view_type == "menu":
-                from .admin_views.menu_admin import menu_admin_view
-                views_cache[view_type] = menu_admin_view(page, file_picker)
-            elif view_type == "pedidos":
-                from .admin_views.pedidos import pedidos_view
-                views_cache[view_type] = pedidos_view(page, export_file_picker)
-            elif view_type == "config":
-                from .admin_views.configuracion import configuracion_view
-                views_cache[view_type] = configuracion_view(page)
-        return views_cache[view_type]
+        show_notification(page, "Cargando sección...", ft.Colors.BLUE_GREY_700)
+        if view_type == "menu":
+            from .admin_views.menu_admin import menu_admin_view
+            return menu_admin_view(page, file_picker)
+        elif view_type == "pedidos":
+            from .admin_views.pedidos import pedidos_view
+            return pedidos_view(page, export_file_picker)
+        elif view_type == "config":
+            from .admin_views.configuracion import configuracion_view
+            return configuracion_view(page)
+        return ft.Text("Sección no encontrada")
 
     # Funciones para cambiar el contenido
     def show_menu_view(e):

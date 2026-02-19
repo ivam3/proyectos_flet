@@ -39,14 +39,18 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
     error_dialog = ft.AlertDialog(title=ft.Text("Error"), content=ft.Text(""))
     
     async def descargar_archivo_web(filename, content_bytes, mime_type="application/octet-stream"):
-        """Método compatible con Flet 0.24.1 usando launch_url en la misma ventana."""
+        """Método compatible con Flet 0.24.1 usando launch_url. 
+        Nota: Archivos muy grandes pueden causar desconexión del WebSocket en modo web."""
         import base64
         try:
+            size_kb = len(content_bytes) / 1024
+            print(f"DEBUG: Preparando descarga Web ({size_kb:.2f} KB)")
             # Convertir bytes a base64
             b64 = base64.b64encode(content_bytes).decode()
             url = f"data:{mime_type};base64,{b64}"
             # En esta versión el argumento es web_popup_window_name
             await page.launch_url(url, web_popup_window_name="_self")
+            
             show_notification(page, f"Descarga iniciada: {filename}", ft.Colors.GREEN)
         except Exception as e:
             print(f"Error en descarga web: {e}")
@@ -108,6 +112,16 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             pdf.set_font("helvetica", size=12)
             pdf.set_margins(10, 10, 10)
             
+            # --- ENCABEZADO CON LOGO ---
+            try:
+                # Intentar localizar logo.jpg en assets
+                logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.jpg")
+                if os.path.exists(logo_path):
+                    pdf.image(logo_path, x=10, y=8, w=30)
+                    pdf.ln(20) # Espacio para el logo
+            except Exception as e:
+                print(f"DEBUG: No se pudo cargar el logo en PDF: {e}")
+
             pdf.set_font("helvetica", 'B', 16)
             pdf.cell(0, 10, text=f"Comprobante - {COMPANY_NAME}", align='C', new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("helvetica", size=14)
@@ -124,8 +138,8 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             pdf.set_font("helvetica", size=12)
             pdf.cell(0, 8, text=f"Nombre: {pedido['nombre_cliente']}", new_x="LMARGIN", new_y="NEXT")
             
-            direccion = (pedido['direccion'] or "").encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(w=pdf.epw, h=8, text=f"Dirección: {direccion}")
+            direccion_cliente = (pedido['direccion'] or "").encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(w=pdf.epw, h=8, text=f"Dirección: {direccion_cliente}")
             pdf.ln(5)
             
             pdf.set_font("helvetica", 'B', 14)
@@ -141,6 +155,20 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             pdf.ln(5)
             pdf.set_font("helvetica", 'B', 16)
             pdf.cell(0, 10, text=f"Total: ${pedido['total']:.2f}", align='R', new_x="LMARGIN", new_y="NEXT")
+
+            # --- PIE DE PÁGINA CON DATOS DEL NEGOCIO ---
+            pdf.ln(10)
+            pdf.set_font("helvetica", 'I', 10)
+            pdf.divider_y = pdf.get_y()
+            pdf.line(10, pdf.divider_y, 200, pdf.divider_y)
+            pdf.ln(2)
+            pdf.cell(0, 5, text=f"{COMPANY_NAME}", align='C', new_x="LMARGIN", new_y="NEXT")
+            
+            tel_negocio = contactos.get('telefono', 'N/A')
+            dir_negocio = contactos.get('direccion', 'N/A').encode('latin-1', 'replace').decode('latin-1')
+            
+            pdf.cell(0, 5, text=f"Tel: {tel_negocio}", align='C', new_x="LMARGIN", new_y="NEXT")
+            pdf.multi_cell(w=pdf.epw, h=5, text=f"Dirección: {dir_negocio}", align='C')
 
             pdf_bytes = pdf.output()
             filename = f"pedido_{pedido['id']}.pdf"

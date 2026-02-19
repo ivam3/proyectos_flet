@@ -127,6 +127,27 @@ def configuracion_view(page: ft.Page):
         label_style=ft.TextStyle(color=ft.Colors.BLACK),
     )
 
+    facebook_field = ft.TextField(
+        label="Facebook URL",
+        border_radius=10,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
+
+    instagram_field = ft.TextField(
+        label="Instagram URL",
+        border_radius=10,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
+
+    x_field = ft.TextField(
+        label="X (Twitter) URL",
+        border_radius=10,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
+
     direccion_field = ft.TextField(
         label="Dirección del Negocio",
         border_radius=10,
@@ -316,6 +337,17 @@ def configuracion_view(page: ft.Page):
 
     btn_add_grupo = ft.FilledButton("Agregar Grupo", icon=ft.Icons.ADD, on_click=agregar_grupo_click, style=ft.ButtonStyle(bgcolor=ft.Colors.BROWN_700, color=ft.Colors.WHITE))
 
+    # --- Diálogos de Notificación (Estilo Pedidos) ---
+    success_dialog = ft.AlertDialog(
+        title=ft.Text("Éxito", color=ft.Colors.GREEN, weight="bold"),
+        content=ft.Column([
+            ft.Icon(ft.Icons.CHECK_CIRCLE, size=50, color=ft.Colors.GREEN),
+            ft.Text("Configuración guardada correctamente.", text_align="center", color=ft.Colors.BLACK),
+        ], tight=True, horizontal_alignment="center"),
+        actions=[ft.TextButton("Aceptar", on_click=lambda e: setattr(success_dialog, "open", False) or page.update())]
+    )
+    page.overlay.append(success_dialog)
+
     def cargar_datos():
         config = get_configuracion()
         if not config:
@@ -355,6 +387,9 @@ def configuracion_view(page: ft.Page):
         telefono_field.value = contactos.get("telefono", "")
         email_field.value = contactos.get("email", "")
         whatsapp_field.value = contactos.get("whatsapp", "")
+        facebook_field.value = contactos.get("facebook", "")
+        instagram_field.value = contactos.get("instagram", "")
+        x_field.value = contactos.get("x", "")
         direccion_field.value = contactos.get("direccion", "")
 
         guisos_list_col.controls.clear()
@@ -402,6 +437,9 @@ def configuracion_view(page: ft.Page):
                 "telefono": telefono_field.value.strip(),
                 "email": email_field.value.strip(),
                 "whatsapp": whatsapp_field.value.strip(),
+                "facebook": facebook_field.value.strip(),
+                "instagram": instagram_field.value.strip(),
+                "x": x_field.value.strip(),
                 "direccion": direccion_field.value.strip(),
             }
         )
@@ -427,7 +465,8 @@ def configuracion_view(page: ft.Page):
             costo_envio=c_envio,
             categorias_disponibles=categorias_json
         ):
-            show_notification(page, "Configuración guardada correctamente", ft.Colors.GREEN_700)
+            success_dialog.open = True
+            page.update()
         else:
             show_notification(page, "Error al guardar configuración", ft.Colors.RED)
 
@@ -491,6 +530,9 @@ def configuracion_view(page: ft.Page):
                 telefono_field,
                 email_field,
                 whatsapp_field,
+                facebook_field,
+                instagram_field,
+                x_field,
                 direccion_field,
                 ft.Divider(),
                 ft.Text("Opciones Configurables (Extras)", size=18, weight="bold", color=ft.Colors.BLACK),

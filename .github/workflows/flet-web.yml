@@ -2,7 +2,7 @@ name: Build Flet Web (Doña Soco)
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
@@ -63,5 +63,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add dona_soco_app/app/build/web 
-          git commit -m "actions-dev: redes sociales|estetica" || echo "No changes to commit"
-          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main
+          git commit -m "actions-dev: redes sociales|estetica 2" || echo "No changes to commit"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:dev

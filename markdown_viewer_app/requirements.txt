@@ -1,0 +1,8 @@
+flet>=0.80.1
+flet>=0.80.1
+flet-cli>=0.80.1
+flet-core>=0.24.1
+flet-desktop>=0.80.1
+flet-web>=0.80.1
+markdown
+xhtml2pdf

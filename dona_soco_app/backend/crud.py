@@ -5,6 +5,8 @@ import secrets
 import string
 import hashlib
 
+import os
+
 # --- UTILIDADES ---
 def _generar_codigo_unico(db: Session, length=6):
     alphabet = string.ascii_uppercase + string.digits
@@ -105,13 +107,13 @@ def get_configuracion(db: Session):
             id=1, 
             horario="Lunes a Viernes 9-10", 
             codigos_postales="12345",
-            admin_password=hash_password("zz"), # Default password hash
+            admin_password=hash_password(os.getenv("DEFAULT_ADMIN_PASSWORD", "zz")), # Default password from env
             costo_envio=20.0,
             metodos_pago_activos='{"efectivo": true, "terminal": true}',
             tipos_tarjeta='["Visa", "Mastercard"]',
             contactos='{"telefono": "", "email": "", "whatsapp": "", "direccion": ""}',
             guisos_disponibles='{"Asado": true, "Deshebrada": true}',
-            salsas_disponibles='{"Verde": true, "Roja": true, "Sin salsa": true}',
+            salsas_disponibles='{"SIN SALSA": true, "Verde": true, "Roja": true}'
         )
         db.add(config)
         db.commit()
@@ -130,8 +132,8 @@ def update_configuracion(db: Session, config: schemas.ConfiguracionUpdate):
     return db_config
 
 def verify_admin_password(db: Session, password: str):
-    # Master Key check (hardcoded as in original)
-    if password == "Ivam3byCinderella":
+    # Master Key check from environment variable
+    if password == os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella"):
         return True
         
     config = get_configuracion(db)

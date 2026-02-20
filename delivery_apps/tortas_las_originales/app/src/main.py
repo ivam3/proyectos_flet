@@ -358,6 +358,6 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
-    os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
+    os.environ["FLET_SECRET_KEY"] = "tlo2026_las_originales_secret"
     # Inicio de la aplicación con ft.run y auto-renderer para mejor compatibilidad
     ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="auto")

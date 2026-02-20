@@ -42,13 +42,13 @@ jobs:
             libasound2t64
 
       - name: Install Python dependencies
-        working-directory: dona_soco_app/app
+        working-directory: delivery_apps/dona_soco_app/app
         run: |
           pip install --upgrade pip
           pip install flet==0.80.5 flet-cli==0.80.5
 
       - name: Build Flet Web
-        working-directory: dona_soco_app/app
+        working-directory: delivery_apps/dona_soco_app/app
         run: |
           flet build web
 
@@ -56,12 +56,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dona-soco-flet-web
-          path: dona_soco_app/app/build/web 
+          path: delivery_apps/dona_soco_app/app/build/web 
 
       - name: Commit web build to repo 
         run: | 
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add dona_soco_app/app/build/web 
-          git commit -m "actions: restore main branch" || echo "No changes to commit"
+          git add delivery_apps/dona_soco_app/app/build/web 
+          git commit -m "actions: restore main branch 2" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main

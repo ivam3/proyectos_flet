@@ -203,8 +203,11 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
             # 2. Si no hay bytes pero hay path (Modo Local/Android)
             elif file.path:
                 print(f"DEBUG: Modo Local detectado: {file.path}")
-                with open(file.path, "rb") as f:
-                    content = f.read()
+                try:
+                    with open(file.path, "rb") as f:
+                        content = f.read()
+                except Exception as e:
+                    print(f"Error leyendo archivo local: {e}")
             
             if content:
                 upload_status.value = "Subiendo al servidor..."
@@ -222,7 +225,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                 else:
                     upload_status.value = "Error: El servidor rechazó la imagen"
             else:
-                upload_status.value = "Error: No se pudo leer el contenido del archivo"
+                upload_status.value = "Error: No se pudo leer el archivo"
             
         except Exception as ex:
             print(f"Error crítico procesando imagen: {ex}")
@@ -230,30 +233,21 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         
         page.update()
 
-    # Configurar el callback del picker global para esta vista
-    def on_picker_result(e):
-        if e.files:
-            # Lanzamos la tarea de procesamiento
-            import asyncio
-            asyncio.create_task(process_selected_file(e.files[0]))
-
-    # IMPORTANTE: Reasignamos el handler al picker global cada vez que cargamos la vista
-    if not file_picker.page:
-        page.overlay.append(ft.Container(content=file_picker, width=1, height=1, opacity=0))
-        
-    file_picker.on_result = on_picker_result
-    # Forzar actualización para que el cliente reconozca el nuevo handler
-    try:
-        file_picker.update()
-    except:
-        pass
+    # IMPORTANTE: Usamos el sistema de contexto global definido en main.py
+    page.session.file_picker_ctx = {
+        "callback": process_selected_file
+    }
 
     async def on_pick_files(e):
          print("DEBUG: Intentando abrir selector de archivos...")
-         await file_picker.pick_files(
-             allow_multiple=False, 
-             file_type=ft.FilePickerFileType.IMAGE
-         )
+         try:
+             await file_picker.pick_files(
+                 allow_multiple=False, 
+                 file_type=ft.FilePickerFileType.IMAGE
+             )
+         except Exception as ex:
+             print(f"Error abriendo selector: {ex}")
+             show_notification(page, f"Error al abrir selector: {ex}", ft.Colors.RED)
 
     btn_subir_imagen.on_click = on_pick_files
 

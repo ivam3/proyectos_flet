@@ -52,7 +52,8 @@ def ensure_columns():
             "is_configurable_salsa": "INTEGER DEFAULT 0",
             "piezas": "INTEGER DEFAULT 1",
             "printer_target": "VARCHAR DEFAULT 'cocina'",
-            "grupos_opciones_ids": "TEXT DEFAULT '[]'"
+            "grupos_opciones_ids": "TEXT DEFAULT '[]'",
+            "categoria_id": "VARCHAR"
         }
         for col, type_def in columns_to_add.items():
             try:

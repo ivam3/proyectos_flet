@@ -388,7 +388,7 @@ class AdminShell(cmd.Cmd):
                     campos_validos = [
                         "nombre", "descripcion", "precio", "descuento", "imagen", 
                         "is_active", "is_configurable", "is_configurable_salsa", 
-                        "piezas", "printer_target", "grupos_opciones_ids"
+                        "piezas", "printer_target", "grupos_opciones_ids", "categoria_id"
                     ]
                     item_clean = {k: v for k, v in item.items() if k in campos_validos}
                     

@@ -187,6 +187,13 @@ def _iniciar_proceso_checkout(page: ft.Page, show_snackbar_func, nav):
     user_cart = page.session.cart
     items = user_cart.get_items()
     
+    # Inicializar contadores de piezas que necesitan configuración legacy
+    # Esto permite que si en un grupo dinámico se elige "Sin salsa", 
+    # se descuente de las piezas que pedirán salsa en el paso legacy.
+    for it in items:
+        it["_guiso_pieces_needed"] = it["cantidad"] * it.get("piezas", 1) if it.get("is_configurable") else 0
+        it["_salsa_pieces_needed"] = it["cantidad"] * it.get("piezas", 1) if it.get("is_configurable_salsa") else 0
+
     to_configure_guisos = [it for it in items if it.get("is_configurable")]
     to_configure_salsas = [it for it in items if it.get("is_configurable_salsa")]
     
@@ -321,6 +328,28 @@ def _mostrar_dialogo_generico(page, titulo_grupo, opciones_disponibles, items_to
         for op, c in counters.items():
             if c > 0: detalles_list.append(f"{op} x{c}")
         
+        # --- LÓGICA DE DEPENDENCIA (Evitar redundancia) ---
+        # Si el grupo se llama "Salsa", ver cuántas opciones "negativas" se eligieron
+        tg_low = titulo_grupo.lower()
+        if "salsa" in tg_low:
+            negativas = 0
+            for op, c in counters.items():
+                op_low = op.lower()
+                # Detectar opciones que indican que no se requiere salsa (sin, no, ninguno)
+                if any(x in op_low for x in ["sin", "no ", "ningun"]):
+                    negativas += c
+            if "_salsa_pieces_needed" in item:
+                item["_salsa_pieces_needed"] = max(0, item["_salsa_pieces_needed"] - negativas)
+            
+        if "guiso" in tg_low:
+            negativas = 0
+            for op, c in counters.items():
+                op_low = op.lower()
+                if any(x in op_low for x in ["sin", "no ", "ningun"]):
+                    negativas += c
+            if "_guiso_pieces_needed" in item:
+                item["_guiso_pieces_needed"] = max(0, item["_guiso_pieces_needed"] - negativas)
+
         res_str = f"{titulo_grupo}: " + ", ".join(detalles_list)
         
         if item.get("details"):
@@ -362,7 +391,12 @@ def _mostrar_dialogo_guisos(page, items_to_configure, current_index, guisos_disp
 
     item = items_to_configure[current_index]
     piezas_por_orden = item.get("piezas", 1)
-    cantidad_total = item["cantidad"] * piezas_por_orden
+    
+    # NUEVO: Si no quedan piezas que necesiten guiso (por elección previa en grupos), saltar
+    cantidad_total = item.get("_guiso_pieces_needed", 0)
+    if cantidad_total <= 0:
+        _mostrar_dialogo_guisos(page, items_to_configure, current_index + 1, guisos_disponibles, show_snackbar_func, final_callback)
+        return
     
     counters = {guiso: 0 for guiso in guisos_disponibles}
     remaining_text = ft.Text(f"Faltan por elegir: {cantidad_total}", color=ft.Colors.BLACK)
@@ -436,8 +470,13 @@ def _mostrar_dialogo_salsas(page, items_to_configure, current_index, salsas_disp
 
     item = items_to_configure[current_index]
     piezas_por_orden = item.get("piezas", 1)
-    cantidad_total = item["cantidad"] * piezas_por_orden
     
+    # NUEVO: Si no quedan piezas que necesiten salsa (por elección previa en grupos o "Sin salsa"), saltar
+    cantidad_total = item.get("_salsa_pieces_needed", 0)
+    if cantidad_total <= 0:
+        _mostrar_dialogo_salsas(page, items_to_configure, current_index + 1, salsas_disponibles, show_snackbar_func, final_callback)
+        return
+
     counters = {salsa: 0 for salsa in salsas_disponibles}
     remaining_text = ft.Text(f"Faltan por elegir: {cantidad_total}", color=ft.Colors.BLACK)
 

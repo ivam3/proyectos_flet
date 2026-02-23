@@ -110,14 +110,18 @@ def main(page: ft.Page):
         if not ctx:
             return
         try:
-            ctx["callback"](e.files[0])
+            # Si el callback es corrutina, lo ejecutamos con run_task
+            import inspect
+            if inspect.iscoroutinefunction(ctx["callback"]):
+                page.run_task(ctx["callback"], e.files[0])
+            else:
+                ctx["callback"](e.files[0])
         except Exception as ex:
             print(f"Error callback: {ex}")
 
     global_file_picker = ft.FilePicker()
     global_file_picker.on_result = global_file_picker_handler
-    # En build web, visible=False puede hacer que el control no se inicialice.
-    # Usamos un contenedor casi invisible (1x1 px) pero técnicamente visible.
+    # Contenedor protector para evitar el error "Unknown control: FilePicker"
     page.overlay.append(ft.Container(content=global_file_picker, width=1, height=1, opacity=0))
     page.session.file_picker = global_file_picker
 
@@ -196,12 +200,7 @@ def main(page: ft.Page):
             content_area.content = create_checkout_view(page, show_snackbar, nav)
         elif route.startswith("/admin"):
             if admin_mode:
-                # Asegurar que los pickers estén en la página
-                if not global_file_picker.page:
-                    page.overlay.append(ft.Container(content=global_file_picker, width=1, height=1, opacity=0))
-                if not export_file_picker.page:
-                    page.overlay.append(ft.Container(content=export_file_picker, width=1, height=1, opacity=0))
-                
+                # Los pickers ya están en el overlay global de la página
                 nav.selected_index = 3
                 content_area.content = create_admin_panel_view(
                     page, 
@@ -359,5 +358,5 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
     os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
-    # Inicio de la aplicación con ft.run y auto-renderer para mejor compatibilidad
-    ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="auto")
+    # Inicio de la aplicación con ft.run y renderer canvaskit para máxima compatibilidad
+    ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")

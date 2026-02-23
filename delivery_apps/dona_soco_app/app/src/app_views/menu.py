@@ -69,9 +69,59 @@ def cargar_menu(page: ft.Page):
 
                 precio_final = precio * (1 - descuento / 100) if descuento > 0 else precio
 
-                async def _on_add_clicked(e, item_id=pid, name=nombre, price=precio_final, img=imagen, is_conf=is_configurable, is_conf_salsa=is_configurable_salsa, pz=piezas, g_ids=grupos_opciones_ids):
+                # --- LÓGICA DE ACCIONES (Añadir / Cantidad) ---
+                def create_action_buttons(p_id, p_nombre, p_precio, p_img, p_is_conf, p_is_conf_salsa, p_pz, p_g_ids, container_ref):
+                    qty = user_cart.get_item_quantity(p_id)
+                    
+                    if qty == 0:
+                        # Botón Agregar inicial
+                        return ft.IconButton(
+                            icon=ft.Icons.ADD_SHOPPING_CART, 
+                            icon_size=20,
+                            style=ft.ButtonStyle(bgcolor=ft.Colors.ORANGE_50, shape=ft.CircleBorder()),
+                            on_click=lambda e: _on_add_first(e, p_id, p_nombre, p_precio, p_img, p_is_conf, p_is_conf_salsa, p_pz, p_g_ids, container_ref)
+                        )
+                    else:
+                        # Selector de cantidad - 1 +
+                        return ft.Container(
+                            bgcolor=ft.Colors.ORANGE_100,
+                            border_radius=20,
+                            padding=ft.Padding.symmetric(horizontal=5),
+                            content=ft.Row([
+                                ft.IconButton(
+                                    icon=ft.Icons.REMOVE, 
+                                    icon_size=16, 
+                                    icon_color=ft.Colors.ORANGE_900,
+                                    on_click=lambda e: _on_change_qty(e, p_id, -1, container_ref)
+                                ),
+                                ft.Text(str(qty), weight="bold", size=14, color=ft.Colors.ORANGE_900),
+                                ft.IconButton(
+                                    icon=ft.Icons.ADD, 
+                                    icon_size=16, 
+                                    icon_color=ft.Colors.ORANGE_900,
+                                    on_click=lambda e: _on_change_qty(e, p_id, 1, container_ref)
+                                ),
+                            ], spacing=0, alignment=ft.MainAxisAlignment.CENTER)
+                        )
+
+                def _on_add_first(e, item_id, name, price, img, is_conf, is_conf_salsa, pz, g_ids, container_ref):
                     user_cart.add_item(item_id, name, price, img, is_configurable=is_conf, is_configurable_salsa=is_conf_salsa, piezas=pz, grupos_opciones_ids=g_ids)
-                    await page.push_route("/carrito") # Redirección directa al carrito vía ruteo unificado
+                    container_ref.content = create_action_buttons(item_id, name, price, img, is_conf, is_conf_salsa, pz, g_ids, container_ref)
+                    page.update()
+
+                def _on_change_qty(e, item_id, delta, container_ref):
+                    current_qty = user_cart.get_item_quantity(item_id)
+                    new_qty = current_qty + delta
+                    user_cart.update_quantity(item_id, new_qty)
+                    
+                    p = next((item for item in platillos if item['id'] == item_id), None)
+                    if p:
+                        container_ref.content = create_action_buttons(
+                            item_id, p['nombre'], p['precio'], p.get('imagen'), 
+                            p.get('is_configurable',0), p.get('is_configurable_salsa',0), 
+                            p.get('piezas',1), p.get('grupos_opciones_ids',"[]"),
+                            container_ref
+                        )
                     page.update()
 
                 p_display = ft.Column([
@@ -86,14 +136,16 @@ def cargar_menu(page: ft.Page):
                     if imagen.startswith(("http://", "https://")):
                         img_src = imagen
                     elif "." in imagen and not imagen.startswith("/"):
-                        # Si es una imagen subida por el API (nombre.jpg)
-                        # Opcional: Podrías usar API_URL directamente aquí si quieres forzar carga externa
                         from config import API_URL
                         img_src = f"{API_URL}/static/uploads/{imagen}"
                     else:
                         img_src = f"/{imagen}"
                 else:
                     img_src = "/icon.png"
+
+                # Contenedor para los botones de acción
+                action_area = ft.Container()
+                action_area.content = create_action_buttons(pid, nombre, precio_final, imagen, is_configurable, is_configurable_salsa, piezas, grupos_opciones_ids, action_area)
 
                 menu_grid.controls.append(
                     ft.Card(
@@ -123,11 +175,7 @@ def cargar_menu(page: ft.Page):
                                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                                         controls=[
                                             p_display,
-                                            ft.IconButton(
-                                                icon=ft.Icons.ADD_SHOPPING_CART, icon_size=20,
-                                                style=ft.ButtonStyle(bgcolor=ft.Colors.ORANGE_50, shape=ft.CircleBorder()),
-                                                on_click=_on_add_clicked
-                                            )
+                                            action_area
                                         ]
                                     )
                                 ]

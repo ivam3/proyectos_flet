@@ -24,11 +24,21 @@ class DBManager:
 
     # --- MENU ---
     def get_all_menu(self):
-        r = self.client.get("/menu", params={"solo_activos": False})
-        return r.json()
+        try:
+            r = self.client.get("/menu", params={"solo_activos": False})
+            if r.status_code != 200:
+                print(f"❌ Error del API ({r.status_code}): {r.text}")
+                return []
+            data = r.json()
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            print(f"🛑 Error de conexión: {e}")
+            return []
 
     def delete_item(self, item_id: int):
         r = self.client.delete(f"/menu/{item_id}")
+        if r.status_code != 200:
+            print(f"❌ Error al borrar: {r.text}")
         return r.status_code == 200
 
     def create_item(self, data: Dict[str, Any]):
@@ -113,7 +123,7 @@ class DBManager:
 
 class AdminShell(cmd.Cmd):
     intro = '🛠️ Sistema de Administración Doña Soco. Escribe "help" o "?" para listar comandos.\n'
-    prompt = '(ds-admin) '
+    prompt = '(db-admin) '
     
     def __init__(self):
         super().__init__()

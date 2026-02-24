@@ -1,7 +1,7 @@
 [project]
-name = "dona-soco-app"
+name = "las_originales"
 version = "0.1.0"
-description = "Aplicación de pedidos y administración Antojitos Doña Soco"
+description = "Aplicación de pedidos y administración Tortas las Originales"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
@@ -14,14 +14,14 @@ dependencies = [
 ]
 
 [tool.flet]
-app_name = "Antojitos Doña Soco"
+app_name = "Tortas las Originales"
 # org name in reverse domain name notation, e.g. "com.mycompany".
 # Combined with project.name to build bundle ID for iOS and Android apps
 org = "Ivam3byCinderella"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "Doña Soco App"
+product = "Tortas las Originales"
 
 # company name to display in about app dialogs
 company = "Ivam3byCinderella"
@@ -30,7 +30,7 @@ company = "Ivam3byCinderella"
 copyright = "Copyright (C) 2026 by Ivam3byCinderella"
 
 [tool.flet.android]
-package_name = "com.donasoco.app"
+package_name = "com.lasoriginales.app"
 
 [tool.flet.app]
 path = "src"

@@ -25,14 +25,12 @@ if not os.path.exists(DB_DESTINATION) and os.path.exists(DB_SOURCE):
 mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('application/wasm', '.wasm')
 
-# --- SEGURIDAD ESTRICTA ---
-# Se requiere configurar API_SECRET_KEY en las variables de entorno de Railway
+# --- SEGURIDAD Y TENANT ---
 API_KEY = os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella")
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KEY")):
     """Verifica que el cliente envíe la llave correcta en el encabezado X-API-KEY."""
     if not x_api_key or x_api_key != API_KEY:
-        # El log de error solo es visible para ti en el panel de Railway
         print(f"ALERTA SEGURIDAD: Acceso rechazado. Header: {x_api_key}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -40,39 +38,68 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KE
         )
     return x_api_key
 
+async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
+    """Obtiene el ID del tenant desde los encabezados. Obligatorio para garantizar aislamiento."""
+    if not x_tenant_id or x_tenant_id.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Tenant-ID header is required for data isolation"
+        )
+    return x_tenant_id
+
 # Inicialización de Base de Datos
 models.Base.metadata.create_all(bind=engine)
 
 # --- MIGRACIÓN MANUAL (Asegurar columnas nuevas) ---
 def ensure_columns():
-    from sqlalchemy import text
+    from sqlalchemy import text, inspect
+    inspector = inspect(engine)
+    
     with engine.connect() as conn:
-        columns_to_add = {
-            "is_configurable": "INTEGER DEFAULT 0",
-            "is_configurable_salsa": "INTEGER DEFAULT 0",
-            "piezas": "INTEGER DEFAULT 1",
-            "printer_target": "VARCHAR DEFAULT 'cocina'",
-            "grupos_opciones_ids": "TEXT DEFAULT '[]'",
-            "categoria_id": "VARCHAR"
-        }
-        for col, type_def in columns_to_add.items():
-            try:
-                conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
-                conn.commit()
-            except Exception:
-                pass
-        
-        # Migración para la tabla configuracion
+        # 1. Columnas generales del menú
         try:
-            conn.execute(text("ALTER TABLE configuracion ADD COLUMN categorias_disponibles TEXT DEFAULT '[]'"))
-            conn.commit()
-            print("DEBUG: Columna 'categorias_disponibles' añadida con éxito.")
-        except Exception:
-            pass
+            menu_columns = [c['name'] for c in inspector.get_columns("menu")]
+            cols_to_add = {
+                "is_configurable": "INTEGER DEFAULT 0",
+                "is_configurable_salsa": "INTEGER DEFAULT 0",
+                "piezas": "INTEGER DEFAULT 1",
+                "printer_target": "VARCHAR DEFAULT 'cocina'",
+                "grupos_opciones_ids": "TEXT DEFAULT '[]'",
+                "categoria_id": "VARCHAR"
+            }
+            for col, type_def in cols_to_add.items():
+                if col not in menu_columns:
+                    conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
+                    conn.commit()
+        except Exception: pass
+        
+        # 2. Multi-tenancy: tenant_id en todas las tablas
+        tables = ["menu", "grupos_opciones", "configuracion", "ordenes", "orden_detalle", "historial_estados"]
+        for table in tables:
+            try:
+                columns = [c['name'] for c in inspector.get_columns(table)]
+                if "tenant_id" not in columns:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR"))
+                    # Poblar con valor por defecto solo si se acaba de crear la columna
+                    conn.execute(text(f"UPDATE {table} SET tenant_id = 'dona_soco' WHERE tenant_id IS NULL"))
+                    conn.commit()
+                    print(f"DEBUG: Columna 'tenant_id' añadida y poblada en {table}")
+            except Exception as e:
+                print(f"ERROR MIGRACION {table}: {e}")
+                try: conn.rollback()
+                except Exception: pass
+
+        # 3. Columnas extras en configuración
+        try:
+            config_cols = [c['name'] for c in inspector.get_columns("configuracion")]
+            if "categorias_disponibles" not in config_cols:
+                conn.execute(text("ALTER TABLE configuracion ADD COLUMN categorias_disponibles TEXT DEFAULT '[]'"))
+                conn.commit()
+        except Exception: pass
 
 ensure_columns()
 
-app = FastAPI(title="Antojitos Doña Soco API")
+app = FastAPI(title="Delivery Multi-tenant API")
 
 # --- MIDDLEWARE DE SEGURIDAD GLOBAL (CRÍTICO PARA FLET WEB) ---
 @app.middleware("http")
@@ -106,121 +133,208 @@ app.add_middleware(
 # --- RUTAS DE API ---
 
 @app.get("/menu", response_model=List[schemas.Menu])
-def read_menu(solo_activos: bool = True, search: Optional[str] = None, db: Session = Depends(get_db)):
-    return crud.get_menu(db, solo_activos, search)
+def read_menu(
+    solo_activos: bool = True, 
+    search: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.get_menu(db, tenant_id, solo_activos, search)
 
 @app.post("/menu", response_model=schemas.Menu, dependencies=[Depends(verify_api_key)])
-def create_menu_item(item: schemas.MenuCreate, db: Session = Depends(get_db)):
+def create_menu_item(
+    item: schemas.MenuCreate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
     try:
-        return crud.create_platillo(db, item)
+        return crud.create_platillo(db, tenant_id, item)
     except Exception as e:
         print(f"ERROR CRÍTICO CREANDO PLATILLO: {e}")
-        # Intentar ver si es un error de integridad de base de datos
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @app.put("/menu/{item_id}", response_model=schemas.Menu, dependencies=[Depends(verify_api_key)])
-def update_menu_item(item_id: int, item: schemas.MenuCreate, db: Session = Depends(get_db)):
-    db_item = crud.update_platillo(db, item_id, item)
+def update_menu_item(
+    item_id: int, 
+    item: schemas.MenuCreate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    db_item = crud.update_platillo(db, tenant_id, item_id, item)
     if not db_item:
         raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return db_item
 
 @app.delete("/menu/{item_id}", dependencies=[Depends(verify_api_key)])
-def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
-    success = crud.delete_platillo(db, item_id)
+def delete_menu_item(
+    item_id: int, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.delete_platillo(db, tenant_id, item_id)
     if not success:
         raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return {"ok": True}
 
 @app.get("/opciones", response_model=List[schemas.GrupoOpciones])
-def read_grupos_opciones(db: Session = Depends(get_db)):
-    return crud.get_grupos_opciones(db)
+def read_grupos_opciones(
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.get_grupos_opciones(db, tenant_id)
 
 @app.post("/opciones", response_model=schemas.GrupoOpciones, dependencies=[Depends(verify_api_key)])
-def create_grupo_opciones(grupo: schemas.GrupoOpcionesCreate, db: Session = Depends(get_db)):
-    return crud.create_grupo_opciones(db, grupo)
+def create_grupo_opciones(
+    grupo: schemas.GrupoOpcionesCreate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.create_grupo_opciones(db, tenant_id, grupo)
 
 @app.put("/opciones/{grupo_id}", response_model=schemas.GrupoOpciones, dependencies=[Depends(verify_api_key)])
-def update_grupo_opciones(grupo_id: int, grupo: schemas.GrupoOpcionesCreate, db: Session = Depends(get_db)):
-    db_grupo = crud.update_grupo_opciones(db, grupo_id, grupo)
+def update_grupo_opciones(
+    grupo_id: int, 
+    grupo: schemas.GrupoOpcionesCreate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    db_grupo = crud.update_grupo_opciones(db, tenant_id, grupo_id, grupo)
     if not db_grupo:
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
     return db_grupo
 
 @app.delete("/opciones/{grupo_id}", dependencies=[Depends(verify_api_key)])
-def delete_grupo_opciones(grupo_id: int, db: Session = Depends(get_db)):
-    success = crud.delete_grupo_opciones(db, grupo_id)
+def delete_grupo_opciones(
+    grupo_id: int, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.delete_grupo_opciones(db, tenant_id, grupo_id)
     if not success:
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
     return {"ok": True}
 
 @app.get("/configuracion", response_model=schemas.Configuracion)
-def read_config(db: Session = Depends(get_db)):
-    return crud.get_configuracion(db)
+def read_config(
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.get_configuracion(db, tenant_id)
 
 @app.put("/configuracion", response_model=schemas.Configuracion, dependencies=[Depends(verify_api_key)])
-def update_config(config: schemas.ConfiguracionUpdate, db: Session = Depends(get_db)):
-    return crud.update_configuracion(db, config)
+def update_config(
+    config: schemas.ConfiguracionUpdate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.update_configuracion(db, tenant_id, config)
 
 @app.post("/pedidos", response_model=schemas.Orden)
-def create_pedido(orden: schemas.OrdenCreate, db: Session = Depends(get_db)):
-    return crud.create_pedido(db, orden)
+def create_pedido(
+    orden: schemas.OrdenCreate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.create_pedido(db, tenant_id, orden)
 
 @app.get("/pedidos/seguimiento", response_model=schemas.Orden)
-def track_pedido(telefono: str, codigo: str, db: Session = Depends(get_db)):
-    orden = crud.get_pedido_by_tracking(db, telefono, codigo)
+def track_pedido(
+    telefono: str, 
+    codigo: str, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    orden = crud.get_pedido_by_tracking(db, tenant_id, telefono, codigo)
     if not orden:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return orden
 
 @app.get("/pedidos", response_model=List[schemas.Orden], dependencies=[Depends(verify_api_key)])
-def read_pedidos(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db)):
-    return crud.get_pedidos(db, skip, limit, search)
+def read_pedidos(
+    skip: int = 0, 
+    limit: int = 100, 
+    search: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.get_pedidos(db, tenant_id, skip, limit, search)
 
 @app.put("/pedidos/{orden_id}/estado", dependencies=[Depends(verify_api_key)])
-def update_estado(orden_id: int, nuevo_estado: str, motivo: Optional[str] = None, db: Session = Depends(get_db)):
-    success = crud.update_estado_pedido(db, orden_id, nuevo_estado, motivo)
+def update_estado(
+    orden_id: int, 
+    nuevo_estado: str, 
+    motivo: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.update_estado_pedido(db, tenant_id, orden_id, nuevo_estado, motivo)
     if not success:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return {"ok": True}
 
 @app.put("/pedidos/{orden_id}/pago", dependencies=[Depends(verify_api_key)])
-def update_pago(orden_id: int, data: schemas.PagoUpdate, db: Session = Depends(get_db)):
-    success = crud.update_pago_pedido(db, orden_id, data.metodo_pago, data.paga_con)
+def update_pago(
+    orden_id: int, 
+    data: schemas.PagoUpdate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.update_pago_pedido(db, tenant_id, orden_id, data.metodo_pago, data.paga_con)
     if not success:
          raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return {"ok": True}
 
 @app.delete("/pedidos/{orden_id}", dependencies=[Depends(verify_api_key)])
-def delete_pedido(orden_id: int, db: Session = Depends(get_db)):
-    success = crud.delete_pedido(db, orden_id)
+def delete_pedido(
+    orden_id: int, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.delete_pedido(db, tenant_id, orden_id)
     if not success:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return {"ok": True}
 
 @app.put("/admin/menu/visibilidad-global", dependencies=[Depends(verify_api_key)])
-def toggle_global_visibility(is_active: int, db: Session = Depends(get_db)):
-    crud.update_all_platillos_visibility(db, is_active)
+def toggle_global_visibility(
+    is_active: int, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    crud.update_all_platillos_visibility(db, tenant_id, is_active)
     return {"ok": True}
 
 @app.put("/menu/{item_id}/visibilidad", dependencies=[Depends(verify_api_key)])
-def toggle_menu_item(item_id: int, is_active: int, db: Session = Depends(get_db)):
-    success = crud.toggle_platillo_visibility(db, item_id, is_active)
+def toggle_menu_item(
+    item_id: int, 
+    is_active: int, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.toggle_platillo_visibility(db, tenant_id, item_id, is_active)
     if not success:
          raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return {"ok": True}
 
 @app.post("/admin/login")
-def admin_login(creds: schemas.LoginRequest, db: Session = Depends(get_db)):
-    is_valid = crud.verify_admin_password(db, creds.password)
+def admin_login(
+    creds: schemas.LoginRequest, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    is_valid = crud.verify_admin_password(db, tenant_id, creds.password)
     if not is_valid:
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     return {"authenticated": True}
 
 @app.post("/admin/change-password", dependencies=[Depends(verify_api_key)])
-def admin_change_pass(data: schemas.PasswordUpdate, db: Session = Depends(get_db)):
-    crud.change_admin_password(db, data.new_password)
+def admin_change_pass(
+    data: schemas.PasswordUpdate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    crud.change_admin_password(db, tenant_id, data.new_password)
     return {"ok": True}
 
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
@@ -288,7 +402,7 @@ async def read_root():
                 "Cache-Control": "no-cache, no-store, must-revalidate"
             }
         )
-    return {"message": "API de Antojitos Doña Soco funcionando"}
+    return {"message": "API de delivery apps by Ivam3byCinderella funcionando"}
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):

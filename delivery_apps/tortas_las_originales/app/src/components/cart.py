@@ -54,5 +54,11 @@ class Cart:
     def clear_cart(self):
         self.items.clear()
 
+    def get_item_quantity(self, item_id: int) -> int:
+        for it in self.items:
+            if it["id"] == item_id:
+                return it["cantidad"]
+        return 0
+
     def get_total(self) -> float:
         return sum(it["precio"] * it["cantidad"] for it in self.items)

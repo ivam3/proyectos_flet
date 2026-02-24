@@ -94,3 +94,14 @@ Después de un extenso proceso de depuración, se logró identificar y soluciona
     4. Al presionar "Agregar", el botón se transforma en un control `- 1 +`, permitiendo ajustar la cantidad directamente desde el menú.
     5. Se añadió el método `get_item_quantity` en la clase `Cart` para sincronizar las cantidades entre vistas.
     6. Este enfoque es más profesional y permite una compra más rápida y fluida.
+
+### 29. Implementación de Multi-tenencia (Backend Centralizado)
+*   **Cambio:** Se migró a un backend único para todos los negocios del proyecto.
+*   **Solución:**
+    1. Se añadió el campo `tenant_id` a todas las tablas de la base de datos.
+    2. El API ahora requiere el encabezado `X-Tenant-ID` para filtrar menús, configuraciones y pedidos.
+    3. Se implementó una migración automática que asigna `dona_soco` por defecto a los datos existentes.
+
+### 30. Actualización de CI/CD (GitHub Actions)
+*   **Cambio:** Se actualizó `.github/workflows/flet-web.yml`.
+*   **Solución:** Ahora el flujo de trabajo construye automáticamente tanto `dona_soco_app` como `tortas_las_originales` en cada push a la rama `dev`, manteniendo ambos sitios actualizados en Railway.

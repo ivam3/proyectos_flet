@@ -10,7 +10,8 @@ import shutil
 from typing import Dict, Any, List
 
 # Configurar el path para importar config.py
-sys.path.append(os.path.join(os.getcwd(), "app/src"))
+tenant = sys.argv[1] if len(sys.argv) > 1 else print("❌ Por favor, especifica el tenant como argumento: python db_admin.py [tenant]") or sys.exit(1)
+sys.path.append(os.path.join(os.getcwd(), f"{tenant}/app/src"))
 try:
     from config import API_URL, HEADERS, API_KEY
 except ImportError:
@@ -23,11 +24,21 @@ class DBManager:
 
     # --- MENU ---
     def get_all_menu(self):
-        r = self.client.get("/menu", params={"solo_activos": False})
-        return r.json()
+        try:
+            r = self.client.get("/menu", params={"solo_activos": False})
+            if r.status_code != 200:
+                print(f"❌ Error del API ({r.status_code}): {r.text}")
+                return []
+            data = r.json()
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            print(f"🛑 Error de conexión: {e}")
+            return []
 
     def delete_item(self, item_id: int):
         r = self.client.delete(f"/menu/{item_id}")
+        if r.status_code != 200:
+            print(f"❌ Error al borrar: {r.text}")
         return r.status_code == 200
 
     def create_item(self, data: Dict[str, Any]):
@@ -112,7 +123,7 @@ class DBManager:
 
 class AdminShell(cmd.Cmd):
     intro = '🛠️ Sistema de Administración Doña Soco. Escribe "help" o "?" para listar comandos.\n'
-    prompt = '(ds-admin) '
+    prompt = '(db-admin) '
     
     def __init__(self):
         super().__init__()
@@ -341,7 +352,8 @@ class AdminShell(cmd.Cmd):
             if isinstance(data, dict) and "grupos_extras" in data:
                 print("➕ Sincronizando grupos de extras...")
                 current_groups = self.mgr.get_groups()
-                group_map = {g['nombre'].strip().lower(): g['id'] for g in current_groups}
+                if not isinstance(current_groups, list): current_groups = []
+                group_map = {g['nombre'].strip().lower(): g['id'] for g in current_groups if isinstance(g, dict)}
                 
                 for g in data["grupos_extras"]:
                     name_clean = g['nombre'].strip().lower()
@@ -378,7 +390,8 @@ class AdminShell(cmd.Cmd):
             if items_to_import:
                 print("🔍 Sincronizando menú...")
                 current_menu = self.mgr.get_all_menu()
-                menu_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu}
+                if not isinstance(current_menu, list): current_menu = []
+                menu_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu if isinstance(item, dict)}
 
                 print(f"📥 Procesando {len(items_to_import)} platillos...")
                 for item in items_to_import:
@@ -450,11 +463,18 @@ class AdminShell(cmd.Cmd):
     def do_ls(self, arg):
         """Lista todos los platillos: ls"""
         items = self.mgr.get_all_menu()
+        if not items or not isinstance(items, list):
+            print("📭 No hay platillos que mostrar o hubo un error en la consulta.")
+            return
+
         print(f"{ 'ID':<5} | {'Nombre':<30} | {'Precio':<8} | {'Imagen'}")
         print("-" * 75)
         for i in items:
-            img = i.get("imagen") or "---"
-            print(f"{i['id']:<5} | {i['nombre'][:30]:<30} | ${i['precio']:<7.2f} | {img}")
+            if isinstance(i, dict):
+                img = i.get("imagen") or "---"
+                print(f"{i.get('id', '??'):<5} | {i.get('nombre', 'Sin nombre')[:30]:<30} | ${i.get('precio', 0.0):<7.2f} | {img}")
+            else:
+                print(f"⚠️ Item inesperado: {i}")
 
     def do_rm(self, arg):
         """Elimina un platillo por ID: rm [id]"""

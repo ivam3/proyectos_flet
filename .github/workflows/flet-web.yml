@@ -1,4 +1,4 @@
-name: Build Flet Web (Doña Soco)
+name: Build Flet Web (Multi-tenant)
 
 on:
   push:
@@ -41,27 +41,34 @@ jobs:
             libxkbcommon0 \
             libasound2t64
 
-      - name: Install Python dependencies
-        working-directory: delivery_apps/dona_soco_app/app
+      - name: Install Flet CLI
         run: |
           pip install --upgrade pip
           pip install flet==0.80.5 flet-cli==0.80.5
 
-      - name: Build Flet Web
+      - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app
-        run: |
-          flet build web
+        run: flet build web
 
-      - name: Upload web build
+      - name: Build Tortas Las Originales Web
+        working-directory: delivery_apps/tortas_las_originales/app
+        run: flet build web
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dona-soco-flet-web
-          path: delivery_apps/dona_soco_app/app/build/web 
+          name: multi-tenant-web-builds
+          path: |
+            delivery_apps/dona_soco_app/app/build/web
+            delivery_apps/tortas_las_originales/app/build/web
 
-      - name: Commit web build to repo 
-        run: | 
+      - name: Commit web builds to repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add delivery_apps/dona_soco_app/app/build/web 
-          git commit -m "actions: updates(db:categoria_id)" || echo "No changes to commit"
+          git add delivery_apps/dona_soco_app/app/build/web
+          git add delivery_apps/tortas_las_originales/app/build/web
+          git commit -m "actions: updates web builds (Multi-tenant)" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:dev

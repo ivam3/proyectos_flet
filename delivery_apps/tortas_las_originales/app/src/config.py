@@ -11,7 +11,7 @@ TENANT_ID = os.getenv("TENANT_ID", "tortas_las_originales")
 
 # URL de la API, cambiar si se usa localmente
 API_URL = os.getenv(
-        "API_URL", "https://dona-soco-api-dev.up.railway.app"
+        "API_URL", "https://delivery-apps-api-dev.up.railway.app"
         )
 
 # Seguridad de la API

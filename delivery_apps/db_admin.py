@@ -122,7 +122,7 @@ class DBManager:
         return r.json().get("files", [])
 
 class AdminShell(cmd.Cmd):
-    intro = '🛠️ Sistema de Administración Doña Soco. Escribe "help" o "?" para listar comandos.\n'
+    intro = f'🛠️ Sistema de Administración {tenant}. Escribe "help" o "?" para listar comandos.\n'
     prompt = '(db-admin) '
     
     def __init__(self):

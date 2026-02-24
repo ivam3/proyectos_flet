@@ -3,7 +3,7 @@
 
 import os
 
-APP_NAME = "Tortas Las Originales DEV"
+APP_NAME = "Tortas Las Originales"
 COMPANY_NAME = "Tortas Las Originales" # Usado en reportes y encabezados
 
 # Identificador único para multi-tenencia

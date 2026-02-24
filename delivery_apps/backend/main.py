@@ -39,11 +39,11 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KE
     return x_api_key
 
 async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
-    """Obtiene el ID del tenant desde los encabezados."""
-    if not x_tenant_id:
+    """Obtiene el ID del tenant desde los encabezados. Obligatorio para garantizar aislamiento."""
+    if not x_tenant_id or x_tenant_id.strip() == "":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="X-Tenant-ID header is missing"
+            detail="X-Tenant-ID header is required for data isolation"
         )
     return x_tenant_id
 
@@ -52,36 +52,49 @@ models.Base.metadata.create_all(bind=engine)
 
 # --- MIGRACIÓN MANUAL (Asegurar columnas nuevas) ---
 def ensure_columns():
-    from sqlalchemy import text
+    from sqlalchemy import text, inspect
+    inspector = inspect(engine)
+    
     with engine.connect() as conn:
         # 1. Columnas generales del menú
-        columns_to_add = {
-            "is_configurable": "INTEGER DEFAULT 0",
-            "is_configurable_salsa": "INTEGER DEFAULT 0",
-            "piezas": "INTEGER DEFAULT 1",
-            "printer_target": "VARCHAR DEFAULT 'cocina'",
-            "grupos_opciones_ids": "TEXT DEFAULT '[]'",
-            "categoria_id": "VARCHAR"
-        }
-        for col, type_def in columns_to_add.items():
-            try:
-                conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
-                conn.commit()
-            except Exception: pass
+        try:
+            menu_columns = [c['name'] for c in inspector.get_columns("menu")]
+            cols_to_add = {
+                "is_configurable": "INTEGER DEFAULT 0",
+                "is_configurable_salsa": "INTEGER DEFAULT 0",
+                "piezas": "INTEGER DEFAULT 1",
+                "printer_target": "VARCHAR DEFAULT 'cocina'",
+                "grupos_opciones_ids": "TEXT DEFAULT '[]'",
+                "categoria_id": "VARCHAR"
+            }
+            for col, type_def in cols_to_add.items():
+                if col not in menu_columns:
+                    conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
+                    conn.commit()
+        except Exception: pass
         
         # 2. Multi-tenancy: tenant_id en todas las tablas
         tables = ["menu", "grupos_opciones", "configuracion", "ordenes", "orden_detalle", "historial_estados"]
         for table in tables:
             try:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR INDEX DEFAULT 'dona_soco'"))
-                conn.commit()
-                print(f"DEBUG: Columna 'tenant_id' añadida a {table}")
-            except Exception: pass
+                columns = [c['name'] for c in inspector.get_columns(table)]
+                if "tenant_id" not in columns:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN tenant_id VARCHAR"))
+                    # Poblar con valor por defecto solo si se acaba de crear la columna
+                    conn.execute(text(f"UPDATE {table} SET tenant_id = 'dona_soco' WHERE tenant_id IS NULL"))
+                    conn.commit()
+                    print(f"DEBUG: Columna 'tenant_id' añadida y poblada en {table}")
+            except Exception as e:
+                print(f"ERROR MIGRACION {table}: {e}")
+                try: conn.rollback()
+                except Exception: pass
 
         # 3. Columnas extras en configuración
         try:
-            conn.execute(text("ALTER TABLE configuracion ADD COLUMN categorias_disponibles TEXT DEFAULT '[]'"))
-            conn.commit()
+            config_cols = [c['name'] for c in inspector.get_columns("configuracion")]
+            if "categorias_disponibles" not in config_cols:
+                conn.execute(text("ALTER TABLE configuracion ADD COLUMN categorias_disponibles TEXT DEFAULT '[]'"))
+                conn.commit()
         except Exception: pass
 
 ensure_columns()
@@ -389,7 +402,7 @@ async def read_root():
                 "Cache-Control": "no-cache, no-store, must-revalidate"
             }
         )
-    return {"message": "API de Antojitos Doña Soco funcionando"}
+    return {"message": "API de delivery apps by Ivam3byCinderella funcionando"}
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):

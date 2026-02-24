@@ -4,6 +4,7 @@ from datetime import datetime
 
 # --- SCHEMAS DE MENU ---
 class MenuBase(BaseModel):
+    tenant_id: Optional[str] = None
     nombre: str
     descripcion: Optional[str] = None
     precio: float
@@ -28,6 +29,7 @@ class Menu(MenuBase):
 
 # --- SCHEMAS DE GRUPOS OPCIONES ---
 class GrupoOpcionesBase(BaseModel):
+    tenant_id: Optional[str] = None
     nombre: str
     opciones: str # JSON list string
     seleccion_multiple: Optional[int] = 0
@@ -43,6 +45,7 @@ class GrupoOpciones(GrupoOpcionesBase):
 
 # --- SCHEMAS DE ORDEN ---
 class OrdenDetalleBase(BaseModel):
+    tenant_id: Optional[str] = None
     producto: str
     cantidad: int
     precio_unitario: float
@@ -59,6 +62,7 @@ class OrdenDetalle(OrdenDetalleBase):
         from_attributes = True
 
 class OrdenBase(BaseModel):
+    tenant_id: Optional[str] = None
     nombre_cliente: str
     telefono: str
     direccion: str
@@ -71,6 +75,7 @@ class OrdenCreate(OrdenBase):
     items: List[OrdenDetalleCreate] # Lista de productos al crear
 
 class HistorialEstado(BaseModel):
+    tenant_id: Optional[str] = None
     nuevo_estado: str
     fecha: datetime
     class Config:
@@ -94,6 +99,7 @@ class PagoUpdate(BaseModel):
 
 # --- SCHEMAS DE CONFIGURACION ---
 class ConfiguracionBase(BaseModel):
+    tenant_id: Optional[str] = None
     horario: Optional[str] = None
     codigos_postales: Optional[str] = None
     metodos_pago_activos: Optional[str] = None # JSON string

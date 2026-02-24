@@ -10,7 +10,8 @@ import shutil
 from typing import Dict, Any, List
 
 # Configurar el path para importar config.py
-sys.path.append(os.path.join(os.getcwd(), "app/src"))
+tenant = sys.argv[1] if len(sys.argv) > 1 else print("❌ Por favor, especifica el tenant como argumento: python db_admin.py [tenant]") or sys.exit(1)
+sys.path.append(os.path.join(os.getcwd(), f"{tenant}/app/src"))
 try:
     from config import API_URL, HEADERS, API_KEY
 except ImportError:

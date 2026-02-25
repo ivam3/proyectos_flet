@@ -4,6 +4,7 @@ import uuid
 import shutil
 import json
 import httpx
+from config import IMAGES_URL
 from database import (
     obtener_menu,
     agregar_platillo,
@@ -174,8 +175,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         imagen_path_guardado.value = img
         if img:
             # En producción, las imagenes se sirven desde el backend
-            from config import API_URL
-            imagen_preview.src = f"{API_URL}/static/uploads/{img}?v={uuid.uuid4()}" 
+            imagen_preview.src = f"{IMAGES_URL}/{img}?v={uuid.uuid4()}" 
             imagen_preview.visible = True
         else:
             imagen_preview.src = "/icon.png"
@@ -217,9 +217,8 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                 
                 if filename:
                     imagen_path_guardado.value = filename
-                    from config import API_URL
                     # Forzar recarga con timestamp o UUID para evitar caché del navegador
-                    imagen_preview.src = f"{API_URL}/static/uploads/{filename}?v={uuid.uuid4()}"
+                    imagen_preview.src = f"{IMAGES_URL}/{filename}?v={uuid.uuid4()}"
                     imagen_preview.visible = True
                     upload_status.value = "Carga completa"
                 else:
@@ -281,7 +280,6 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     def cargar_lista(search_term=""):
         lista.controls.clear()
         platillos = obtener_menu(solo_activos=False, search_term=search_term)
-        from config import API_URL
         for p in platillos:
             pid = p['id']
             nom = p['nombre']
@@ -303,7 +301,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
             config_labels = f"({', '.join(extras)})" if extras else ""
 
             # Imagen del item
-            item_img_src = f"{API_URL}/static/uploads/{img}" if img else "/icon.png"
+            item_img_src = f"{IMAGES_URL}/{img}" if img else "/icon.png"
 
             item_row = ft.Container(
                 padding=10,

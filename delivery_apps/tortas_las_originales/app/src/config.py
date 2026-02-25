@@ -20,3 +20,6 @@ HEADERS = {
     "X-API-KEY": API_KEY,
     "X-Tenant-ID": TENANT_ID
 }
+
+# URL base para imágenes (aislamiento por tenant)
+IMAGES_URL = f"{API_URL}/static/uploads/{TENANT_ID}"

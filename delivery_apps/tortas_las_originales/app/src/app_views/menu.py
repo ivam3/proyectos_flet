@@ -1,5 +1,6 @@
 # app/src/app_views/menu.py
 import flet as ft
+from config import IMAGES_URL
 from database import obtener_menu, get_configuracion
 
 def cargar_menu(page: ft.Page):
@@ -136,8 +137,7 @@ def cargar_menu(page: ft.Page):
                     if imagen.startswith(("http://", "https://")):
                         img_src = imagen
                     elif "." in imagen and not imagen.startswith("/"):
-                        from config import API_URL
-                        img_src = f"{API_URL}/static/uploads/{imagen}"
+                        img_src = f"{IMAGES_URL}/{imagen}"
                     else:
                         img_src = f"/{imagen}"
                 else:

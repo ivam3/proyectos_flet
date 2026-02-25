@@ -13,9 +13,14 @@ from typing import Dict, Any, List
 tenant = sys.argv[1] if len(sys.argv) > 1 else print("❌ Por favor, especifica el tenant como argumento: python db_admin.py [tenant]") or sys.exit(1)
 sys.path.append(os.path.join(os.getcwd(), f"{tenant}/app/src"))
 try:
-    from config import API_URL, HEADERS, API_KEY
+    from config import API_URL, HEADERS, API_KEY, TENANT_ID
+    print(f"📡 API_URL: {API_URL}")
+    print(f"🆔 TENANT_ID: {TENANT_ID}")
+    print(f"🔑 HEADERS: {json.dumps(HEADERS, indent=2)}")
 except ImportError:
     print("❌ No se pudo cargar config.py")
+    # Intentar diagnóstico de ruta
+    print(f"🔍 Ruta buscada: {os.path.join(os.getcwd(), f'{tenant}/app/src')}")
     sys.exit(1)
 
 class DBManager:
@@ -250,7 +255,9 @@ class AdminShell(cmd.Cmd):
     def do_ls_uploads(self, arg):
         """Lista todos los archivos de imagen en el servidor: ls_uploads"""
         files = self.mgr.get_upload_list()
-        print(f"📂 Archivos en el servidor ({len(files)}):")
+        menu = self.mgr.get_all_menu()
+        print(f"📦 Items en el menú de este tenant: {len(menu)}")
+        print(f"📂 Archivos en el espacio del servidor ({len(files)}):")
         for f in sorted(files):
             print(f"  - {f}")
 
@@ -268,6 +275,9 @@ class AdminShell(cmd.Cmd):
         # 3. Identificar archivos a eliminar
         to_delete = []
         for f in server_files:
+            # Ignorar archivos de sistema
+            if f == "lost+found" or f.startswith("."):
+                continue
             # Si no es webp O no está en el menú, se va
             if not f.endswith(".webp") or f not in used_images:
                 to_delete.append(f)

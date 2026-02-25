@@ -14,9 +14,6 @@ tenant = sys.argv[1] if len(sys.argv) > 1 else print("❌ Por favor, especifica 
 sys.path.append(os.path.join(os.getcwd(), f"{tenant}/app/src"))
 try:
     from config import API_URL, HEADERS, API_KEY, TENANT_ID
-    print(f"📡 API_URL: {API_URL}")
-    print(f"🆔 TENANT_ID: {TENANT_ID}")
-    print(f"🔑 HEADERS: {json.dumps(HEADERS, indent=2)}")
 except ImportError:
     print("❌ No se pudo cargar config.py")
     # Intentar diagnóstico de ruta
@@ -131,8 +128,8 @@ class DBManager:
         return r.json()
 
 class AdminShell(cmd.Cmd):
-    intro = f'🛠️ Sistema de Administración {tenant}. Escribe "help" o "?" para listar comandos.\n'
-    prompt = '(db-admin) '
+    intro = f'🛠️_Sistema de Administración {tenant}\n📡 API_URL: {API_URL}\n🆔 TENANT_ID: {TENANT_ID}\n🔑 HEADERS: {json.dumps(HEADERS, indent=2)}\n❓ Escribe "help" o "?" para listar comandos.\n'
+    prompt = f'(db-admin-{TENANT_ID})\n╰─➤ '
     
     def __init__(self):
         super().__init__()

@@ -338,49 +338,67 @@ def admin_change_pass(
     return {"ok": True}
 
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    tenant_id: str = Depends(get_tenant_id)
+):
     from PIL import Image
     import io
     
-    # 1. Leer contenido de forma asíncrona
+    # 1. Asegurar directorio del tenant
+    tenant_upload_dir = os.path.join(UPLOAD_DIR, tenant_id)
+    os.makedirs(tenant_upload_dir, exist_ok=True)
+    
+    # 2. Leer contenido
     content = await file.read()
     
-    # 2. Generar nombre con extensión .webp
+    # 3. Generar nombre con extensión .webp
     base_name = os.path.splitext(file.filename)[0]
     filename = f"{base_name}.webp"
-    file_location = os.path.join(UPLOAD_DIR, filename)
+    file_location = os.path.join(tenant_upload_dir, filename)
     
     try:
-        # 3. Abrir imagen desde memoria y convertir a WebP
+        # 4. Abrir imagen desde memoria y convertir a WebP
         img = Image.open(io.BytesIO(content))
-        # Convertir a RGB si es necesario (ej: de RGBA o CMYK)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
             
-        # 4. Guardar optimizada
         img.save(file_location, "WEBP", quality=80, method=6)
         return {"filename": filename}
     except Exception as e:
-        print(f"Error procesando imagen: {e}")
-        # Fallback: guardar tal cual si Pillow falla (aunque no es lo ideal)
+        print(f"Error procesando imagen para tenant {tenant_id}: {e}")
         with open(file_location, "wb+") as file_object:
             file_object.write(content)
         return {"filename": filename}
 
 @app.delete("/upload/{filename}", dependencies=[Depends(verify_api_key)])
-async def delete_file(filename: str):
-    file_location = os.path.join(UPLOAD_DIR, filename)
-    if os.path.exists(file_location):
+async def delete_file(
+    filename: str,
+    tenant_id: str = Depends(get_tenant_id)
+):
+    file_location = os.path.join(UPLOAD_DIR, tenant_id, filename)
+    # Solo eliminar si existe y es un archivo (evita errores con lost+found o subcarpetas)
+    if os.path.exists(file_location) and os.path.isfile(file_location):
         os.remove(file_location)
-        return {"ok": True, "message": f"Archivo {filename} eliminado"}
-    raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        return {"ok": True, "message": f"Archivo {filename} eliminado para {tenant_id}"}
+    raise HTTPException(status_code=404, detail="Archivo no encontrado o es un directorio protegido")
 
 @app.get("/upload/list", dependencies=[Depends(verify_api_key)])
-async def list_uploads():
-    """Retorna una lista de todos los archivos en la carpeta de subidas."""
-    if not os.path.exists(UPLOAD_DIR):
+async def list_uploads(tenant_id: str = Depends(get_tenant_id)):
+    """Retorna una lista de todos los archivos en la carpeta del tenant, ignorando carpetas de sistema."""
+    tenant_upload_dir = os.path.join(UPLOAD_DIR, tenant_id)
+    print(f"DEBUG: Listando archivos para tenant '{tenant_id}' en: {tenant_upload_dir}")
+    if not os.path.exists(tenant_upload_dir):
         return {"files": []}
-    return {"files": os.listdir(UPLOAD_DIR)}
+    
+    # Filtrar: solo archivos, ignorar lost+found y archivos ocultos
+    files = [
+        f for f in os.listdir(tenant_upload_dir) 
+        if os.path.isfile(os.path.join(tenant_upload_dir, f)) 
+        and f != "lost+found" 
+        and not f.startswith(".")
+    ]
+    return {"files": files}
 
 # --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 

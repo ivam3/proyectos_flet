@@ -126,6 +126,10 @@ class DBManager:
         r = self.client.get("/upload/list")
         return r.json().get("files", [])
 
+    def purge_root_webp(self):
+        r = self.client.post("/admin/maintenance/purge-root-webp")
+        return r.json()
+
 class AdminShell(cmd.Cmd):
     intro = f'🛠️ Sistema de Administración {tenant}. Escribe "help" o "?" para listar comandos.\n'
     prompt = '(db-admin) '
@@ -261,8 +265,20 @@ class AdminShell(cmd.Cmd):
         for f in sorted(files):
             print(f"  - {f}")
 
-    def do_clean_uploads(self, arg):
-        """Elimina archivos del servidor que no están en el menú o no son WebP: clean_uploads"""
+    def do_purge_root(self, arg):
+        """⚠️ ELIMINA ARCHIVOS .WEBP DE LA RAÍZ DEL SERVIDOR: purge_root"""
+        confirm = input("❗ ¿Estás seguro de eliminar todos los .webp de la RAÍZ (fuera de carpetas)? (s/n): ")
+        if confirm.lower() == 's':
+            res = self.mgr.purge_root_webp()
+            if res.get("ok"):
+                print(f"✅ Limpieza completada. Archivos borrados: {res['deleted_count']}")
+                if res.get("errors"):
+                    print(f"⚠️ Algunos errores: {res['errors']}")
+            else:
+                print(f"❌ Error en el servidor: {res}")
+
+    def do_wipe_uploads(self, arg):
+        """Elimina archivos del servidor que no están en el menú o no son WebP: wipe_uploads"""
         print("🧹 Iniciando limpieza de archivos huérfanos...")
         
         # 1. Obtener lista de archivos en el servidor

@@ -400,6 +400,29 @@ async def list_uploads(tenant_id: str = Depends(get_tenant_id)):
     ]
     return {"files": files}
 
+@app.post("/admin/maintenance/purge-root-webp", dependencies=[Depends(verify_api_key)])
+async def purge_root_webp():
+    """Elimina archivos .webp que quedaron en la raíz tras la migración a subcarpetas."""
+    import glob
+    # Buscar solo archivos .webp en la raíz de UPLOAD_DIR
+    files = glob.glob(os.path.join(UPLOAD_DIR, "*.webp"))
+    deleted_count = 0
+    errors = []
+    
+    for f in files:
+        try:
+            if os.path.isfile(f):
+                os.remove(f)
+                deleted_count += 1
+        except Exception as e:
+            errors.append(f"{os.path.basename(f)}: {str(e)}")
+            
+    return {
+        "ok": True, 
+        "deleted_count": deleted_count,
+        "errors": errors
+    }
+
 # --- ARCHIVOS ESTÁTICOS (WEB Y RECURSOS) ---
 
 # Carpeta de subidas

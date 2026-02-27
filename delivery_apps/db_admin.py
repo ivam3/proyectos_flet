@@ -379,12 +379,17 @@ class AdminShell(cmd.Cmd):
                 current_groups = self.mgr.get_groups()
                 if not isinstance(current_groups, list): current_groups = []
                 
-                group_id_map = {g['id']: g['id'] for g in current_groups if isinstance(g, dict)}
+                group_id_map = {int(g['id']): g['id'] for g in current_groups if isinstance(g, dict) and g.get('id') is not None}
                 group_name_map = {g['nombre'].strip().lower(): g['id'] for g in current_groups if isinstance(g, dict)}
+                
+                print(f"📦 Grupos actuales en DB: {len(group_id_map)}")
                 
                 for g in data["grupos_extras"]:
                     name_clean = g['nombre'].strip().lower()
-                    item_id = g.get("id")
+                    try:
+                        item_id = int(g.get("id")) if g.get("id") is not None else None
+                    except (ValueError, TypeError):
+                        item_id = None
                     ops = json.loads(g['opciones']) if isinstance(g['opciones'], str) else g['opciones']
                     m = g.get('seleccion_multiple', 0)
                     o = g.get('obligatorio', 0)
@@ -432,17 +437,25 @@ class AdminShell(cmd.Cmd):
             if items_to_import:
                 print("🔍 Sincronizando menú...")
                 current_menu = self.mgr.get_all_menu()
-                if not isinstance(current_menu, list): current_menu = []
+                if not isinstance(current_menu, list): 
+                    print(f" ⚠️ Error: El API no devolvió una lista de menú ({type(current_menu)})")
+                    current_menu = []
                 
-                menu_id_map = {item['id']: item['id'] for item in current_menu if isinstance(item, dict)}
+                # Asegurar que los IDs en el mapa sean enteros para comparación robusta
+                menu_id_map = {int(item['id']): item['id'] for item in current_menu if isinstance(item, dict) and item.get('id') is not None}
                 menu_name_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu if isinstance(item, dict)}
 
-                print(f"📥 Procesando {len(items_to_import)} platillos...")
+                print(f"📦 Registros actuales en DB para este tenant: {len(menu_id_map)}")
+                print(f"📥 Procesando {len(items_to_import)} platillos del JSON...")
+                
                 for item in items_to_import:
                     nombre_clean = item['nombre'].strip().lower()
-                    item_id = item.get("id")
+                    try:
+                        item_id = int(item.get("id")) if item.get("id") is not None else None
+                    except (ValueError, TypeError):
+                        item_id = None
                     
-                    # --- FILTRADO ESTRICTO DE CAMPOS (MenuCreate Schema) ---
+                    # --- FILTRADO ESTRICTO DE CAMPOS ---
                     campos_validos = [
                         "id", "nombre", "descripcion", "precio", "descuento", "imagen", 
                         "is_active", "is_configurable", "is_configurable_salsa", 

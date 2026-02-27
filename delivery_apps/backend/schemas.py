@@ -19,7 +19,7 @@ class MenuBase(BaseModel):
     categoria_id: Optional[str] = None
 
 class MenuCreate(MenuBase):
-    pass
+    id: Optional[int] = None
 
 class Menu(MenuBase):
     id: int
@@ -36,7 +36,7 @@ class GrupoOpcionesBase(BaseModel):
     obligatorio: Optional[int] = 0
 
 class GrupoOpcionesCreate(GrupoOpcionesBase):
-    pass
+    id: Optional[int] = None
 
 class GrupoOpciones(GrupoOpcionesBase):
     id: int

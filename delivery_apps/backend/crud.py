@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 import models, schemas
 import secrets
 import string
@@ -8,6 +8,16 @@ import hashlib
 import os
 
 # --- UTILIDADES ---
+def _reset_sequence(db: Session, table_name: str):
+    """Corrige el contador de IDs en PostgreSQL tras inserciones manuales."""
+    if db.bind.dialect.name == "postgresql":
+        try:
+            # PostgreSQL requiere corregir la secuencia si se insertan IDs manualmente
+            db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM {table_name}"))
+            db.commit()
+        except Exception as e:
+            print(f"⚠️ Error reseteando secuencia {table_name}: {e}")
+
 def _generar_codigo_unico(db: Session, tenant_id: str, length=6):
     alphabet = string.ascii_uppercase + string.digits
     while True:
@@ -41,6 +51,10 @@ def create_platillo(db: Session, tenant_id: str, platillo: schemas.MenuCreate):
     db.add(db_platillo)
     db.commit()
     db.refresh(db_platillo)
+    
+    if platillo.id is not None:
+        _reset_sequence(db, "menu")
+        
     return db_platillo
 
 def update_platillo(db: Session, tenant_id: str, platillo_id: int, platillo: schemas.MenuCreate):
@@ -93,6 +107,10 @@ def create_grupo_opciones(db: Session, tenant_id: str, grupo: schemas.GrupoOpcio
     db.add(db_grupo)
     db.commit()
     db.refresh(db_grupo)
+    
+    if grupo.id is not None:
+        _reset_sequence(db, "grupos_opciones")
+        
     return db_grupo
 
 def update_grupo_opciones(db: Session, tenant_id: str, grupo_id: int, grupo: schemas.GrupoOpcionesCreate):

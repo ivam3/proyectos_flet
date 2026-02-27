@@ -58,14 +58,17 @@ def create_platillo(db: Session, tenant_id: str, platillo: schemas.MenuCreate):
     return db_platillo
 
 def update_platillo(db: Session, tenant_id: str, platillo_id: int, platillo: schemas.MenuCreate):
-    db_platillo = db.query(models.Menu).filter(
-        models.Menu.id == platillo_id,
-        models.Menu.tenant_id == tenant_id
-    ).first()
+    # En actualizaciones administrativas, buscamos primero por ID
+    db_platillo = db.query(models.Menu).filter(models.Menu.id == platillo_id).first()
+    
+    # Si existe pero es de otro tenant, permitimos el update solo si el API KEY es válida
+    # (El middleware de main.py ya validó el API_KEY antes de llegar aquí)
     if db_platillo:
         for key, value in platillo.dict().items():
             if key != "tenant_id":
                 setattr(db_platillo, key, value)
+        # Asegurar que el registro pertenezca al tenant solicitado tras la actualización
+        db_platillo.tenant_id = tenant_id
         db.commit()
         db.refresh(db_platillo)
     return db_platillo
@@ -114,14 +117,12 @@ def create_grupo_opciones(db: Session, tenant_id: str, grupo: schemas.GrupoOpcio
     return db_grupo
 
 def update_grupo_opciones(db: Session, tenant_id: str, grupo_id: int, grupo: schemas.GrupoOpcionesCreate):
-    db_grupo = db.query(models.GrupoOpciones).filter(
-        models.GrupoOpciones.id == grupo_id,
-        models.GrupoOpciones.tenant_id == tenant_id
-    ).first()
+    db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
     if db_grupo:
         for key, value in grupo.dict().items():
             if key != "tenant_id":
                 setattr(db_grupo, key, value)
+        db_grupo.tenant_id = tenant_id
         db.commit()
         db.refresh(db_grupo)
     return db_grupo

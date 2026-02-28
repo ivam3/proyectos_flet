@@ -120,6 +120,20 @@ class Configuracion(ConfiguracionBase):
     class Config:
         from_attributes = True
 
+# --- SCHEMAS DE SHORT LINKS ---
+class ShortLinkBase(BaseModel):
+    tenant_id: Optional[str] = None
+    short_code: str
+    destination_url: str
+
+class ShortLinkCreate(ShortLinkBase):
+    pass
+
+class ShortLink(ShortLinkBase):
+    id: int
+    class Config:
+        from_attributes = True
+
 # --- SCHEMAS DE AUTH/ADMIN ---
 class LoginRequest(BaseModel):
     password: str

@@ -50,6 +50,14 @@ class Configuracion(Base):
     categorias_disponibles = Column(Text, nullable=True)
     costo_envio = Column(Float, default=20.0)
 
+class ShortLink(Base):
+    __tablename__ = "short_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String, index=True, default="dona_soco")
+    short_code = Column(String, unique=True, index=True)
+    destination_url = Column(String)
+
 class Orden(Base):
     __tablename__ = "ordenes"
 

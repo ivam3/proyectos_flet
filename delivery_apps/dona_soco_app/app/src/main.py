@@ -189,6 +189,22 @@ def main(page: ft.Page):
 
     async def handle_route_change(e):
         route = e.route
+        # --- SISTEMA DE REDIRECCIONAMIENTO (ShortLinks) ---
+        if route in ["/apk", "/app", "/download"]:
+            import httpx
+            from config import API_URL, HEADERS
+            code = route.lstrip("/")
+            try:
+                async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
+                    r = await client.get(f"{API_URL}/shortlinks/resolve/{code}")
+                    if r.status_code == 200:
+                        dest_url = r.json().get("url")
+                        if dest_url:
+                            await page.launch_url(dest_url)
+                            return
+            except Exception as ex:
+                print(f"Error redireccionando {code}: {ex}")
+
         if route.startswith("/seguimiento"):
             nav.selected_index = 2
             content_area.content = seguimiento_view(page, export_file_picker)

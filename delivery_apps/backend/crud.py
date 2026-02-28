@@ -208,6 +208,52 @@ def change_admin_password(db: Session, tenant_id: str, new_password: str):
     db.commit()
     return True
 
+# --- SHORT LINKS (Redireccionamiento) ---
+def get_short_links(db: Session, tenant_id: str):
+    return db.query(models.ShortLink).filter(models.ShortLink.tenant_id == tenant_id).all()
+
+def get_short_link_by_code(db: Session, tenant_id: str, code: str):
+    return db.query(models.ShortLink).filter(
+        models.ShortLink.tenant_id == tenant_id,
+        models.ShortLink.short_code == code
+    ).first()
+
+def create_short_link(db: Session, tenant_id: str, link: schemas.ShortLinkCreate):
+    # Upsert Global por short_code
+    existing = db.query(models.ShortLink).filter(models.ShortLink.short_code == link.short_code).first()
+    if existing:
+        return update_short_link(db, tenant_id, existing.id, link)
+        
+    db_link = models.ShortLink(**link.dict())
+    db_link.tenant_id = tenant_id
+    db.add(db_link)
+    db.commit()
+    db.refresh(db_link)
+    return db_link
+
+def update_short_link(db: Session, tenant_id: str, link_id: int, link: schemas.ShortLinkCreate):
+    db_link = db.query(models.ShortLink).filter(models.ShortLink.id == link_id).first()
+    if db_link:
+        update_data = link.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            if key != "tenant_id":
+                setattr(db_link, key, value)
+        db_link.tenant_id = tenant_id
+        db.commit()
+        db.refresh(db_link)
+    return db_link
+
+def delete_short_link(db: Session, tenant_id: str, link_id: int):
+    db_link = db.query(models.ShortLink).filter(
+        models.ShortLink.id == link_id,
+        models.ShortLink.tenant_id == tenant_id
+    ).first()
+    if db_link:
+        db.delete(db_link)
+        db.commit()
+        return True
+    return False
+
 # --- PEDIDOS ---
 def create_pedido(db: Session, tenant_id: str, orden: schemas.OrdenCreate):
     codigo = _generar_codigo_unico(db, tenant_id)

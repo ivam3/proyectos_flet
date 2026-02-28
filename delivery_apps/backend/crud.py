@@ -45,7 +45,7 @@ def get_menu(db: Session, tenant_id: str, solo_activos: bool = True, search_term
         term = f"%{search_term}%"
         query = query.filter(or_(models.Menu.nombre.like(term), models.Menu.descripcion.like(term)))
         
-    return query.all()
+    return query.order_by(models.Menu.id).all()
 
 def create_platillo(db: Session, tenant_id: str, platillo: schemas.MenuCreate):
     # Upsert Global: Si el ID ya existe en cualquier tenant, lo actualizamos
@@ -114,7 +114,7 @@ def update_all_platillos_visibility(db: Session, tenant_id: str, is_active: int)
 
 # --- GRUPOS DE OPCIONES ---
 def get_grupos_opciones(db: Session, tenant_id: str):
-    return db.query(models.GrupoOpciones).filter(models.GrupoOpciones.tenant_id == tenant_id).all()
+    return db.query(models.GrupoOpciones).filter(models.GrupoOpciones.tenant_id == tenant_id).order_by(models.GrupoOpciones.id).all()
 
 def create_grupo_opciones(db: Session, tenant_id: str, grupo: schemas.GrupoOpcionesCreate):
     # Upsert Global por ID

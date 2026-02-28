@@ -3,7 +3,7 @@
 
 import os
 
-APP_NAME = "Tortas Las Originales DEV"
+APP_NAME = "Tortas Las Originales"
 COMPANY_NAME = "Tortas Las Originales" # Usado en reportes y encabezados
 
 # Identificador único para multi-tenencia
@@ -11,7 +11,7 @@ TENANT_ID = os.getenv("TENANT_ID", "tortas_las_originales")
 
 # URL de la API, cambiar si se usa localmente
 API_URL = os.getenv(
-        "API_URL", "https://delivery-apps-api-dev.up.railway.app"
+        "API_URL", "https://delivery-apps-api.up.railway.app"
         )
 
 # Seguridad de la API

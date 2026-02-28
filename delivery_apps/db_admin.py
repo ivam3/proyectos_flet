@@ -125,6 +125,20 @@ class DBManager:
         r = self.client.get("/upload/list")
         return r.json().get("files", [])
 
+    # --- SHORT LINKS ---
+    def get_short_links(self):
+        r = self.client.get("/shortlinks")
+        return r.json()
+
+    def create_short_link(self, code: str, url: str):
+        data = {"short_code": code, "destination_url": url}
+        r = self.client.post("/shortlinks", json=data)
+        return r.status_code in [200, 201]
+
+    def delete_short_link(self, link_id: int):
+        r = self.client.delete(f"/shortlinks/{link_id}")
+        return r.status_code == 200
+
     def purge_root_webp(self):
         r = self.client.post("/admin/maintenance/purge-root-webp")
         return r.json()
@@ -671,6 +685,43 @@ class AdminShell(cmd.Cmd):
                 if self.mgr.delete_pedido(p["id"]):
                     count += 1
             print(f"🧹 Historial vaciado: {count} pedidos eliminados.")
+
+    # --- ENLACES CORTOS (REDICCIONAMIENTO) ---
+    def do_links(self, arg):
+        """Lista todos los enlaces de redirección: links"""
+        links = self.mgr.get_short_links()
+        if not links:
+            print("📭 No hay enlaces configurados.")
+            return
+        print(f"{ 'ID':<5} | {'Código':<15} | {'URL de Destino'}")
+        print("-" * 75)
+        for l in links:
+            print(f"{l['id']:<5} | {l['short_code']:<15} | {l['destination_url']}")
+
+    def do_addlink(self, arg):
+        """Crea o actualiza un enlace de redirección: addlink codigo url"""
+        import shlex
+        try:
+            parts = shlex.split(arg)
+            if len(parts) < 2:
+                print("❌ Uso: addlink [codigo] [url]")
+                return
+            if self.mgr.create_short_link(parts[0], parts[1]):
+                print(f"✅ Redirección para '{parts[0]}' configurada -> {parts[1]}")
+            else:
+                print("❌ Error al crear enlace.")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+
+    def do_rmlink(self, arg):
+        """Elimina un enlace de redirección por ID: rmlink [id]"""
+        if not arg:
+            print("❌ Uso: rmlink [id]")
+            return
+        if self.mgr.delete_short_link(int(arg)):
+            print(f"🗑️ Enlace {arg} eliminado.")
+        else:
+            print(f"❌ No se pudo eliminar el enlace.")
 
     def do_backup(self, arg):
         """Genera un backup local total en JSON: backup [nombre_archivo]"""

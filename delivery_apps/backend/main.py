@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -131,6 +131,44 @@ app.add_middleware(
 )
 
 # --- RUTAS DE API ---
+
+@app.get("/shortlinks/resolve/{code}")
+def resolve_short_link(
+    code: str,
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Consulta la URL de destino para un código corto en el tenant actual."""
+    link = crud.get_short_link_by_code(db, tenant_id, code)
+    if not link:
+        raise HTTPException(status_code=404, detail="Código no encontrado para este negocio")
+    return {"url": link.destination_url}
+
+@app.get("/shortlinks", response_model=List[schemas.ShortLink], dependencies=[Depends(verify_api_key)])
+def read_short_links(
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.get_short_links(db, tenant_id)
+
+@app.post("/shortlinks", response_model=schemas.ShortLink, dependencies=[Depends(verify_api_key)])
+def create_short_link(
+    link: schemas.ShortLinkCreate, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return crud.create_short_link(db, tenant_id, link)
+
+@app.delete("/shortlinks/{link_id}", dependencies=[Depends(verify_api_key)])
+def delete_short_link(
+    link_id: int, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    success = crud.delete_short_link(db, tenant_id, link_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Enlace no encontrado")
+    return {"ok": True}
 
 @app.get("/menu", response_model=List[schemas.Menu])
 def read_menu(
@@ -447,8 +485,8 @@ async def read_root():
 
 @app.get("/{full_path:path}")
 async def catch_all(full_path: str):
-    # 1. Rutas de API y Estáticos del Backend: Dejar que FastAPI las maneje normalmente
-    if full_path.startswith(("menu", "opciones", "configuracion", "pedidos", "admin/", "upload", "static")):
+    # 1. Rutas de API y Estáticos del Backend
+    if full_path.startswith(("menu", "opciones", "configuracion", "pedidos", "admin/", "upload", "static", "shortlinks")):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
 
     # 2. Intentar servir archivos estáticos reales del build de Flet (js, css, wasm, etc)

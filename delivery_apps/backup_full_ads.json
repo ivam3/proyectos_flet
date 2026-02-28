@@ -1,6 +1,7 @@
 {
     "menu": [
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌮 Tacos de deshebrada",
             "descripcion": "05 Tortillas de maíz con deshebrada, lechuga, tómate y nuestra salsa verde especial",
             "precio": 110.0,
@@ -16,6 +17,7 @@
             "id": 1
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌮 Taco de deshebrada",
             "descripcion": "01 Tortilla de maíz con deshebrada, lechuga, tómate y nuestra salsa verde especial",
             "precio": 25.0,
@@ -31,6 +33,7 @@
             "id": 2
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🪈 Flautas",
             "descripcion": "04 Tortillas enrolladas de maíz dorada, lechuga, tómate, guacamole y nuestra salsa verde especial",
             "precio": 110.0,
@@ -46,6 +49,7 @@
             "id": 3
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🪈 Flauta",
             "descripcion": "01 Tortilla enrollada de maíz dorada, lechuga, tómate, guacamole y nuestra salsa verde especial",
             "precio": 25.0,
@@ -61,6 +65,7 @@
             "id": 4
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌯 Burrito",
             "descripcion": "01 Tortilla de harina, guiso a elegir, frijol molido, lechuga, tomate, papas freidas y nuestra rica salsa especial",
             "precio": 30.0,
@@ -76,6 +81,7 @@
             "id": 5
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🫔 Enchiladas rojas",
             "descripcion": "04 Tortillas rojas rellenas de queso panela, lechuga, tomate y nuestra rica salsa verde especial",
             "precio": 110.0,
@@ -91,6 +97,7 @@
             "id": 6
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🫔 Enchilada roja",
             "descripcion": "01 Tortilla roja rellena de queso panela, lechuga, tomate, y nuestra rica salsa verde especial",
             "precio": 25.0,
@@ -106,6 +113,7 @@
             "id": 7
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥘 Sopes de guisos",
             "descripcion": "04 Masas de maiz pelliscada, guiso a elegir, lechuga, tomate y nuestra salsa verde especial",
             "precio": 110.0,
@@ -121,6 +129,7 @@
             "id": 8
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥘 Sope de guiso",
             "descripcion": "01 Masa de maiz pelliscada, guiso a elegir, lechuga, tomate y nuestra salsa verde especial",
             "precio": 30.0,
@@ -136,6 +145,7 @@
             "id": 9
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🫓 Tostadas de guisos",
             "descripcion": "04 Tortillas de maiz dorada, guiso a elegir, lechuga, tomate y nuestra salsa verde especial",
             "precio": 110.0,
@@ -151,6 +161,7 @@
             "id": 10
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🫓 Tostada con guiso",
             "descripcion": "01 Tortilla de maiz dorada, guiso a elegir, lechuga, tomate y nuestra salsa verde especial",
             "precio": 30.0,
@@ -166,6 +177,7 @@
             "id": 11
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🧆 Soco mix",
             "descripcion": "01 Taco dorado, 01 Flauta, 01 Enchilada, 01 Sope, 01 Tostada, lechuga, tomate y nuestra salsa verde especial",
             "precio": 120.0,
@@ -181,6 +193,7 @@
             "id": 12
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥟 Quesadilla",
             "descripcion": "01 Tortilla de harina rellena de queso oaxaca, lechuga, tomate y nuestra salsa verde especial",
             "precio": 30.0,
@@ -196,6 +209,7 @@
             "id": 13
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥟 Quesadilla con guiso",
             "descripcion": "01 Tortilla de harina rellena de queso oaxaca, guiso a elegir, lechuga, tomate y nuestra salsa verde especial",
             "precio": 40.0,
@@ -211,6 +225,7 @@
             "id": 14
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥚 Papas con chile colorado",
             "descripcion": "250gr Papas freidas con chile colorado",
             "precio": 45.0,
@@ -226,6 +241,7 @@
             "id": 15
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍔 Hamburguesa de res",
             "descripcion": "Carne de res, lechuga, jamón, queso manchego, americano, aguacate y aderezos",
             "precio": 105.0,
@@ -241,6 +257,7 @@
             "id": 16
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍔 Hamburguesa de res con papas",
             "descripcion": "Orden de papas, carne de res, lechuga, jamón, queso manchego, americano, aguacate y aderezos",
             "precio": 120.0,
@@ -256,6 +273,7 @@
             "id": 17
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍔 Hamburguesa de pollo",
             "descripcion": "Pechuga de pollo empanizada, lechuga, queso americano, aros de cebolla y aderezos",
             "precio": 105.0,
@@ -266,16 +284,17 @@
             "is_configurable_salsa": 1,
             "piezas": 1,
             "printer_target": "foodtruck",
-            "grupos_opciones_ids": "[]",
+            "grupos_opciones_ids": "[1, 5, 6, 8]",
             "categoria_id": "Hamburguesas",
             "id": 18
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍔 Hamburguesa de pollo con papas",
             "descripcion": "Orden de papas, pechuga de pollo empanizada, lechuga, queso americano, aros de cebolla y aderezos",
             "precio": 120.0,
             "descuento": 0.0,
-            "imagen": "hamburguesa_de_pollo.webp",
+            "imagen": "hamburguesa_de_pollo_con_papas.webp",
             "is_active": 1,
             "is_configurable": 0,
             "is_configurable_salsa": 1,
@@ -286,6 +305,7 @@
             "id": 19
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥚 Papas a la francesa",
             "descripcion": "Orden de papas a la francesa",
             "precio": 50.0,
@@ -301,6 +321,7 @@
             "id": 20
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥚 Papas a la francesa con queso",
             "descripcion": "Orden de papas a la francesa bañadas con queso cheddar",
             "precio": 65.0,
@@ -316,6 +337,7 @@
             "id": 21
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🐣 Tenders",
             "descripcion": "Tiras de pollo empanizado con papas a la francesa, salsa a elegir y aderezo ranch",
             "precio": 120.0,
@@ -331,6 +353,7 @@
             "id": 22
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🐣 French tender",
             "descripcion": "Cama de papas a la francesa, pechuga de pollo empanizada bañadas de queso cheddar, salsa a elegir y aderezo ranch",
             "precio": 120.0,
@@ -341,11 +364,12 @@
             "is_configurable_salsa": 1,
             "piezas": 1,
             "printer_target": "cocina",
-            "grupos_opciones_ids": "[8]",
+            "grupos_opciones_ids": "[4, 8]",
             "categoria_id": "Pollo",
             "id": 23
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌰 Boneless",
             "descripcion": "250grs de boneless, papas a la francesa banados en aderezo ranch y salsa a elegir",
             "precio": 120.0,
@@ -361,6 +385,7 @@
             "id": 24
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍲 Salchipapas",
             "descripcion": "350grs de papas a la francesa, salchicha, queso amarillo cheddar y aderezos",
             "precio": 100.0,
@@ -376,6 +401,7 @@
             "id": 25
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌭 Hot dog jumbo",
             "descripcion": "Salchicha, cebolla, tocino, aderezos y papas freidas",
             "precio": 50.0,
@@ -391,6 +417,7 @@
             "id": 26
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌭 Hot dog jumbo con queso",
             "descripcion": "Salchicha, queso, cebolla, tocino, aderezos y papas freidas",
             "precio": 70.0,
@@ -406,6 +433,7 @@
             "id": 27
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🥓 Salchicha extra",
             "descripcion": "Salchicha a elegir",
             "precio": 40.0,
@@ -421,6 +449,7 @@
             "id": 28
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🌶️Dip de salsa",
             "descripcion": "Dip de salsa a elegir ",
             "precio": 20.0,
@@ -436,6 +465,7 @@
             "id": 29
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pastel chocofudge",
             "descripcion": "Rebanada de pastel de COSTCO. Capas de panqué de chocolate cubiertas con betún",
             "precio": 60.0,
@@ -451,6 +481,7 @@
             "id": 30
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pastel de frambuesa",
             "descripcion": "Rebanada de pastel de COSTCO. Queso crema, mermelada de frambuesa y crema batida",
             "precio": 60.0,
@@ -466,6 +497,7 @@
             "id": 31
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pay de limón",
             "descripcion": "Rebanada de pay de COSTCO. base crujiente de galleta, mousse de limón, queso crema",
             "precio": 60.0,
@@ -481,6 +513,7 @@
             "id": 32
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pastel tortuga",
             "descripcion": "Rebanada de pastel de COTSCO. Cheesecake cubierto de caramelo, chispas de chocolate y nueces",
             "precio": 60.0,
@@ -496,6 +529,7 @@
             "id": 33
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pastel tuxedo",
             "descripcion": "Rebanada de pastel de COTSCO. Capas de pan de chocolate, mousse, queso crema, trozos de brownie",
             "precio": 60.0,
@@ -511,6 +545,7 @@
             "id": 34
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pastel de zanahoria",
             "descripcion": "Rebanada de pastel de COTSCO. cubierto de queso crema y nuez",
             "precio": 60.0,
@@ -526,6 +561,7 @@
             "id": 35
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "🍰 Rebanada de pastel de chocoflan",
             "descripcion": "Rebanada de pastel de COTSCO. Pan de chocolate, flan de vainilla, con caramelo",
             "precio": 60.0,
@@ -541,6 +577,7 @@
             "id": 36
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Coca cola 600ml",
             "descripcion": "Refresco coca cola clasica en envase de plastico no retornable",
             "precio": 30.0,
@@ -556,6 +593,7 @@
             "id": 37
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Coca cola 600ml sin azúcar",
             "descripcion": "Refresco coca cola clasica en envase de plastico no retornable",
             "precio": 30.0,
@@ -571,6 +609,7 @@
             "id": 38
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Pepsi en lata 355ml",
             "descripcion": "Refresco pepsi clasica en envase de lata no retornable",
             "precio": 25.0,
@@ -586,6 +625,7 @@
             "id": 39
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Seven Up en lata 355ml",
             "descripcion": "Refresco 7up clasica en envase de lata no retornable",
             "precio": 25.0,
@@ -601,6 +641,7 @@
             "id": 40
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Agua natural 1Lt.",
             "descripcion": "Agua natural en envase de plastico de un litro",
             "precio": 20.0,
@@ -617,6 +658,7 @@
         }
     ],
     "configuracion": {
+        "tenant_id": "dona_soco",
         "horario": "Jueves a Martes de 06:00 pm a 12:00 pm",
         "codigos_postales": "64440,64000",
         "metodos_pago_activos": "{\"efectivo\": true, \"terminal\": true}",
@@ -626,11 +668,12 @@
         "salsas_disponibles": "{\"BBQ\": true, \"B\\u00fafalo\": true, \"Chipotle\": true, \"Habanero\": true, \"Mango Habanero\": true, \"BBQ Hot\": true, \"Piqu\\u00edn Lim\\u00f3n\": true, \"Ranch\": true}",
         "categorias_disponibles": "[\"Antojitos\", \"Hamburguesas\", \"Pollo\", \"Hot Dog\", \"Salsas y Aderezos\", \"Postres\", \"Bebidas\"]",
         "costo_envio": 20.0,
-        "id": 1,
+        "id": 2,
         "admin_password": "4a60bf7d4bc1e485744cf7e8d0860524752fca1ce42331be7c439fd23043f151"
     },
     "grupos_extras": [
         {
+            "tenant_id": "dona_soco",
             "nombre": "Cebolla",
             "opciones": "[\"Con cebolla\", \"Sin cebolla\"]",
             "seleccion_multiple": 0,
@@ -638,6 +681,7 @@
             "id": 1
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Cocción ",
             "opciones": "[\"Dorados\", \"Suaves\"]",
             "seleccion_multiple": 0,
@@ -645,6 +689,7 @@
             "id": 2
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Salchicha",
             "opciones": "[\"Salchicha roja\", \"Salchicha de pavo\"]",
             "seleccion_multiple": 0,
@@ -652,6 +697,7 @@
             "id": 3
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Salsa",
             "opciones": "[\"A parte\", \"Ba\\u00f1ados\", \"Sin salsa\"]",
             "seleccion_multiple": 0,
@@ -659,6 +705,7 @@
             "id": 4
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Mayonesa",
             "opciones": "[\"Con mayonesa\", \"Sin mayonesa\"]",
             "seleccion_multiple": 0,
@@ -666,6 +713,7 @@
             "id": 5
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Mostaza",
             "opciones": "[\"Con mostaza\", \"Sin mostaza\"]",
             "seleccion_multiple": 0,
@@ -673,6 +721,7 @@
             "id": 6
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Preparación",
             "opciones": "[\"Preparado\", \"Divorciado\"]",
             "seleccion_multiple": 0,
@@ -680,6 +729,7 @@
             "id": 7
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Aderezo Ranch",
             "opciones": "[\"Con aderezo\", \"Sin aderezo\"]",
             "seleccion_multiple": 0,
@@ -687,6 +737,7 @@
             "id": 8
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Captsup",
             "opciones": "[\"Con captsup\", \"Sin captsup\"]",
             "seleccion_multiple": 0,
@@ -694,6 +745,7 @@
             "id": 9
         },
         {
+            "tenant_id": "dona_soco",
             "nombre": "Verdura",
             "opciones": "[\"Con verdura\", \"Sin verdura\"]",
             "seleccion_multiple": 0,

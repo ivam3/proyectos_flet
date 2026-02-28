@@ -105,3 +105,11 @@ Después de un extenso proceso de depuración, se logró identificar y soluciona
 ### 30. Actualización de CI/CD (GitHub Actions)
 *   **Cambio:** Se actualizó `.github/workflows/flet-web.yml`.
 *   **Solución:** Ahora el flujo de trabajo construye automáticamente tanto `dona_soco_app` como `tortas_las_originales` en cada push a la rama `dev`, manteniendo ambos sitios actualizados en Railway.
+
+### 31. Sincronización Robusta e ID Persistentes (Herramienta Administrativa)
+*   **Problema:** Al importar datos desde JSON con `db_admin.py`, los IDs originales se perdían (la DB asignaba nuevos) y la sincronización fallaba al intentar sobrescribir por nombre si este había cambiado.
+*   **Solución:**
+    1.  **Backend Schemas:** Se actualizó `MenuCreate` y `GrupoOpcionesCreate` para permitir un `id` opcional.
+    2.  **Backend CRUD:** Se modificaron las funciones de creación para respetar el `id` proporcionado. Se implementó una utilidad `_reset_sequence` para PostgreSQL que sincroniza automáticamente el contador de IDs tras inserciones manuales, evitando errores de clave duplicada.
+    3.  **db_admin.py:** Se rediseñó la lógica de `importar` para usar una estrategia de emparejamiento dual (primero por `id`, luego por `nombre` como respaldo). Ahora la herramienta envía el `id` original al API, garantizando que el respaldo JSON y la base de datos mantengan la misma estructura de identificadores.
+    4.  **Resultado:** Ya no es necesario usar `wipe` antes de `importar`; la herramienta ahora detecta y actualiza correctamente los registros existentes respetando sus IDs.

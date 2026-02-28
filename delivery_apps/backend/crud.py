@@ -48,14 +48,22 @@ def get_menu(db: Session, tenant_id: str, solo_activos: bool = True, search_term
     return query.order_by(models.Menu.id).all()
 
 def create_platillo(db: Session, tenant_id: str, platillo: schemas.MenuCreate):
-    # Upsert Global: Si el ID ya existe en cualquier tenant, lo actualizamos
+    # Isolated Upsert: Solo actualizamos si el ID existe PARA ESTE TENANT
     if platillo.id is not None:
-        existing = db.query(models.Menu).filter(models.Menu.id == platillo.id).first()
+        existing = db.query(models.Menu).filter(
+            models.Menu.id == platillo.id,
+            models.Menu.tenant_id == tenant_id
+        ).first()
         if existing:
             return update_platillo(db, tenant_id, platillo.id, platillo)
+        
+        # Si el ID existe pero pertenece a OTRO tenant, no podemos usarlo (Unique Constraint).
+        # Eliminamos el ID del payload para que la DB asigne el siguiente libre.
+        check_global = db.query(models.Menu).filter(models.Menu.id == platillo.id).first()
+        if check_global:
+            platillo.id = None
 
-    # Si no existe, crear nuevo
-    # Excluimos id si es None para que la DB asigne el siguiente si no se provee
+    # Si no existe o hubo colisión de tenant, crear nuevo
     item_data = platillo.dict(exclude_none=True)
     db_platillo = models.Menu(**item_data)
     db_platillo.tenant_id = tenant_id
@@ -63,16 +71,18 @@ def create_platillo(db: Session, tenant_id: str, platillo: schemas.MenuCreate):
     try:
         db.commit()
         db.refresh(db_platillo)
-        if platillo.id is not None:
-            _reset_sequence(db, "menu")
+        if platillo.id is not None and db.bind.dialect.name == "postgresql":
+             _reset_sequence(db, "menu")
     except Exception as e:
         db.rollback()
-        print(f"❌ Error insertando platillo: {e}")
         raise e
     return db_platillo
 
 def update_platillo(db: Session, tenant_id: str, platillo_id: int, platillo: schemas.MenuCreate):
-    db_platillo = db.query(models.Menu).filter(models.Menu.id == platillo_id).first()
+    db_platillo = db.query(models.Menu).filter(
+        models.Menu.id == platillo_id,
+        models.Menu.tenant_id == tenant_id
+    ).first()
     if db_platillo:
         # Excluir id y tenant_id de la actualización para evitar colisiones
         update_data = platillo.dict(exclude_unset=True)
@@ -80,7 +90,6 @@ def update_platillo(db: Session, tenant_id: str, platillo_id: int, platillo: sch
             if key not in ["id", "tenant_id"]:
                 setattr(db_platillo, key, value)
         
-        db_platillo.tenant_id = tenant_id
         db.commit()
         db.refresh(db_platillo)
     return db_platillo
@@ -219,8 +228,12 @@ def get_short_link_by_code(db: Session, tenant_id: str, code: str):
     ).first()
 
 def create_short_link(db: Session, tenant_id: str, link: schemas.ShortLinkCreate):
-    # Upsert Global por short_code
-    existing = db.query(models.ShortLink).filter(models.ShortLink.short_code == link.short_code).first()
+    # Upsert por short_code DENTRO del mismo tenant
+    existing = db.query(models.ShortLink).filter(
+        models.ShortLink.tenant_id == tenant_id,
+        models.ShortLink.short_code == link.short_code
+    ).first()
+    
     if existing:
         return update_short_link(db, tenant_id, existing.id, link)
         

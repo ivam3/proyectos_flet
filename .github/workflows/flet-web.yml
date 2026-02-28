@@ -70,5 +70,5 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add delivery_apps/dona_soco_app/app/build/web
           git add delivery_apps/tortas_las_originales/app/build/web
-          git commit -m "actions: update db_admin 5" || echo "No changes to commit"
+          git commit -m "actions: update db_admin 6" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main

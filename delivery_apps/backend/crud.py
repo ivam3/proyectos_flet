@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 import models, schemas
 import secrets
 import string
@@ -8,6 +8,18 @@ import hashlib
 import os
 
 # --- UTILIDADES ---
+def _reset_sequence(db: Session, table_name: str):
+    """Corrige el contador de IDs en PostgreSQL tras inserciones manuales."""
+    if db.bind.dialect.name == "postgresql":
+        try:
+            # PostgreSQL requiere corregir la secuencia si se insertan IDs manualmente.
+            # Usamos una consulta que no falle si la secuencia tiene nombres estándar.
+            db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table_name}', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM {table_name}"))
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"⚠️ Error reseteando secuencia {table_name}: {e}")
+
 def _generar_codigo_unico(db: Session, tenant_id: str, length=6):
     alphabet = string.ascii_uppercase + string.digits
     while True:
@@ -33,25 +45,42 @@ def get_menu(db: Session, tenant_id: str, solo_activos: bool = True, search_term
         term = f"%{search_term}%"
         query = query.filter(or_(models.Menu.nombre.like(term), models.Menu.descripcion.like(term)))
         
-    return query.all()
+    return query.order_by(models.Menu.id).all()
 
 def create_platillo(db: Session, tenant_id: str, platillo: schemas.MenuCreate):
-    db_platillo = models.Menu(**platillo.dict())
+    # Upsert Global: Si el ID ya existe en cualquier tenant, lo actualizamos
+    if platillo.id is not None:
+        existing = db.query(models.Menu).filter(models.Menu.id == platillo.id).first()
+        if existing:
+            return update_platillo(db, tenant_id, platillo.id, platillo)
+
+    # Si no existe, crear nuevo
+    # Excluimos id si es None para que la DB asigne el siguiente si no se provee
+    item_data = platillo.dict(exclude_none=True)
+    db_platillo = models.Menu(**item_data)
     db_platillo.tenant_id = tenant_id
     db.add(db_platillo)
-    db.commit()
-    db.refresh(db_platillo)
+    try:
+        db.commit()
+        db.refresh(db_platillo)
+        if platillo.id is not None:
+            _reset_sequence(db, "menu")
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error insertando platillo: {e}")
+        raise e
     return db_platillo
 
 def update_platillo(db: Session, tenant_id: str, platillo_id: int, platillo: schemas.MenuCreate):
-    db_platillo = db.query(models.Menu).filter(
-        models.Menu.id == platillo_id,
-        models.Menu.tenant_id == tenant_id
-    ).first()
+    db_platillo = db.query(models.Menu).filter(models.Menu.id == platillo_id).first()
     if db_platillo:
-        for key, value in platillo.dict().items():
-            if key != "tenant_id":
+        # Excluir id y tenant_id de la actualización para evitar colisiones
+        update_data = platillo.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            if key not in ["id", "tenant_id"]:
                 setattr(db_platillo, key, value)
+        
+        db_platillo.tenant_id = tenant_id
         db.commit()
         db.refresh(db_platillo)
     return db_platillo
@@ -85,25 +114,38 @@ def update_all_platillos_visibility(db: Session, tenant_id: str, is_active: int)
 
 # --- GRUPOS DE OPCIONES ---
 def get_grupos_opciones(db: Session, tenant_id: str):
-    return db.query(models.GrupoOpciones).filter(models.GrupoOpciones.tenant_id == tenant_id).all()
+    return db.query(models.GrupoOpciones).filter(models.GrupoOpciones.tenant_id == tenant_id).order_by(models.GrupoOpciones.id).all()
 
 def create_grupo_opciones(db: Session, tenant_id: str, grupo: schemas.GrupoOpcionesCreate):
-    db_grupo = models.GrupoOpciones(**grupo.dict())
+    # Upsert Global por ID
+    if grupo.id is not None:
+        existing = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo.id).first()
+        if existing:
+            return update_grupo_opciones(db, tenant_id, grupo.id, grupo)
+            
+    db_grupo = models.GrupoOpciones(**grupo.dict(exclude_none=True))
     db_grupo.tenant_id = tenant_id
     db.add(db_grupo)
-    db.commit()
-    db.refresh(db_grupo)
+    try:
+        db.commit()
+        db.refresh(db_grupo)
+        if grupo.id is not None:
+            _reset_sequence(db, "grupos_opciones")
+    except Exception as e:
+        db.rollback()
+        raise e
     return db_grupo
 
 def update_grupo_opciones(db: Session, tenant_id: str, grupo_id: int, grupo: schemas.GrupoOpcionesCreate):
-    db_grupo = db.query(models.GrupoOpciones).filter(
-        models.GrupoOpciones.id == grupo_id,
-        models.GrupoOpciones.tenant_id == tenant_id
-    ).first()
+    db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
     if db_grupo:
-        for key, value in grupo.dict().items():
-            if key != "tenant_id":
+        # Excluir campos clave de la actualización para no resetear a None o cambiar ID
+        update_data = grupo.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            if key not in ["id", "tenant_id"]:
                 setattr(db_grupo, key, value)
+        
+        db_grupo.tenant_id = tenant_id
         db.commit()
         db.refresh(db_grupo)
     return db_grupo

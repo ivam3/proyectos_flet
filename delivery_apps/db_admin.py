@@ -86,13 +86,15 @@ class DBManager:
         r = self.client.get("/opciones")
         return r.json()
 
-    def create_group(self, nombre: str, opciones: List[str], multiple: int = 0, obligatorio: int = 0):
+    def create_group(self, nombre: str, opciones: List[str], multiple: int = 0, obligatorio: int = 0, group_id: int = None):
         data = {
             "nombre": nombre,
             "opciones": json.dumps(opciones),
             "seleccion_multiple": multiple,
             "obligatorio": obligatorio
         }
+        if group_id:
+            data["id"] = group_id
         r = self.client.post("/opciones", json=data)
         return r.status_code in [200, 201]
 
@@ -376,30 +378,52 @@ class AdminShell(cmd.Cmd):
                 print("➕ Sincronizando grupos de extras...")
                 current_groups = self.mgr.get_groups()
                 if not isinstance(current_groups, list): current_groups = []
-                group_map = {g['nombre'].strip().lower(): g['id'] for g in current_groups if isinstance(g, dict)}
+                
+                group_id_map = {int(g['id']): g['id'] for g in current_groups if isinstance(g, dict) and g.get('id') is not None}
+                group_name_map = {g['nombre'].strip().lower(): g['id'] for g in current_groups if isinstance(g, dict)}
+                
+                print(f"📦 Grupos actuales en DB: {len(group_id_map)}")
                 
                 for g in data["grupos_extras"]:
                     name_clean = g['nombre'].strip().lower()
+                    try:
+                        item_id = int(g.get("id")) if g.get("id") is not None else None
+                    except (ValueError, TypeError):
+                        item_id = None
                     ops = json.loads(g['opciones']) if isinstance(g['opciones'], str) else g['opciones']
                     m = g.get('seleccion_multiple', 0)
                     o = g.get('obligatorio', 0)
                     
-                    # Payload limpio sin ID para evitar conflictos
+                    # Payload limpio
                     g_payload = {
                         "nombre": g['nombre'],
                         "opciones": json.dumps(ops),
                         "seleccion_multiple": m,
                         "obligatorio": o
                     }
+                    if item_id:
+                        g_payload["id"] = item_id
+
+                    target_id = None
+                    if item_id and item_id in group_id_map:
+                        target_id = item_id
+                    elif name_clean in group_name_map:
+                        target_id = group_name_map[name_clean]
                     
-                    if name_clean in group_map:
-                        if self.mgr.update_group(group_map[name_clean], g['nombre'], ops, m, o):
-                            print(f" 🔄 Grupo '{g['nombre']}' actualizado.")
+                    if target_id:
+                        if self.mgr.update_group(target_id, g['nombre'], ops, m, o):
+                            print(f" 🔄 Grupo '{g['nombre']}' (ID: {target_id}) actualizado.")
                         else:
                             print(f" ❌ Error actualizando grupo '{g['nombre']}'.")
                     else:
-                        if self.mgr.create_group(g['nombre'], ops, m, o):
-                            print(f" ✅ Grupo '{g['nombre']}' creado.")
+                        # Para creación, usamos el payload que puede incluir el ID
+                        # Pero el método create_group actual no acepta el payload completo
+                        # Vamos a usar una versión que sí lo haga si es necesario, 
+                        # o simplemente dejar que el manager lo maneje.
+                        # El manager actual: create_group(self, nombre, opciones, multiple=0, obligatorio=0)
+                        # Necesito actualizar el manager también.
+                        if self.mgr.create_group(g['nombre'], ops, m, o, item_id):
+                            print(f" ✅ Grupo '{g['nombre']}' (ID: {item_id or 'auto'}) creado.")
                         else:
                             print(f" ❌ Error creando grupo '{g['nombre']}'.")
 
@@ -413,16 +437,27 @@ class AdminShell(cmd.Cmd):
             if items_to_import:
                 print("🔍 Sincronizando menú...")
                 current_menu = self.mgr.get_all_menu()
-                if not isinstance(current_menu, list): current_menu = []
-                menu_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu if isinstance(item, dict)}
+                if not isinstance(current_menu, list): 
+                    print(f" ⚠️ Error: El API no devolvió una lista de menú ({type(current_menu)})")
+                    current_menu = []
+                
+                # Asegurar que los IDs en el mapa sean enteros para comparación robusta
+                menu_id_map = {int(item['id']): item['id'] for item in current_menu if isinstance(item, dict) and item.get('id') is not None}
+                menu_name_map = {item['nombre'].strip().lower(): item['id'] for item in current_menu if isinstance(item, dict)}
 
-                print(f"📥 Procesando {len(items_to_import)} platillos...")
+                print(f"📦 Registros actuales en DB para este tenant: {len(menu_id_map)}")
+                print(f"📥 Procesando {len(items_to_import)} platillos del JSON...")
+                
                 for item in items_to_import:
                     nombre_clean = item['nombre'].strip().lower()
+                    try:
+                        item_id = int(item.get("id")) if item.get("id") is not None else None
+                    except (ValueError, TypeError):
+                        item_id = None
                     
-                    # --- FILTRADO ESTRICTO DE CAMPOS (MenuCreate Schema) ---
+                    # --- FILTRADO ESTRICTO DE CAMPOS ---
                     campos_validos = [
-                        "nombre", "descripcion", "precio", "descuento", "imagen", 
+                        "id", "nombre", "descripcion", "precio", "descuento", "imagen", 
                         "is_active", "is_configurable", "is_configurable_salsa", 
                         "piezas", "printer_target", "grupos_opciones_ids", "categoria_id"
                     ]
@@ -443,15 +478,20 @@ class AdminShell(cmd.Cmd):
                     if "is_configurable_salsa" not in item_clean: item_clean["is_configurable_salsa"] = 0
                     if "descuento" not in item_clean: item_clean["descuento"] = 0.0
                     
-                    if nombre_clean in menu_map:
-                        item_id = menu_map[nombre_clean]
-                        if self.mgr.update_item(item_id, item_clean):
-                            print(f" 🔄 {item_clean['nombre']} actualizado.")
+                    target_id = None
+                    if item_id and item_id in menu_id_map:
+                        target_id = item_id
+                    elif nombre_clean in menu_name_map:
+                        target_id = menu_name_map[nombre_clean]
+
+                    if target_id:
+                        if self.mgr.update_item(target_id, item_clean):
+                            print(f" 🔄 {item_clean['nombre']} (ID: {target_id}) actualizado.")
                         else:
                             print(f" ❌ Error actualizando {item_clean['nombre']}.")
                     else:
                         if self.mgr.create_item(item_clean):
-                            print(f" ✅ {item_clean['nombre']} creado.")
+                            print(f" ✅ {item_clean['nombre']} (ID: {item_id or 'auto'}) creado.")
                         else:
                             print(f" ❌ Error creando {item_clean['nombre']}.")
             

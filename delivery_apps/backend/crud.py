@@ -126,11 +126,20 @@ def get_grupos_opciones(db: Session, tenant_id: str):
     return db.query(models.GrupoOpciones).filter(models.GrupoOpciones.tenant_id == tenant_id).order_by(models.GrupoOpciones.id).all()
 
 def create_grupo_opciones(db: Session, tenant_id: str, grupo: schemas.GrupoOpcionesCreate):
-    # Upsert Global por ID
+    # Isolated Upsert por ID y Tenant
     if grupo.id is not None:
-        existing = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo.id).first()
+        existing = db.query(models.GrupoOpciones).filter(
+            models.GrupoOpciones.id == grupo.id,
+            models.GrupoOpciones.tenant_id == tenant_id
+        ).first()
         if existing:
             return update_grupo_opciones(db, tenant_id, grupo.id, grupo)
+        
+        # Si el ID existe pero pertenece a OTRO tenant, no podemos tocarlo.
+        # Quitamos el ID del payload para que la DB asigne el siguiente libre.
+        check_global = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo.id).first()
+        if check_global:
+            grupo.id = None
             
     db_grupo = models.GrupoOpciones(**grupo.dict(exclude_none=True))
     db_grupo.tenant_id = tenant_id
@@ -146,15 +155,19 @@ def create_grupo_opciones(db: Session, tenant_id: str, grupo: schemas.GrupoOpcio
     return db_grupo
 
 def update_grupo_opciones(db: Session, tenant_id: str, grupo_id: int, grupo: schemas.GrupoOpcionesCreate):
-    db_grupo = db.query(models.GrupoOpciones).filter(models.GrupoOpciones.id == grupo_id).first()
+    # Solo permitimos actualizar si el ID pertenece a este Tenant
+    db_grupo = db.query(models.GrupoOpciones).filter(
+        models.GrupoOpciones.id == grupo_id,
+        models.GrupoOpciones.tenant_id == tenant_id
+    ).first()
+    
     if db_grupo:
-        # Excluir campos clave de la actualización para no resetear a None o cambiar ID
+        # Excluir campos clave
         update_data = grupo.dict(exclude_unset=True)
         for key, value in update_data.items():
             if key not in ["id", "tenant_id"]:
                 setattr(db_grupo, key, value)
         
-        db_grupo.tenant_id = tenant_id
         db.commit()
         db.refresh(db_grupo)
     return db_grupo

@@ -26,7 +26,12 @@ mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('application/wasm', '.wasm')
 
 # --- SEGURIDAD Y TENANT ---
-API_KEY = os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella")
+API_KEY = os.getenv("API_SECRET_KEY")
+
+if not API_KEY:
+    print("❌ ERROR CRÍTICO: API_SECRET_KEY no configurada en las variables de entorno.")
+    # En producción esto detendrá el arranque para evitar que la API sea pública
+    # raise RuntimeError("API_SECRET_KEY is required")
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KEY")):
     """Verifica que el cliente envíe la llave correcta en el encabezado X-API-KEY."""

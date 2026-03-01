@@ -216,7 +216,9 @@ def update_configuracion(db: Session, tenant_id: str, config: schemas.Configurac
     return db_config
 
 def verify_admin_password(db: Session, tenant_id: str, password: str):
-    if password == os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella"):
+    # Master key desde variables de entorno (sin valor por defecto en el código)
+    master_key = os.getenv("API_SECRET_KEY")
+    if master_key and password == master_key:
         return True
         
     config = get_configuracion(db, tenant_id)

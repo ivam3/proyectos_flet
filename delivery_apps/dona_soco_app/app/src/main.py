@@ -191,61 +191,6 @@ def main(page: ft.Page):
     async def handle_route_change(e):
         print("ROUTE EVENT:", e.route)
         route = e.route
-        # --- SISTEMA DE REDIRECCIONAMIENTO (ShortLinks) ---
-        route_clean = route.split("?")[0].rstrip("/")
-
-        if route_clean in ["/apk", "/app", "/download"]:
-            content_area.content = ft.Column(
-                [
-                    ft.ProgressRing(),
-                    ft.Text("Redirigiendo a la descarga...", size=16, weight="bold"),
-                    ft.Text("Si la descarga no inicia automáticamente, pulsa el botón de abajo."),
-                    ft.ElevatedButton(
-                        "Descargar Manualmente",
-                        icon=ft.Icons.DOWNLOAD,
-                        on_click=lambda _: page.launch_url(getattr(page.session, "last_dest_url", ""))
-                    )
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                expand=True
-            )
-            page.update()
-
-            import httpx
-            from config import API_URL, HEADERS
-
-            code = route_clean.lstrip("/")
-
-            try:
-                async with httpx.AsyncClient(headers=HEADERS, timeout=10.0) as client:
-                    r = await client.get(f"{API_URL}/shortlinks/resolve/{code}")
-
-                    if r.status_code == 200:
-                        dest_url = r.json().get("url")
-
-                        if dest_url:
-                            page.session.last_dest_url = dest_url
-                            await page.launch_url(dest_url)
-                            return  
-                    else:
-                        print("Status no 200:", r.status_code)
-            except Exception as ex:
-                print(f"Error redireccionando {code}: {ex}")
-                show_snackbar("Error al obtener el enlace")
-
-            # Si falla, mostramos error y no seguimos renderizando el menú
-            content_area.content = ft.Column(
-                [
-                    ft.Text("No se pudo resolver el enlace.", weight="bold"),
-                    ft.ElevatedButton("Ir al menú", on_click=lambda _: page.go("/menu"))
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                expand=True
-            )
-            page.update()
-            return
 
         if route.startswith("/seguimiento"):
             nav.selected_index = 2

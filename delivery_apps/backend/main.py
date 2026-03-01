@@ -184,6 +184,15 @@ def delete_short_link(
         raise HTTPException(status_code=404, detail="Enlace no encontrado")
     return {"ok": True}
 
+@app.get("/r/{tenant_id}/{code}")
+async def public_redirect(tenant_id: str, code: str, db: Session = Depends(get_db)):
+    """Redirección pública rápida mediante HTTP 302."""
+    link = crud.get_short_link_by_code(db, tenant_id, code)
+    if not link:
+        # Si no existe el link, mandarlo al home del tenant (opcional)
+        return JSONResponse({"detail": "Enlace no encontrado"}, status_code=404)
+    return RedirectResponse(url=link.destination_url, status_code=302)
+
 @app.get("/menu", response_model=List[schemas.Menu])
 def read_menu(
     solo_activos: bool = True, 

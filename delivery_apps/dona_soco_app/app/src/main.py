@@ -191,6 +191,19 @@ def main(page: ft.Page):
         route = e.route
         # --- SISTEMA DE REDIRECCIONAMIENTO (ShortLinks) ---
         if route in ["/apk", "/app", "/download"]:
+            content_area.content = ft.Column(
+                [
+                    ft.ProgressRing(),
+                    ft.Text("Redirigiendo a la descarga...", size=16, weight="bold"),
+                    ft.Text("Si la descarga no inicia automáticamente, pulsa el botón de abajo."),
+                    ft.ElevatedButton("Descargar Manualmente", icon=ft.Icons.DOWNLOAD, on_click=lambda _: page.launch_url(getattr(page.session, "last_dest_url", "")))
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True
+            )
+            page.update()
+
             import httpx
             from config import API_URL, HEADERS
             code = route.lstrip("/")
@@ -200,10 +213,12 @@ def main(page: ft.Page):
                     if r.status_code == 200:
                         dest_url = r.json().get("url")
                         if dest_url:
+                            page.session.last_dest_url = dest_url
                             await page.launch_url(dest_url)
                             return
             except Exception as ex:
                 print(f"Error redireccionando {code}: {ex}")
+                show_snackbar(f"Error al obtener el enlace: {ex}")
 
         if route.startswith("/seguimiento"):
             nav.selected_index = 2

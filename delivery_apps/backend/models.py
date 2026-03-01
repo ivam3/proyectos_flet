@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime, Text
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -55,8 +55,10 @@ class ShortLink(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(String, index=True, default="dona_soco")
-    short_code = Column(String, unique=True, index=True)
+    short_code = Column(String, index=True)
     destination_url = Column(String)
+
+    __table_args__ = (UniqueConstraint('tenant_id', 'short_code', name='_tenant_short_code_uc'),)
 
 class Orden(Base):
     __tablename__ = "ordenes"

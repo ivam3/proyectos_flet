@@ -127,8 +127,16 @@ class DBManager:
 
     # --- SHORT LINKS ---
     def get_short_links(self):
-        r = self.client.get("/shortlinks")
-        return r.json()
+        try:
+            r = self.client.get("/shortlinks")
+            if r.status_code != 200:
+                print(f"❌ Error del API ({r.status_code}): {r.text}")
+                return []
+            data = r.json()
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            print(f"🛑 Error de conexión: {e}")
+            return []
 
     def create_short_link(self, code: str, url: str):
         data = {"short_code": code, "destination_url": url}

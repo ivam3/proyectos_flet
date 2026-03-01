@@ -714,14 +714,32 @@ class AdminShell(cmd.Cmd):
             print(f"❌ Error: {e}")
 
     def do_rmlink(self, arg):
-        """Elimina un enlace de redirección por ID: rmlink [id]"""
+        """Elimina un enlace de redirección por ID o Código: rmlink [id|codigo]"""
         if not arg:
-            print("❌ Uso: rmlink [id]")
+            print("❌ Uso: rmlink [id|codigo]")
             return
-        if self.mgr.delete_short_link(int(arg)):
-            print(f"🗑️ Enlace {arg} eliminado.")
+        
+        target_id = None
+        # Si es un número, lo usamos directamente como ID
+        if arg.isdigit():
+            target_id = int(arg)
         else:
-            print(f"❌ No se pudo eliminar el enlace.")
+            # Si es texto (ej: "apk"), buscamos el ID correspondiente en este tenant
+            print(f"🔍 Buscando enlace con código '{arg}'...")
+            links = self.mgr.get_short_links()
+            if isinstance(links, list):
+                for l in links:
+                    if l.get('short_code') == arg:
+                        target_id = l['id']
+                        break
+        
+        if target_id is not None:
+            if self.mgr.delete_short_link(target_id):
+                print(f"🗑️ Enlace '{arg}' eliminado con éxito.")
+            else:
+                print(f"❌ No se pudo eliminar el enlace en el servidor.")
+        else:
+            print(f"❌ No se encontró ningún enlace con el código o ID: {arg}")
 
     def do_backup(self, arg):
         """Genera un backup local total en JSON: backup [nombre_archivo]"""

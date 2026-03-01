@@ -20,6 +20,7 @@ import flet as ft
 from config import APP_NAME
 
 def main(page: ft.Page):
+    print("INITIAL ROUTE:", page.route)
     # --- PANTALLA DE CARGA INICIAL ---
     loading_screen = ft.Column(
         [
@@ -188,6 +189,7 @@ def main(page: ft.Page):
         page.update()
 
     async def handle_route_change(e):
+        print("ROUTE EVENT:", e.route)
         route = e.route
         # --- SISTEMA DE REDIRECCIONAMIENTO (ShortLinks) ---
         route_clean = route.split("?")[0].rstrip("/")
@@ -273,6 +275,8 @@ def main(page: ft.Page):
         page.update()
 
     page.on_route_change = handle_route_change
+    # Forzar procesamiento de la ruta inicial (útil para links directos como /apk)
+    page.go(page.route)
 
     # --- FETCH CONFIG PARA BOTONES SOCIALES ---
     from database import get_configuracion

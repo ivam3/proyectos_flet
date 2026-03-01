@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Base de Datos Local
+*.db
+backend/static/uploads/*.db
+
+# Archivos de configuración con secretos
+# (Solo subir los .example)
+config.py
+!config.py.example
+
+# IDEs
+.vscode/
+.idea/
+
+# SO
+.DS_Store
+Thumbs.db

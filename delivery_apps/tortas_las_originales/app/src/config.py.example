@@ -1,0 +1,21 @@
+# Ejemplo de configuración global (Copiar como config.py y llenar valores)
+import os
+
+APP_NAME = "Nombre del Negocio"
+COMPANY_NAME = "Compañía S.A."
+
+# Identificador único del tenant
+TENANT_ID = "nombre_del_tenant"
+
+# URL de la API (Producción o Local)
+API_URL = "https://tu-api.up.railway.app"
+
+# Seguridad (Debe coincidir con la del Backend)
+API_KEY = "tu_clave_secreta_configurada_en_railway"
+
+HEADERS = {
+    "X-API-KEY": API_KEY,
+    "X-Tenant-ID": TENANT_ID
+}
+
+IMAGES_URL = f"{API_URL}/static/uploads/{TENANT_ID}"

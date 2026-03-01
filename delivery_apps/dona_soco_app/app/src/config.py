@@ -15,7 +15,7 @@ API_URL = os.getenv(
         )
 
 # Seguridad de la API
-API_KEY = os.getenv("API_SECRET_KEY", "ads2026_Ivam3byCinderella")
+API_KEY = os.getenv("API_SECRET_KEY") # Se debe configurar en Railway o como variable de entorno local
 HEADERS = {
     "X-API-KEY": API_KEY,
     "X-Tenant-ID": TENANT_ID

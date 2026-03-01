@@ -97,6 +97,21 @@ def ensure_columns():
                 conn.commit()
         except Exception: pass
 
+        # 4. Migración de ShortLinks (Quitar unicidad global, poner por tenant)
+        if db.bind.dialect.name == "postgresql":
+            try:
+                # Intentar borrar la restricción global antigua si existe
+                conn.execute(text("ALTER TABLE short_links DROP CONSTRAINT IF EXISTS short_links_short_code_key"))
+                # Intentar borrar el índice único si se creó como índice
+                conn.execute(text("DROP INDEX IF EXISTS ix_short_links_short_code"))
+                # Asegurar que la nueva restricción compuesta exista (SQLAlchemy la creará si no existe, 
+                # pero aquí forzamos la limpieza de la anterior que es la que bloquea)
+                conn.commit()
+                print("DEBUG: Restricciones de ShortLink actualizadas en PostgreSQL")
+            except Exception as e:
+                print(f"DEBUG: Nota migración ShortLink: {e}")
+                conn.rollback()
+
 ensure_columns()
 
 app = FastAPI(title="Delivery Multi-tenant API")

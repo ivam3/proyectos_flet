@@ -12,6 +12,8 @@ API_URL = os.getenv("API_URL")
 
 # Seguridad de la API (Sin valor por defecto para obligar configuración en Railway)
 API_KEY = os.getenv("API_SECRET_KEY")
+if not API_KEY:
+    raise ValueError("API_SECRET_KEY no configurado")
 
 HEADERS = {
     "X-API-KEY": API_KEY,

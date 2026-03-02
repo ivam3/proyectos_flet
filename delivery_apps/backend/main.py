@@ -50,38 +50,6 @@ if not API_KEY:
     # En producción esto detendrá el arranque para evitar que la API sea pública
     # raise RuntimeError("API_SECRET_KEY is required")
 
-async def verify_api_key(
-    x_api_key: Optional[str] = Header(None, alias="X-API-KEY"),
-    auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    tenant_id: str = Depends(get_tenant_id)
-):
-    """
-    Sistema de autenticación dual:
-    1. API_KEY: Para scripts administrativos (db_admin.py).
-    2. JWT: Para el panel administrativo en el navegador.
-    """
-    # Opción 1: Validar contra MASTER API_KEY
-    if x_api_key and x_api_key == API_KEY:
-        return True
-
-    # Opción 2: Validar contra Bearer Token (JWT)
-    if auth and auth.scheme == "Bearer":
-        token = auth.credentials
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
-            token_tenant = payload.get("sub")
-            if token_tenant == tenant_id:
-                return True
-            print(f"ALERTA SEGURIDAD: Token de tenant '{token_tenant}' usado para '{tenant_id}'")
-        except JWTError:
-            pass
-
-    print(f"ALERTA SEGURIDAD: Acceso rechazado. Tenant: {tenant_id}")
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="No autorizado: Se requiere API_KEY válida o Token de sesión"
-    )
-
 async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
     """Obtiene el ID del tenant desde los encabezados. Obligatorio para garantizar aislamiento."""
     if not x_tenant_id or x_tenant_id.strip() == "":
@@ -90,6 +58,12 @@ async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
             detail="X-Tenant-ID header is required for data isolation"
         )
     return x_tenant_id
+
+async def verify_api_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-KEY"),
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    tenant_id: str = Depends(get_tenant_id)
+):
 
 # Inicialización de Base de Datos
 models.Base.metadata.create_all(bind=engine)

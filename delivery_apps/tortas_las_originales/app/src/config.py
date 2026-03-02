@@ -8,10 +8,10 @@ COMPANY_NAME = os.getenv("COMPANY_NAME", "Tortas Las Originales")
 TENANT_ID = os.getenv("TENANT_ID", "tortas_las_originales")
 
 # URL de la API
-API_URL = os.getenv("API_URL", "https://delivery-apps-api.up.railway.app")
+API_URL = os.getenv("API_URL")
 
 # Seguridad de la API
-API_KEY = os.getenv("API_SECRET_KEY", "")
+API_KEY = os.getenv("API_SECRET_KEY")
 
 HEADERS = {
     "X-API-KEY": API_KEY,

@@ -8,7 +8,7 @@ COMPANY_NAME = os.getenv("COMPANY_NAME", "Tortas Las Originales")
 TENANT_ID = os.getenv("TENANT_ID", "tortas_las_originales")
 
 # URL de la API
-API_URL = os.getenv("API_URL")
+API_URL = os.getenv("API_URL", "https://delivery-apps-api.up.railway.app")
 
 # Seguridad de la API
 API_KEY = os.getenv("API_SECRET_KEY")

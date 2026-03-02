@@ -288,7 +288,7 @@ def configuracion_view(page: ft.Page):
 
     def cargar_grupos_opciones():
         lista_grupos_col.controls.clear()
-        grupos = get_grupos_opciones()
+        grupos = get_grupos_opciones(page=page)
         
         for g in grupos:
             # g: id, nombre, opciones (str json), ...
@@ -322,7 +322,7 @@ def configuracion_view(page: ft.Page):
         ops_list = [x.strip() for x in opciones_grupo_field.value.split(",") if x.strip()]
         ops_json = json.dumps(ops_list)
         
-        if create_grupo_opciones(nombre_grupo_field.value, ops_json):
+        if create_grupo_opciones(nombre_grupo_field.value, ops_json, page=page):
             show_notification(page, "Grupo agregado exitosamente", ft.Colors.GREEN_700)
             nombre_grupo_field.value = ""
             opciones_grupo_field.value = ""
@@ -331,7 +331,7 @@ def configuracion_view(page: ft.Page):
             show_notification(page, "Error al crear grupo. Verifique permisos o conexión (API 401?)", ft.Colors.RED)
 
     def borrar_grupo_click(gid):
-        if delete_grupo_opciones(gid):
+        if delete_grupo_opciones(gid, page=page):
             cargar_grupos_opciones()
             show_notification(page, "Grupo eliminado", ft.Colors.ORANGE)
 
@@ -349,7 +349,7 @@ def configuracion_view(page: ft.Page):
     page.overlay.append(success_dialog)
 
     def cargar_datos():
-        config = get_configuracion()
+        config = get_configuracion(page=page)
         if not config:
             return
 
@@ -463,7 +463,8 @@ def configuracion_view(page: ft.Page):
             guisos_json,
             salsas_json,
             costo_envio=c_envio,
-            categorias_disponibles=categorias_json
+            categorias_disponibles=categorias_json,
+            page=page
         ):
             success_dialog.open = True
             page.update()
@@ -475,7 +476,7 @@ def configuracion_view(page: ft.Page):
             show_notification(page, "Las contraseñas no coinciden", ft.Colors.RED)
             return
 
-        if cambiar_admin_password(new_password_field.value):
+        if cambiar_admin_password(new_password_field.value, page=page):
             show_notification(page, "Contraseña actualizada", ft.Colors.GREEN_700)
             new_password_field.value = ""
             confirm_password_field.value = ""

@@ -53,7 +53,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
 
     def cargar_categorias():
         from database import get_configuracion
-        config = get_configuracion()
+        config = get_configuracion(page=page)
         categorias = []
         if config and config.get("categorias_disponibles"):
             try:
@@ -90,7 +90,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     def cargar_checkboxes_grupos():
         grupos_opciones_container.controls.clear()
         grupos_opciones_checks.clear()
-        grupos = get_grupos_opciones()
+        grupos = get_grupos_opciones(page=page)
         
         if not grupos:
             grupos_opciones_container.controls.append(ft.Text("No hay grupos extras configurados (Ir a Configuración)", size=12, color=ft.Colors.GREY))
@@ -213,7 +213,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                 upload_status.value = "Subiendo al servidor..."
                 page.update()
                 
-                filename = subir_imagen(file.name, content)
+                filename = subir_imagen(file.name, content, page=page)
                 
                 if filename:
                     imagen_path_guardado.value = filename
@@ -253,7 +253,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     def agregar_click(e):
         data = validar_datos()
         if data:
-            if agregar_platillo(*data):
+            if agregar_platillo(*data, page=page):
                 limpiar_campos()
                 cargar_lista()
                 show_notification(page, "Platillo agregado correctamente", ft.Colors.GREEN)
@@ -267,7 +267,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     def guardar_cambios_click(e):
         data = validar_datos()
         if data and edit_mode_id.value:
-            actualizar_platillo(int(edit_mode_id.value), *data)
+            actualizar_platillo(int(edit_mode_id.value), *data, page=page)
             limpiar_campos()
             cargar_lista()
             show_notification(page, "Actualizado", ft.Colors.GREEN)
@@ -279,7 +279,7 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
     # --- LISTA DE PLATILLOS ---
     def cargar_lista(search_term=""):
         lista.controls.clear()
-        platillos = obtener_menu(solo_activos=False, search_term=search_term)
+        platillos = obtener_menu(solo_activos=False, search_term=search_term, page=page)
         for p in platillos:
             pid = p['id']
             nom = p['nombre']
@@ -324,8 +324,8 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
                         ft.Text(f"${pre:.2f}", weight="bold", size=15, color=ft.Colors.BROWN_700),
                         ft.Row([
                             ft.IconButton(ft.Icons.EDIT, icon_color=ft.Colors.BROWN_700, icon_size=20, tooltip="Editar", on_click=lambda e, pl=p: llenar_campos(pl)),
-                            ft.IconButton(ft.Icons.DELETE, icon_color=ft.Colors.RED, icon_size=20, tooltip="Eliminar", on_click=lambda e, id=pid: [eliminar_platillo(id), cargar_lista()]),
-                            ft.Switch(value=bool(active), scale=0.8, active_color=ft.Colors.GREEN, on_change=lambda e, id=pid: [actualizar_visibilidad_platillo(id, 1 if e.control.value else 0)]),
+                            ft.IconButton(ft.Icons.DELETE, icon_color=ft.Colors.RED, icon_size=20, tooltip="Eliminar", on_click=lambda e, id=pid: [eliminar_platillo(id, page=page), cargar_lista()]),
+                            ft.Switch(value=bool(active), scale=0.8, active_color=ft.Colors.GREEN, on_change=lambda e, id=pid: [actualizar_visibilidad_platillo(id, 1 if e.control.value else 0, page=page)]),
                         ], spacing=10, alignment=ft.MainAxisAlignment.START)
                     ], expand=True, spacing=2)
                 ], vertical_alignment=ft.CrossAxisAlignment.START)
@@ -381,9 +381,9 @@ def menu_admin_view(page: ft.Page, file_picker: ft.FilePicker):
         
         def ejecutar_accion(e):
             if es_mostrar:
-                mostrar_todos_los_platillos()
+                mostrar_todos_los_platillos(page=page)
             else:
-                ocultar_todos_los_platillos()
+                ocultar_todos_los_platillos(page=page)
             
             cargar_lista()
             global_confirm_dialog.open = False

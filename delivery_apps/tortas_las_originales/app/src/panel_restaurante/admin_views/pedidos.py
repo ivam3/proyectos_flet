@@ -133,7 +133,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             search_term = search_filter.value.strip() if search_filter.value else None
             
             print("DEBUG: Consultando base de datos...")
-            datos = obtener_datos_exportacion(search_term=search_term)
+            datos = obtener_datos_exportacion(search_term=search_term, page=page)
             
             headers = [
                 "Orden ID", "Código", "Fecha", "Cliente", "Teléfono", "Dirección", "Referencias", 
@@ -215,7 +215,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         try:
             # 1. Obtener mapa de productos para saber destino
             # Nota: Esto trae todo el menú. En producción optimizar con caché o mapa estático.
-            menu_items = obtener_menu(solo_activos=False)
+            menu_items = obtener_menu(solo_activos=False, page=page)
             # Map: "Nombre Producto" -> "cocina" | "foodtruck"
             # Normalizamos nombres para evitar fallos por espacios
             product_map = { m['nombre'].strip().lower(): m.get('printer_target', 'cocina') for m in menu_items }
@@ -292,7 +292,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
 
         try:
             # Obtener configuración para el pie de página
-            config = get_configuracion()
+            config = get_configuracion(page=page)
             contactos = {}
             if config and 'contactos' in config.keys() and config['contactos']:
                 try:
@@ -490,7 +490,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         page.update()
 
     def confirm_status_change(e, pedido_id, new_status, motivo=None):
-        actualizar_estado_pedido(pedido_id, new_status, motivo)
+        actualizar_estado_pedido(pedido_id, new_status, motivo, page=page)
         close_confirmation_dialog()
         cargar_pedidos()
         show_notification(page, f"Estado actualizado a {new_status}", ft.Colors.GREEN)
@@ -574,14 +574,14 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
         nonlocal current_page, total_pages
         search_term = search_filter.value.strip() if search_filter.value else None
         
-        total_items = obtener_total_pedidos(search_term=search_term)
+        total_items = obtener_total_pedidos(search_term=search_term, page=page)
         
         total_pages = math.ceil(total_items / rows_per_page) if total_items > 0 else 1
         current_page = max(1, min(current_page, total_pages))
         
         offset = (current_page - 1) * rows_per_page
         
-        pedidos = obtener_pedidos(limit=rows_per_page, offset=offset, search_term=search_term)
+        pedidos = obtener_pedidos(limit=rows_per_page, offset=offset, search_term=search_term, page=page)
         
         pedidos_data_table.rows.clear()
         for p in pedidos:
@@ -631,7 +631,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
             try:
                 # Obtener el ultimo pedido para imprimirlo
                 # Asumimos que obtener_pedidos devuelve ordenados por fecha descendente
-                pedidos_recientes = obtener_pedidos(limit=1)
+                pedidos_recientes = obtener_pedidos(limit=1, page=page)
                 if pedidos_recientes:
                     ultimo_pedido = pedidos_recientes[0]
                     # Llamar a la funcion de impresion existente

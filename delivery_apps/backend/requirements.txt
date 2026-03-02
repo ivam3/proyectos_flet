@@ -6,3 +6,5 @@ python-multipart
 psycopg2-binary
 python-dotenv
 Pillow
+python-jose[cryptography]
+passlib[cryptography]

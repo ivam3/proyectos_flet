@@ -9,9 +9,9 @@ venv/
 *.db
 backend/static/uploads/*.db
 
-# Archivos de configuración con secretos
-# (Solo subir los .example)
-config.py
+# Archivos de configuración
+# (Ahora seguros porque usan os.getenv)
+!config.py
 !config.py.example
 
 # IDEs
@@ -21,3 +21,6 @@ config.py
 # SO
 .DS_Store
 Thumbs.db
+
+# Logs Internos
+INFORME_MODIFICACIONES.md

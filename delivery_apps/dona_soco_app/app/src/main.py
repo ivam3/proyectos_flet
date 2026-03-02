@@ -138,7 +138,7 @@ def main(page: ft.Page):
     async def validar_clave(e=None):
         nonlocal admin_mode
         clave = admin_field.value.strip()
-        if verificar_admin_login(clave):
+        if verificar_admin_login(clave, page=page):
             admin_mode = True
             close_dialog()
             show_snackbar("Modo administrador activado")

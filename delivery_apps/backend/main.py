@@ -1,15 +1,32 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
 import os
 import mimetypes
 import shutil
 
 import crud, models, schemas
 from database import SessionLocal, engine, get_db
+
+# --- CONFIGURACIÓN JWT ---
+# Usamos la misma API_SECRET_KEY para firmar los tokens
+JWT_SECRET_KEY = os.getenv("API_SECRET_KEY", "fallback_secret_for_dev_only")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 horas
+
+security = HTTPBearer(auto_error=False)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 # --- PERSISTENCIA DE BASE DE DATOS (AUTO-SEEDING) ---
 # Si la base de datos no existe en el volumen persistente pero sí en la raíz, moverla.
@@ -33,15 +50,37 @@ if not API_KEY:
     # En producción esto detendrá el arranque para evitar que la API sea pública
     # raise RuntimeError("API_SECRET_KEY is required")
 
-async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KEY")):
-    """Verifica que el cliente envíe la llave correcta en el encabezado X-API-KEY."""
-    if not x_api_key or x_api_key != API_KEY:
-        print(f"ALERTA SEGURIDAD: Acceso rechazado. Header: {x_api_key}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Acceso denegado: Credenciales inválidas"
-        )
-    return x_api_key
+async def verify_api_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-KEY"),
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """
+    Sistema de autenticación dual:
+    1. API_KEY: Para scripts administrativos (db_admin.py).
+    2. JWT: Para el panel administrativo en el navegador.
+    """
+    # Opción 1: Validar contra MASTER API_KEY
+    if x_api_key and x_api_key == API_KEY:
+        return True
+
+    # Opción 2: Validar contra Bearer Token (JWT)
+    if auth and auth.scheme == "Bearer":
+        token = auth.credentials
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+            token_tenant = payload.get("sub")
+            if token_tenant == tenant_id:
+                return True
+            print(f"ALERTA SEGURIDAD: Token de tenant '{token_tenant}' usado para '{tenant_id}'")
+        except JWTError:
+            pass
+
+    print(f"ALERTA SEGURIDAD: Acceso rechazado. Tenant: {tenant_id}")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No autorizado: Se requiere API_KEY válida o Token de sesión"
+    )
 
 async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
     """Obtiene el ID del tenant desde los encabezados. Obligatorio para garantizar aislamiento."""
@@ -383,7 +422,7 @@ def toggle_menu_item(
          raise HTTPException(status_code=404, detail="Platillo no encontrado")
     return {"ok": True}
 
-@app.post("/admin/login")
+@app.post("/admin/login", response_model=schemas.Token)
 def admin_login(
     creds: schemas.LoginRequest, 
     db: Session = Depends(get_db),
@@ -392,7 +431,10 @@ def admin_login(
     is_valid = crud.verify_admin_password(db, tenant_id, creds.password)
     if not is_valid:
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
-    return {"authenticated": True}
+    
+    # Generar token JWT que expira en 24h
+    access_token = create_access_token(data={"sub": tenant_id})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/admin/change-password", dependencies=[Depends(verify_api_key)])
 def admin_change_pass(

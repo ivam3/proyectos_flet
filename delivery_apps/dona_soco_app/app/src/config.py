@@ -8,7 +8,7 @@ COMPANY_NAME = os.getenv("COMPANY_NAME", "Antojitos Doña Soco")
 TENANT_ID = os.getenv("TENANT_ID", "dona_soco")
 
 # URL de la API
-API_URL = os.getenv("API_URL")
+API_URL = os.getenv("API_URL", "https://delivery-apps-api.up.railway.app")
 
 # Seguridad de la API (Sin valor por defecto para obligar configuración en Railway)
 API_KEY = os.getenv("API_SECRET_KEY")

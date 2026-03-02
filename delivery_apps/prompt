@@ -1,1 +1,0 @@
-En produccion obtengo nullbyte por recibir nulo el valor de SECRET_API_KEY. @...../app/src/config.py ya esta cargando y las variables API_KEY y SECRET_API_KEY en los servicios frontend y backend(API). A que crees que se deba este escenario?

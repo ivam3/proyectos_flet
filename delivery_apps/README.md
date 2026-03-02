@@ -1,108 +1,87 @@
 # 🚚 Delivery Apps Multi-tenant System
 
-Una solución profesional, moderna y adaptable de **Software como Servicio (SaaS)** para servicios a domicilio. Diseñada originalmente para el giro restaurantero (Antojitos, Tortas, etc.), pero extensible a cualquier negocio como abarrotes, boutiques o farmacias.
+Una solución profesional, moderna y adaptable de **Software como Servicio (SaaS)** para servicios a domicilio. Diseñada originalmente para el giro restaurantero, pero extensible a cualquier modelo de negocio basado en catálogo y pedidos.
 
-Este ecosistema permite gestionar múltiples negocios (**tenants**) bajo un mismo motor de Backend, ofreciendo autonomía total a cada marca con su propio catálogo, configuración y gestión de pedidos.
+Este ecosistema permite gestionar múltiples marcas (**tenants**) bajo un mismo motor de Backend, ofreciendo autonomía total a cada marca con su propio catálogo, configuración y administración.
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
-El proyecto está dividido en tres componentes principales:
+El proyecto implementa una arquitectura desacoplada y segura:
 
-1.  **Backend (API):** Construido con **FastAPI** y **PostgreSQL**. Centraliza la lógica de negocio, persistencia de datos, seguridad y sistema de redireccionamiento (acortador).
-2.  **Frontend (App):** Aplicaciones multiplataforma (Web/APK) construidas con **Flet**. Experiencia de usuario fluida con soporte para SPA (Single Page Application).
-3.  **Herramienta Admin (CLI):** Un potente sistema de línea de comandos (`db_admin.py`) para gestión masiva de datos, importación/exportación de respaldos JSON y mantenimiento.
+1.  **Backend (API):** Basado en **FastAPI** y **PostgreSQL**.
+    *   **Seguridad Dual:** Autenticación por **API_KEY** (para servicios y scripts) y **JWT (JSON Web Tokens)** para sesiones de navegador.
+    *   **Aislamiento:** Middleware que garantiza que cada petición acceda exclusivamente a los datos de su propio `Tenant ID`.
+2.  **Frontend (App):** Aplicación **Flet** multiplataforma (Web/APK).
+    *   Optimización para producción mediante `flet build web` (CanvasKit).
+    *   Gestión de sesiones administrativas seguras mediante tokens persistentes en memoria del cliente.
+3.  **Redireccionamiento (Shortlinks):** Sistema de redirección rápida a nivel de servidor (HTTP 302) para enlaces de descarga (ej: `/apk`) y promociones.
 
 ---
 
 ## ✨ Características Principales
 
-*   **Multi-tenancy:** Aislamiento de datos por `Tenant ID` en una única base de datos.
-*   **Gestión de Menú Dinámica:** Soporte para platillos configurables (guisos, salsas, extras) y grupos de opciones ilimitados.
-*   **Seguridad por Capas:** Comunicación protegida mediante `API_SECRET_KEY` y variables de entorno.
-*   **Panel Administrativo:** Interfaz integrada en la app para control de pedidos en tiempo real, configuración de horarios y métodos de pago.
-*   **Acortador Inteligente:** Sistema de redirección rápida (ej: `/apk`) gestionado desde la base de datos para facilitar descargas y promociones.
-*   **Build Profesional:** Optimización de imágenes a formato **WebP** y motor de renderizado **CanvasKit**.
+*   **Multi-tenancy Real:** Aislamiento de datos por `Tenant ID` en una base de datos centralizada.
+*   **Gestión Dinámica:** Catálogo, grupos de opciones, precios y descuentos editables en tiempo real.
+*   **Seguridad Industrial:** Claves ocultas mediante variables de entorno y tokens de sesión firmados (HS256).
+*   **Acortador Inteligente:** Redirección instantánea gestionada desde el panel administrativo (Backend-level).
+*   **Panel Administrativo Pro:** Control total de pedidos, estados de entrega, configuración de marca y exportación de datos (CSV/Excel/PDF).
 
 ---
 
-## 🚀 Guía de Instalación Local
+## 🚀 Instalación y Configuración
 
-### Requisitos Previos
-*   Python 3.10 o superior.
-*   Git.
+### Requisitos
+*   Python 3.10+
+*   PostgreSQL (Producción) / SQLite (Pruebas locales)
 
-### Pasos
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/ivam3/proyectos_flet.git
-    cd delivery_apps
-    ```
-
-2.  **Configurar el Backend:**
-    ```bash
-    cd backend
-    cp .env.example .env
-    # Edita .env con tu API_SECRET_KEY
-    pip install -r requirements.txt
-    uvicorn main:app --reload
-    ```
-
-3.  **Configurar el Frontend (Ejemplo Dona Soco):**
-    ```bash
-    # Edita config.py con la URL de tu API local y tu API_SECRET_KEY
-    # O usa variables de entorno para mayor seguridad y determinalas en tus servicios hosting.
-    pip install -r requirements.txt # Si existe, o instala flet
-    flet run --web
-    ```
-
----
-
-## 🛠️ Herramienta Administrativa CLI
-
-La herramienta `db_admin.py` es el corazón de la gestión técnica del sistema.
-
-### Uso Básico
+### 1. Preparar el Entorno
 ```bash
-python db_admin.py [nombre_de_carpeta_del_negocio]
+git clone https://github.com/ivam3/proyectos_flet.git
+cd delivery_apps
 ```
 
-### Comandos Clave:
-*   `ls`: Lista todos los platillos del catálogo.
-*   `importar [archivo.json]`: Sincroniza datos masivamente respetando IDs y aislamiento por tenant.
-*   `backup [nombre.json]`: Genera un respaldo completo del negocio actual.
-*   `addlink [codigo] [url]`: Crea un enlace corto oficial (ej: `apk`).
-*   `links`: Muestra todos los redireccionamientos activos.
-*   `upload [ruta_imagen]`: Sube y convierte automáticamente imágenes a WebP en el servidor.
+### 2. Configuración de Seguridad (OBLIGATORIO)
+El sistema depende de una clave maestra llamada `API_SECRET_KEY`. Debes configurarla en todos los servicios:
+
+*   **Localmente:** Crea archivos `config.py` en las carpetas `src/` basándote en los `.example` y asigna tu clave.
+*   **Producción:** Configura la variable de entorno `API_SECRET_KEY` en Railway para el Backend y todos los Frontends.
 
 ---
 
-## 🌐 Despliegue en Producción (Railway)
+## 🛠️ Gestión con db_admin.py
 
-Este proyecto está optimizado para **Railway** utilizando Docker.
+Esta herramienta CLI permite el control técnico total sin entrar a la web.
 
-1.  **Variables de Entorno Necesarias:**
-    *   `API_SECRET_KEY`: La clave maestra compartida entre Backend y Frontends.
-    *   `DATABASE_URL`: URL de conexión a PostgreSQL.
-    *   `API_URL`: URL pública del servicio de Backend.
-    *   `TENANT_ID`: Identificador único del negocio (ej: `dona_soco`).
-
-2.  **CI/CD:**
-    El sistema utiliza GitHub Actions (`.github/workflows/flet-web.yml`) para automatizar la construcción y el despliegue de los frontends cada vez que se detectan cambios en la rama principal.
-
----
-
-## 📱 Compilación para Android (APK)
-
-Para generar el instalador móvil:
 ```bash
-cd dona_soco_app/app
+# Iniciar administración de un negocio
+python db_admin.py [nombre_directorio_negocio]
+```
+
+### Comandos Principales:
+*   `importar [archivo.json]`: Sincronización inteligente de datos (Upsert por ID/Nombre).
+*   `addlink [codigo] [url]`: Configura una redirección corta (ej: `addlink apk http://...`).
+*   `backup [archivo.json]`: Respaldo completo del tenant actual.
+*   `upload [imagen]`: Sube imágenes al servidor con conversión automática a WebP.
+
+---
+
+## 🌐 Despliegue en Railway
+
+1.  **Backend:** Conectar el repo, configurar `DATABASE_URL` y `API_SECRET_KEY`.
+2.  **Frontends:** Configurar `API_URL`, `TENANT_ID` y la misma `API_SECRET_KEY`.
+3.  **URLs de Redirección:** Disponibles en `https://tu-api.up.railway.app/r/{tenant}/{codigo}`.
+
+---
+
+## 📱 Compilación APK
+Para generar el instalador Android:
+```bash
 flet build apk --verbose
 ```
-*Nota: Requiere tener configurado el entorno de Flutter y Android SDK.*
 
 ---
 
-## 📝 Licencia y Créditos
-Proyecto desarrollado por **Ivam3byCinderella**. Todos los derechos reservados.
+## 📝 Créditos
+Desarrollado por **Ivam3byCinderella**. © 2026 Todos los derechos reservados.

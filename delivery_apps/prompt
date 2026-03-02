@@ -1,0 +1,16 @@
+las acciones realizadas desde el panel administrativo no funcionan, especificamente las efectuadas desde:
+
+- @dona_soco_app/app/src/panel_restaurante/admin_views/menu_admin.py
+- @dona_soco_app/app/src/panel_restaurante/admin_views/configuracion.py
+- @tortas_las_originales/app/src/panel_restaurante/admin_views/menu_admin.py
+- @tortas_las_originales/app/src/panel_restaurante/admin_views/configuracion.py
+
+Esto desde los ultimos cambios realizados de seguridad, es decir, la asigancion de variables de entorno en railway, mismas que estas deternimadas exitosamente con el valor correcto de lo contrario @db_admin.py no funcionaria o el menu no cargaria o no se podria ingresar al panel_restaurante.
+
+Por lo tanto esto nos lleva al manejo de headers, revisa que si esten determinandose de forma correcta.
+
+NOTAS:
+- Cuestiona mis metodos e ideas
+- Opina acerca de los metodos cada que creas necesario
+- Solicita la informacion que necesites para un mejor desempeño
+- Brinda mejores metodos y/o soluciones si crees que existe una mejor

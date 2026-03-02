@@ -51,10 +51,8 @@ El proyecto está dividido en tres componentes principales:
 
 3.  **Configurar el Frontend (Ejemplo Dona Soco):**
     ```bash
-    cd dona_soco_app/app/src
-    cp config.py.example config.py
     # Edita config.py con la URL de tu API local y tu API_SECRET_KEY
-    cd ..
+    # O usa variables de entorno para mayor seguridad y determinalas en tus servicios hosting.
     pip install -r requirements.txt # Si existe, o instala flet
     flet run --web
     ```

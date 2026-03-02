@@ -64,6 +64,32 @@ async def verify_api_key(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
     tenant_id: str = Depends(get_tenant_id)
 ):
+    """
+    Sistema de autenticación dual:
+    1. API_KEY: Para scripts administrativos (db_admin.py).
+    2. JWT: Para el panel administrativo en el navegador.
+    """
+    # Opción 1: Validar contra MASTER API_KEY
+    if x_api_key and API_KEY and x_api_key == API_KEY:
+        return True
+
+    # Opción 2: Validar contra Bearer Token (JWT)
+    if auth and auth.scheme == "Bearer":
+        token = auth.credentials
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+            token_tenant = payload.get("sub")
+            if token_tenant == tenant_id:
+                return True
+            print(f"ALERTA SEGURIDAD: Token de tenant '{token_tenant}' usado para '{tenant_id}'")
+        except JWTError:
+            pass
+
+    print(f"ALERTA SEGURIDAD: Acceso rechazado. Tenant: {tenant_id}")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No autorizado: Se requiere API_KEY válida o Token de sesión"
+    )
 
 # Inicialización de Base de Datos
 models.Base.metadata.create_all(bind=engine)

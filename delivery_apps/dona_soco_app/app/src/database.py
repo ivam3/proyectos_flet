@@ -22,7 +22,7 @@ def verificar_admin_login(password, page=None):
             token_data = response.json()
             # Guardamos el JWT en la sesión de Flet (seguro en el navegador)
             if page:
-                page.session.set("auth_token", token_data["access_token"])
+                page.session["auth_token"] = token_data["access_token"]
             return True
         return False
     except Exception as e:

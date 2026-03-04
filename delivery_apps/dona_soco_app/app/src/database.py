@@ -9,8 +9,9 @@ def get_auth_headers(page=None):
     Si hay un token JWT en la sesión, lo usa. Si no, usa los HEADERS base (que traen la API_KEY local).
     """
     headers = HEADERS.copy()
-    if page and page.session.get("auth_token"):
-        headers["Authorization"] = f"Bearer {page.session.get('auth_token')}"
+    auth_token = getattr(page.session, "auth_token", None) if page else None
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
     return headers
 
 # --- AUTH ---
@@ -22,7 +23,7 @@ def verificar_admin_login(password, page=None):
             token_data = response.json()
             # Guardamos el JWT en la sesión de Flet (seguro en el navegador)
             if page:
-                page.session["auth_token"] = token_data["access_token"]
+                setattr(page.session, "auth_token", token_data["access_token"])
             return True
         return False
     except Exception as e:

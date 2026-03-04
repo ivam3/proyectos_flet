@@ -1,0 +1,24 @@
+El build ejecuta un proceso más completo, empaqueta todo, analiza imports y puede tocar código que en modo run nunca se ejecuta.
+
+Cuando se agrego JWT se instalo
+```
+python-jose
+passlib
+```
+Algunas versiones viejas de dependencias relacionadas (sobre todo rsa, ecdsa, o libs internas antiguas) probablemente todavía tienen referencias legacy a unicode y GitHub Actions puede estar instalando versiones distintas y en GitHub Actions se instalan desde cero.
+
+revisa los requirements.txt que este bien fijado.
+
+
+Una cosa importante
+
+Valida que no se hubiese importando JWT utils en tu frontend Flet (lado cliente), eso también puede romper. pues Flet web no debería ejecutar lógica JWT pesada. JWT debe estar en backend.
+
+Revisa que exista una importacion como:
+```
+from jose import jwt
+```
+Eso seria una mala idea para web build.
+El frontend solo debe enviar:
+Authorization: Bearer <token> y No firmar ni validar tokens.
+

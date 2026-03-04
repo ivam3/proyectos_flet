@@ -45,6 +45,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install flet==0.80.5 flet-cli==0.80.5
+          pip install rsa==4.9 ecdsa==0.19.0
 
       - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app
@@ -70,5 +71,5 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add delivery_apps/dona_soco_app/app/build/web
           git add delivery_apps/tortas_las_originales/app/build/web
-          git commit -m "actions:JWT integrsted as auth method" || echo "No changes to commit"
+          git commit -m "actions:fixing E:unicode" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:dev

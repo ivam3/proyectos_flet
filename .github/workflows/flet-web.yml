@@ -45,19 +45,18 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install flet==0.80.5 flet-cli==0.80.5
+          pip install --upgrade requests urllib3 charset-normalizer
 
       - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app
         run: |
           pip cache purge 
-          flutter clean 
           flet build web -v
 
       - name: Build Tortas Las Originales Web
         working-directory: delivery_apps/tortas_las_originales/app
         run: |
           pip cache purge 
-          flutter clean 
           flet build web -v
 
       - name: Upload artifacts

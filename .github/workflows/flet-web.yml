@@ -23,7 +23,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.7"
+          flutter-version: "3.41.4"
           channel: stable
 
       - name: Install system dependencies
@@ -44,16 +44,28 @@ jobs:
       - name: Install Flet CLI
         run: |
           pip install --upgrade pip
-          pip install flet==0.80.5 flet-cli==0.80.5
-          pip install rsa==4.9 ecdsa==0.19.0
+          pip install \
+          flet==0.82.0 \
+          flet-cli==0.82.0 \
+          requests==2.31.0 \
+          urllib3==1.26.18 \
+          charset-normalizer==3.3.2
 
       - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app
-        run: flet build web
+        run: |
+          export CI=true
+          pip cache purge 
+          export PYTHONIOENCODING=utf-8
+          flet build web -v
 
       - name: Build Tortas Las Originales Web
         working-directory: delivery_apps/tortas_las_originales/app
-        run: flet build web
+        run: |
+          export CI=true
+          pip cache purge 
+          export PYTHONIOENCODING=utf-8
+          flet build web -v
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -71,5 +83,5 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add delivery_apps/dona_soco_app/app/build/web
           git add delivery_apps/tortas_las_originales/app/build/web
-          git commit -m "actions:fixing E:unicode" || echo "No changes to commit"
+          git commit -m "actions(try): E:'unicode' is not defined" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:dev

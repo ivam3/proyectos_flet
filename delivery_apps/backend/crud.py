@@ -226,7 +226,12 @@ def verify_admin_password(db: Session, tenant_id: str, password: str):
         return config.admin_password == hash_password(password)
     return False
 
-def change_admin_password(db: Session, tenant_id: str, new_password: str):
+def change_admin_password(db: Session, tenant_id: str, current_password: str, new_password: str):
+    # 1. Verificar contraseña actual
+    if not verify_admin_password(db, tenant_id, current_password):
+        return False
+        
+    # 2. Aplicar cambio
     config = get_configuracion(db, tenant_id)
     config.admin_password = hash_password(new_password)
     db.commit()

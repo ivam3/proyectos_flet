@@ -262,6 +262,15 @@ def configuracion_view(page: ft.Page):
         return row
 
     # --- Cambio de Contraseña Admin ---
+    current_password_field = ft.TextField(
+        label="Contraseña Actual",
+        password=True,
+        can_reveal_password=True,
+        border_radius=10,
+        text_style=ft.TextStyle(color=ft.Colors.BLACK),
+        label_style=ft.TextStyle(color=ft.Colors.BLACK),
+    )
+
     new_password_field = ft.TextField(
         label="Nueva Contraseña Admin",
         password=True,
@@ -472,15 +481,28 @@ def configuracion_view(page: ft.Page):
             show_notification(page, "Error al guardar configuración", ft.Colors.RED)
 
     def cambiar_pass_click(e):
+        if not current_password_field.value:
+            show_notification(page, "Debe ingresar la contraseña actual", ft.Colors.RED)
+            return
+        if not new_password_field.value:
+            show_notification(page, "Debe ingresar la nueva contraseña", ft.Colors.RED)
+            return
         if new_password_field.value != confirm_password_field.value:
-            show_notification(page, "Las contraseñas no coinciden", ft.Colors.RED)
+            show_notification(page, "Las nuevas contraseñas no coinciden", ft.Colors.RED)
             return
 
-        if cambiar_admin_password(new_password_field.value, page=page):
-            show_notification(page, "Contraseña actualizada", ft.Colors.GREEN_700)
+        status = cambiar_admin_password(current_password_field.value, new_password_field.value, page=page)
+        
+        if status == 200:
+            show_notification(page, "Contraseña actualizada exitosamente", ft.Colors.GREEN_700)
+            current_password_field.value = ""
             new_password_field.value = ""
             confirm_password_field.value = ""
             page.update()
+        elif status == 401:
+            show_notification(page, "La contraseña actual es incorrecta", ft.Colors.RED)
+        else:
+            show_notification(page, "Error al actualizar contraseña. Intente más tarde.", ft.Colors.RED)
 
     guardar_button = ft.FilledButton(
         content=ft.Text("Guardar Configuración"),
@@ -557,6 +579,7 @@ def configuracion_view(page: ft.Page):
                 guardar_button,
                 ft.Divider(),
                 ft.Text("Seguridad", weight="bold", color=ft.Colors.BLACK),
+                current_password_field,
                 new_password_field,
                 confirm_password_field,
                 cambiar_pass_button,

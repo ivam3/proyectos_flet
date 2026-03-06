@@ -442,7 +442,9 @@ def admin_change_pass(
     db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)
 ):
-    crud.change_admin_password(db, tenant_id, data.new_password)
+    success = crud.change_admin_password(db, tenant_id, data.current_password, data.new_password)
+    if not success:
+        raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
     return {"ok": True}
 
 @app.post("/upload", dependencies=[Depends(verify_api_key)])

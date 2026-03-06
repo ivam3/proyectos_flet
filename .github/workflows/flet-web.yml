@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -44,13 +44,18 @@ jobs:
       - name: Install Flet CLI
         run: |
           pip install --upgrade pip
-          pip install flet==0.80.5 flet-cli==0.80.5
-          pip install requests==2.31.0 urllib3==2.2.1 charset-normalizer==3.3.2
+          pip install \
+          flet==0.82.0 \
+          flet-cli==0.82.0 \
+          requests==2.31.0 \
+          urllib3==1.26.18 \
+          charset-normalizer==3.3.2
 
       - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app
         run: |
           pip cache purge 
+          export PYTHONIOENCODING=utf-8
           flet build web -v
 
       - name: Build Tortas Las Originales Web

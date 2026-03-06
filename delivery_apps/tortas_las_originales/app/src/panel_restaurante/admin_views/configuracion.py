@@ -357,6 +357,31 @@ def configuracion_view(page: ft.Page):
     )
     page.overlay.append(success_dialog)
 
+    pass_success_dialog = ft.AlertDialog(
+        title=ft.Text("Éxito", color=ft.Colors.GREEN, weight="bold"),
+        content=ft.Column([
+            ft.Icon(ft.Icons.LOCK_OUTLINE, size=50, color=ft.Colors.GREEN),
+            ft.Text("Contraseña actualizada correctamente.", text_align="center", color=ft.Colors.BLACK),
+        ], tight=True, horizontal_alignment="center"),
+        actions=[ft.TextButton("Aceptar", on_click=lambda e: setattr(pass_success_dialog, "open", False) or page.update())]
+    )
+    page.overlay.append(pass_success_dialog)
+
+    error_dialog = ft.AlertDialog(
+        title=ft.Text("Error", color=ft.Colors.RED, weight="bold"),
+        content=ft.Column([
+            ft.Icon(ft.Icons.ERROR_OUTLINE, size=50, color=ft.Colors.RED),
+            ft.Text("", text_align="center", color=ft.Colors.BLACK),
+        ], tight=True, horizontal_alignment="center"),
+        actions=[ft.TextButton("Cerrar", on_click=lambda e: setattr(error_dialog, "open", False) or page.update())]
+    )
+    page.overlay.append(error_dialog)
+
+    def show_error_popup(message):
+        error_dialog.content.controls[1].value = message
+        error_dialog.open = True
+        page.update()
+
     def cargar_datos():
         config = get_configuracion(page=page)
         if not config:
@@ -482,27 +507,27 @@ def configuracion_view(page: ft.Page):
 
     def cambiar_pass_click(e):
         if not current_password_field.value:
-            show_notification(page, "Debe ingresar la contraseña actual", ft.Colors.RED)
+            show_error_popup("Debe ingresar la contraseña actual")
             return
         if not new_password_field.value:
-            show_notification(page, "Debe ingresar la nueva contraseña", ft.Colors.RED)
+            show_error_popup("Debe ingresar la nueva contraseña")
             return
         if new_password_field.value != confirm_password_field.value:
-            show_notification(page, "Las nuevas contraseñas no coinciden", ft.Colors.RED)
+            show_error_popup("Las contraseñas no coinciden")
             return
 
         status = cambiar_admin_password(current_password_field.value, new_password_field.value, page=page)
         
         if status == 200:
-            show_notification(page, "Contraseña actualizada exitosamente", ft.Colors.GREEN_700)
             current_password_field.value = ""
             new_password_field.value = ""
             confirm_password_field.value = ""
+            pass_success_dialog.open = True
             page.update()
         elif status == 401:
-            show_notification(page, "La contraseña actual es incorrecta", ft.Colors.RED)
+            show_error_popup("La contraseña actual es incorrecta")
         else:
-            show_notification(page, "Error al actualizar contraseña. Intente más tarde.", ft.Colors.RED)
+            show_error_popup("Error al actualizar contraseña. Intente más tarde.")
 
     guardar_button = ft.FilledButton(
         content=ft.Text("Guardar Configuración"),

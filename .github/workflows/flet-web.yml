@@ -23,7 +23,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.38.7"
+          flutter-version: "3.41.4"
           channel: stable
 
       - name: Install system dependencies
@@ -54,6 +54,7 @@ jobs:
       - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app
         run: |
+          export CI=true
           pip cache purge 
           export PYTHONIOENCODING=utf-8
           flet build web -v
@@ -61,7 +62,9 @@ jobs:
       - name: Build Tortas Las Originales Web
         working-directory: delivery_apps/tortas_las_originales/app
         run: |
+          export CI=true
           pip cache purge 
+          export PYTHONIOENCODING=utf-8
           flet build web -v
 
       - name: Upload artifacts

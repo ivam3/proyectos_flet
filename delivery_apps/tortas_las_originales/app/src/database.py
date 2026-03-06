@@ -40,12 +40,16 @@ def subir_imagen(file_name, file_bytes, page=None):
     except Exception as e:
         return None
 
-def cambiar_admin_password(new_password, page=None):
+def cambiar_admin_password(current_password, new_password, page=None):
     try:
-        response = httpx.post(f"{API_URL}/admin/change-password", json={"new_password": new_password}, headers=get_auth_headers(page))
-        return response.status_code == 200
+        response = httpx.post(
+            f"{API_URL}/admin/change-password", 
+            json={"current_password": current_password, "new_password": new_password}, 
+            headers=get_auth_headers(page)
+        )
+        return response.status_code
     except Exception as e:
-        return False
+        return 500
 
 # --- MENU ---
 def agregar_platillo(nombre, descripcion, precio, imagen, descuento=0, is_configurable=0, is_configurable_salsa=0, piezas=1, grupos_opciones_ids="[]", printer_target="cocina", categoria_id=None, page=None):

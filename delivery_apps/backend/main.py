@@ -455,6 +455,18 @@ def admin_change_pass(
         print(f"DEBUG: Cambio fallido - Error interno para {tenant_id}")
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
+@app.post("/admin/reset-password", dependencies=[Depends(verify_api_key)])
+def admin_reset_pass(
+    data: schemas.LoginRequest, # Reusamos LoginRequest que solo pide "password"
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Reestablece la contraseña sin pedir la anterior. Solo accesible vía API_KEY."""
+    config = crud.get_configuracion(db, tenant_id)
+    config.admin_password = crud.hash_password(data.password)
+    db.commit()
+    return {"ok": True, "message": "Contraseña reestablecida correctamente"}
+
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
 async def upload_file(
     file: UploadFile = File(...),

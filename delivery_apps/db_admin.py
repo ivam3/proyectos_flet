@@ -151,6 +151,11 @@ class DBManager:
         r = self.client.post("/admin/maintenance/purge-root-webp")
         return r.json()
 
+    def reset_password(self, new_password: str):
+        """Reestablece la contraseña administrativa del tenant."""
+        r = self.client.post("/admin/reset-password", json={"password": new_password})
+        return r.status_code == 200
+
 class AdminShell(cmd.Cmd):
     intro = f'🛠️_Sistema de Administración {tenant}\n📡 API_URL: {API_URL}\n🆔 TENANT_ID: {TENANT_ID}\n🔑 HEADERS: {json.dumps(HEADERS, indent=2)}\n❓ Escribe "help" o "?" para listar comandos.\n'
     prompt = f'(db-admin-{TENANT_ID})\n╰─➤ '
@@ -748,6 +753,21 @@ class AdminShell(cmd.Cmd):
                 print(f"❌ No se pudo eliminar el enlace en el servidor.")
         else:
             print(f"❌ No se encontró ningún enlace con el código o ID: {arg}")
+
+    def do_passwd(self, arg):
+        """Reestablece la contraseña del panel administrativo: passwd [nueva_contraseña]"""
+        if not arg:
+            print("❌ Uso: passwd [nueva_contraseña]")
+            return
+        
+        confirm = input(f"❗ ¿Estás seguro de reestablecer la contraseña para el tenant '{TENANT_ID}'? (s/n): ")
+        if confirm.lower() == 's':
+            if self.mgr.reset_password(arg):
+                print(f"✅ Contraseña para '{TENANT_ID}' reestablecida con éxito.")
+            else:
+                print(f"❌ Error al reestablecer la contraseña en el servidor.")
+        else:
+            print("🚫 Operación cancelada.")
 
     def do_backup(self, arg):
         """Genera un backup local total en JSON: backup [nombre_archivo]"""

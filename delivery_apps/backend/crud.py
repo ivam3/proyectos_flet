@@ -197,7 +197,7 @@ def update_configuracion(db: Session, tenant_id: str, config: schemas.Configurac
 
 def verify_admin_password(db: Session, tenant_id: str, password: str):
     config = get_configuracion(db, tenant_id)
-    if not config.admin_password:
+    if not config or not config.admin_password:
         return False
 
     # 1. Intentar verificar con Bcrypt (Estándar nuevo)
@@ -205,15 +205,11 @@ def verify_admin_password(db: Session, tenant_id: str, password: str):
         if pwd_context.verify(password, config.admin_password):
             return True
     except Exception:
-        # Si falla el parseo de bcrypt (ej: es un hash viejo), probamos con SHA256
         pass
 
-    # 2. Verificar con SHA256 (Legacy para migración transparente)
+    # 2. Verificar con SHA256 (Migración)
     legacy_hash = hashlib.sha256(password.encode()).hexdigest()
     if config.admin_password == legacy_hash:
-        # Migración Automática: Actualizar a Bcrypt inmediatamente
-        config.admin_password = hash_password(password)
-        db.commit()
         return True
 
     return False

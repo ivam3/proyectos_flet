@@ -505,7 +505,7 @@ def configuracion_view(page: ft.Page):
         else:
             show_notification(page, "Error al guardar configuración", ft.Colors.RED)
 
-    def cambiar_pass_click(e):
+    async def cambiar_pass_click(e):
         if not current_password_field.value:
             show_error_popup("Debe ingresar la contraseña actual")
             return
@@ -516,7 +516,7 @@ def configuracion_view(page: ft.Page):
             show_error_popup("Las contraseñas no coinciden")
             return
 
-        status = cambiar_admin_password(current_password_field.value, new_password_field.value, page=page)
+        status = await cambiar_admin_password(current_password_field.value, new_password_field.value, page=page)
         
         if status == 200:
             current_password_field.value = ""

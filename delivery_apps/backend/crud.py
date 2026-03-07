@@ -227,15 +227,18 @@ def verify_admin_password(db: Session, tenant_id: str, password: str):
     return False
 
 def change_admin_password(db: Session, tenant_id: str, current_password: str, new_password: str):
-    # 1. Verificar contraseña actual
-    if not verify_admin_password(db, tenant_id, current_password):
-        return False
-        
-    # 2. Aplicar cambio
-    config = get_configuracion(db, tenant_id)
-    config.admin_password = hash_password(new_password)
-    db.commit()
-    return True
+    # 1. Verificar contraseña actual de forma estricta
+    is_valid = verify_admin_password(db, tenant_id, current_password)
+    
+    if is_valid:
+        # 2. Solo si es válida, procedemos al cambio
+        config = get_configuracion(db, tenant_id)
+        config.admin_password = hash_password(new_password)
+        db.commit()
+        return True
+    
+    # 3. Si no es válida, retornamos False explícitamente al final
+    return False
 
 # --- SHORT LINKS (Redireccionamiento) ---
 def get_short_links(db: Session, tenant_id: str):

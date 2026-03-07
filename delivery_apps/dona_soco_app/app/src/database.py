@@ -40,15 +40,17 @@ def subir_imagen(file_name, file_bytes, page=None):
     except Exception as e:
         return None
 
-def cambiar_admin_password(current_password, new_password, page=None):
+async def cambiar_admin_password(current_password, new_password, page=None):
     try:
-        response = httpx.post(
-            f"{API_URL}/admin/change-password", 
-            json={"current_password": current_password, "new_password": new_password}, 
-            headers=get_auth_headers(page)
-        )
-        return response.status_code
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{API_URL}/admin/change-password", 
+                json={"current_password": current_password, "new_password": new_password}, 
+                headers=get_auth_headers(page)
+            )
+            return response.status_code
     except Exception as e:
+        print(f"Error cambio pass: {e}")
         return 500
 
 # --- MENU ---

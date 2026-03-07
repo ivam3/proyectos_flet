@@ -443,13 +443,17 @@ def admin_change_pass(
     tenant_id: str = Depends(get_tenant_id)
 ):
     print(f"DEBUG: Intento de cambio de contraseña para tenant: {tenant_id}")
-    success = crud.change_admin_password(db, tenant_id, data.current_password, data.new_password)
-    if not success:
+    status_code = crud.change_admin_password(db, tenant_id, data.current_password, data.new_password)
+    
+    if status_code == 200:
+        print(f"DEBUG: Cambio exitoso para {tenant_id}")
+        return {"ok": True}
+    elif status_code == 401:
         print(f"DEBUG: Cambio fallido - Contraseña actual incorrecta para {tenant_id}")
         raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
-    
-    print(f"DEBUG: Cambio exitoso para {tenant_id}")
-    return {"ok": True}
+    else:
+        print(f"DEBUG: Cambio fallido - Error interno para {tenant_id}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
 async def upload_file(

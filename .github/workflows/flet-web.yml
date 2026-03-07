@@ -57,7 +57,7 @@ jobs:
           export CI=true
           pip cache purge 
           export PYTHONIOENCODING=utf-8
-          flet build web -v
+          flet build web --template-ref 0.80.5 -v
 
       - name: Build Tortas Las Originales Web
         working-directory: delivery_apps/tortas_las_originales/app
@@ -65,7 +65,7 @@ jobs:
           export CI=true
           pip cache purge 
           export PYTHONIOENCODING=utf-8
-          flet build web -v
+          flet build web --template-ref 0.80.5 -v
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

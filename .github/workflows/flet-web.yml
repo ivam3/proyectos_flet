@@ -56,16 +56,20 @@ jobs:
         run: |
           export CI=true
           pip cache purge 
+          find . -type d -name "__pycache__" -exec rm -rf {} + 
+          find . -type f -name "*.pyc" -delete
           export PYTHONIOENCODING=utf-8
-          flet build web --template-ref 0.80.5 -v
+          flet build web --template-ref 0.80.5 --icon assets/icon.png --favicon assets/favicon.png -v
 
       - name: Build Tortas Las Originales Web
         working-directory: delivery_apps/tortas_las_originales/app
         run: |
           export CI=true
           pip cache purge 
+          find . -type d -name "__pycache__" -exec rm -rf {} + 
+          find . -type f -name "*.pyc" -delete
           export PYTHONIOENCODING=utf-8
-          flet build web --template-ref 0.80.5 -v
+          flet build web --template-ref 0.80.5 --icon assets/icon.png --favicon assets/favicon.png -v
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

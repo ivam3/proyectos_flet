@@ -45,8 +45,8 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install \
-          flet==0.82.0 \
-          flet-cli==0.82.0 \
+          flet==0.80.5 \
+          flet-cli==0.80.5 \
           requests==2.31.0 \
           urllib3==1.26.18 \
           charset-normalizer==3.3.2

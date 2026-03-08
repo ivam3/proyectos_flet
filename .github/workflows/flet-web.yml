@@ -47,9 +47,9 @@ jobs:
           pip install \
           flet==0.80.5 \
           flet-cli==0.80.5 \
-          requests==2.31.0 \
-          urllib3==1.26.18 \
-          charset-normalizer==3.3.2
+          requests==2.32.5 \
+          urllib3==2.6.3 \
+          charset-normalizer==3.4.5
 
       - name: Build Doña Soco Web
         working-directory: delivery_apps/dona_soco_app/app

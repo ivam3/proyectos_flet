@@ -56,16 +56,22 @@ jobs:
         run: |
           export CI=true
           pip cache purge 
-          export PYTHONIOENCODING=utf-8
-          flet build web -v
+          export PYTHONFAULTHANDLER=1
+          export PYTHONIOENCODING=utf-8 
+          export PYTHONWARNINGS=default
+          export FLET_TEMPLATE_REF=0.82.0
+          strace -f -e openat flet build web -vv
 
       - name: Build Tortas Las Originales Web
         working-directory: delivery_apps/tortas_las_originales/app
         run: |
           export CI=true
           pip cache purge 
-          export PYTHONIOENCODING=utf-8
-          flet build web -v
+          export PYTHONFAULTHANDLER=1
+          export PYTHONIOENCODING=utf-8 
+          export PYTHONWARNINGS=default
+          export FLET_TEMPLATE_REF=0.82.0
+          flet build web -vv
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

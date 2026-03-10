@@ -59,6 +59,17 @@ async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
         )
     return x_tenant_id
 
+async def verify_master_api_key(
+    x_api_key: Optional[str] = Header(None, alias="X-API-KEY")
+):
+    """Garantiza acceso EXCLUSIVO con la API_KEY maestra. Para mantenimiento (CLI)."""
+    if not API_KEY or not x_api_key or x_api_key != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Acceso restringido: Se requiere API_KEY maestra válida"
+        )
+    return True
+
 async def verify_api_key(
     x_api_key: Optional[str] = Header(None, alias="X-API-KEY"),
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security),
@@ -69,11 +80,11 @@ async def verify_api_key(
     1. API_KEY: Para scripts administrativos (db_admin.py).
     2. JWT: Para el panel administrativo en el navegador.
     """
-    # Opción 1: Validar contra MASTER API_KEY
+    # Opción 1: Validar contra MASTER API_KEY (CLI/Scripts)
     if x_api_key and API_KEY and x_api_key == API_KEY:
         return True
 
-    # Opción 2: Validar contra Bearer Token (JWT)
+    # Opción 2: Validar contra Bearer Token (JWT - Panel Web)
     if auth and auth.scheme == "Bearer":
         token = auth.credentials
         try:
@@ -451,16 +462,18 @@ async def admin_change_pass(
         return {"ok": True}
     elif status_code == 401:
         raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
+    elif status_code == 400:
+        raise HTTPException(status_code=400, detail="Datos de contraseña inválidos o sin cambios")
     else:
         raise HTTPException(status_code=500, detail="Error interno del servidor")
 
-@app.post("/admin/reset-password", dependencies=[Depends(verify_api_key)])
+@app.post("/admin/reset-password", dependencies=[Depends(verify_master_api_key)])
 def admin_reset_pass(
     data: schemas.LoginRequest, # Reusamos LoginRequest que solo pide "password"
     db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)
 ):
-    """Reestablece la contraseña sin pedir la anterior. Solo accesible vía API_KEY."""
+    """Reestablece la contraseña sin pedir la anterior. SOLO accesible vía API_KEY maestra desde CLI."""
     config = crud.get_configuracion(db, tenant_id)
     config.admin_password = crud.hash_password(data.password)
     db.commit()

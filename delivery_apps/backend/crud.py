@@ -215,11 +215,18 @@ def verify_admin_password(db: Session, tenant_id: str, password: str):
     return False
 
 def change_admin_password(db: Session, tenant_id: str, current_password: str, new_password: str):
-    # 1. Verificar contraseña actual de forma estricta
+    # 1. Validaciones de entrada básicas
+    if not current_password or not new_password:
+        return 400 # Bad Request
+        
+    if current_password == new_password:
+        return 400 # No hay cambio real
+
+    # 2. Verificar contraseña actual de forma estricta contra la DB
     if not verify_admin_password(db, tenant_id, current_password):
         return 401 # Unauthorized (Contraseña actual incorrecta)
         
-    # 2. Aplicar cambio con Bcrypt
+    # 3. Aplicar cambio con hashing seguro (Bcrypt)
     config = get_configuracion(db, tenant_id)
     config.admin_password = hash_password(new_password)
     db.commit()

@@ -8,6 +8,7 @@ venv/
 # Base de Datos Local
 *.db
 backend/static/uploads/*.db
+backup_full.json
 
 # Archivos de configuración
 # (Ahora seguros porque usan os.getenv)

@@ -1,6 +1,6 @@
 [project]
-name = "las_originales"
-version = "0.1.0"
+name = "tortas_las_originales"
+version = "0.2.0"
 description = "Aplicación de pedidos y administración Tortas las Originales"
 readme = "README.md"
 requires-python = ">=3.8"

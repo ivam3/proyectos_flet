@@ -8,15 +8,27 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 import os
+import time
 import mimetypes
 import shutil
+
+import re
+import uuid
+import threading
+from collections import defaultdict, deque
 
 import crud, models, schemas
 from database import SessionLocal, engine, get_db
 
 # --- CONFIGURACIÓN JWT ---
-# Usamos la misma API_SECRET_KEY para firmar los tokens
-JWT_SECRET_KEY = os.getenv("API_SECRET_KEY", "fallback_secret_for_dev_only")
+# Usamos la misma API_SECRET_KEY para firmar los tokens.
+# Sin ella la API se niega a arrancar: nunca usar valores de respaldo en producción.
+API_SECRET_KEY = os.getenv("API_SECRET_KEY")
+if not API_SECRET_KEY:
+    raise RuntimeError(
+        "API_SECRET_KEY is required: configura la variable de entorno antes de arrancar la API."
+    )
+JWT_SECRET_KEY = API_SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 horas
 
@@ -43,12 +55,7 @@ mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('application/wasm', '.wasm')
 
 # --- SEGURIDAD Y TENANT ---
-API_KEY = os.getenv("API_SECRET_KEY")
-
-if not API_KEY:
-    print("❌ ERROR CRÍTICO: API_SECRET_KEY no configurada en las variables de entorno.")
-    # En producción esto detendrá el arranque para evitar que la API sea pública
-    # raise RuntimeError("API_SECRET_KEY is required")
+API_KEY = API_SECRET_KEY
 
 async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
     """Obtiene el ID del tenant desde los encabezados. Obligatorio para garantizar aislamiento."""
@@ -57,7 +64,13 @@ async def get_tenant_id(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="X-Tenant-ID header is required for data isolation"
         )
-    return x_tenant_id
+    tenant_id = x_tenant_id.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_\-]{1,64}", tenant_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Tenant-ID inválido"
+        )
+    return tenant_id
 
 async def verify_master_api_key(
     x_api_key: Optional[str] = Header(None, alias="X-API-KEY")
@@ -102,6 +115,26 @@ async def verify_api_key(
         detail="No autorizado: Se requiere API_KEY válida o Token de sesión"
     )
 
+# --- RATE LIMITING (Fuerza bruta / spam) ---
+_login_attempts = defaultdict(deque)
+_login_lock = threading.Lock()
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300
+
+def check_login_rate_limit(tenant_id: str):
+    """Limita los intentos de login por tenant (ventana deslizante en memoria)."""
+    now = time.monotonic()
+    with _login_lock:
+        dq = _login_attempts[tenant_id]
+        while dq and now - dq[0] > LOGIN_WINDOW_SECONDS:
+            dq.popleft()
+        if len(dq) >= MAX_LOGIN_ATTEMPTS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Demasiados intentos. Intenta de nuevo en unos minutos."
+            )
+        dq.append(now)
+
 # Inicialización de Base de Datos
 models.Base.metadata.create_all(bind=engine)
 
@@ -126,7 +159,8 @@ def ensure_columns():
                 if col not in menu_columns:
                     conn.execute(text(f"ALTER TABLE menu ADD COLUMN {col} {type_def}"))
                     conn.commit()
-        except Exception: pass
+        except Exception as e:
+            print(f"WARN migración menu: {e}")
         
         # 2. Multi-tenancy: tenant_id en todas las tablas
         tables = ["menu", "grupos_opciones", "configuracion", "ordenes", "orden_detalle", "historial_estados"]
@@ -150,7 +184,8 @@ def ensure_columns():
             if "categorias_disponibles" not in config_cols:
                 conn.execute(text("ALTER TABLE configuracion ADD COLUMN categorias_disponibles TEXT DEFAULT '[]'"))
                 conn.commit()
-        except Exception: pass
+        except Exception as e:
+            print(f"WARN migración configuracion: {e}")
 
         # 4. Migración de ShortLinks (Quitar unicidad global, poner por tenant)
         if engine.name == "postgresql":
@@ -164,7 +199,7 @@ def ensure_columns():
             except Exception as e:
                 print(f"DEBUG: Nota migración ShortLink: {e}")
                 try: conn.rollback()
-                except: pass
+                except Exception: print(f"WARN rollback migración ShortLink falló: {e}")
 
 ensure_columns()
 
@@ -185,16 +220,25 @@ async def add_security_headers(request, call_next):
     response = await call_next(request)
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    # Permite que los frontends (Flet web) carguen imágenes cross-origin bajo COEP.
+    response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
     
     # Prevenir cacheo de archivos de ejecución
     if request.url.path.endswith((".js", ".wasm", ".zip", ".html")):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 
+# --- CORS ---
+# La API se autentica por headers (API_KEY / JWT Bearer), no por cookies,
+# así que no usamos allow_credentials. Se permiten orígenes conocidos:
+# dominios de Railway (*.up.railway.app) y localhost para desarrollo.
+# Si un tenant usa un dominio propio, configúralo en CORS_ORIGINS (separado por comas).
+cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins or ["*"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://([a-z0-9-]+\.)*up\.railway\.app",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -331,14 +375,14 @@ def delete_grupo_opciones(
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
     return {"ok": True}
 
-@app.get("/configuracion", response_model=schemas.Configuracion)
+@app.get("/configuracion", response_model=schemas.ConfiguracionPublic)
 def read_config(
     db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)
 ):
     return crud.get_configuracion(db, tenant_id)
 
-@app.put("/configuracion", response_model=schemas.Configuracion, dependencies=[Depends(verify_api_key)])
+@app.put("/configuracion", response_model=schemas.ConfiguracionPublic, dependencies=[Depends(verify_api_key)])
 def update_config(
     config: schemas.ConfiguracionUpdate, 
     db: Session = Depends(get_db),
@@ -352,7 +396,23 @@ def create_pedido(
     db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)
 ):
-    return crud.create_pedido(db, tenant_id, orden)
+    try:
+        return crud.create_pedido(db, tenant_id, orden)
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR CRÍTICO CREANDO PEDIDO: {e}")
+        raise HTTPException(status_code=500, detail="Error interno al guardar el pedido")
+
+@app.get("/pedidos/count", dependencies=[Depends(verify_api_key)])
+def count_pedidos(
+    search: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    return {"total": crud.count_pedidos(db, tenant_id, search)}
 
 @app.get("/pedidos/seguimiento", response_model=schemas.Orden)
 def track_pedido(
@@ -439,6 +499,7 @@ def admin_login(
     db: Session = Depends(get_db),
     tenant_id: str = Depends(get_tenant_id)
 ):
+    check_login_rate_limit(tenant_id)
     is_valid = crud.verify_admin_password(db, tenant_id, creds.password)
     if not is_valid:
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
@@ -479,6 +540,21 @@ def admin_reset_pass(
     db.commit()
     return {"ok": True, "message": "Contraseña reestablecida correctamente"}
 
+# --- HELPERS DE UPLOADS ---
+def _sanitize_filename(original: str) -> str:
+    """Genera un nombre de archivo seguro: solo alfanuméricos/_/-, sin rutas."""
+    base = os.path.splitext(os.path.basename(original or ""))[0]
+    base = re.sub(r"[^A-Za-z0-9_\-]+", "_", base).strip("._")[:60] or "imagen"
+    return f"{base}-{uuid.uuid4().hex[:8]}.webp"
+
+def _resolve_upload_path(tenant_id: str, filename: str) -> str:
+    """Resuelve y verifica que la ruta final quede dentro del directorio del tenant."""
+    tenant_dir = os.path.realpath(os.path.join(UPLOAD_DIR, tenant_id))
+    candidate = os.path.realpath(os.path.join(tenant_dir, filename))
+    if os.path.commonpath([tenant_dir, candidate]) != tenant_dir:
+        raise HTTPException(status_code=400, detail="Ruta de archivo inválida")
+    return candidate
+
 @app.post("/upload", dependencies=[Depends(verify_api_key)])
 async def upload_file(
     file: UploadFile = File(...),
@@ -494,9 +570,8 @@ async def upload_file(
     # 2. Leer contenido
     content = await file.read()
     
-    # 3. Generar nombre con extensión .webp
-    base_name = os.path.splitext(file.filename)[0]
-    filename = f"{base_name}.webp"
+    # 3. Generar nombre seguro con extensión .webp (evita path traversal y colisiones)
+    filename = _sanitize_filename(file.filename)
     file_location = os.path.join(tenant_upload_dir, filename)
     
     try:
@@ -518,7 +593,7 @@ async def delete_file(
     filename: str,
     tenant_id: str = Depends(get_tenant_id)
 ):
-    file_location = os.path.join(UPLOAD_DIR, tenant_id, filename)
+    file_location = _resolve_upload_path(tenant_id, filename)
     # Solo eliminar si existe y es un archivo (evita errores con lost+found o subcarpetas)
     if os.path.exists(file_location) and os.path.isfile(file_location):
         os.remove(file_location)

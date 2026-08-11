@@ -120,6 +120,13 @@ class Configuracion(ConfiguracionBase):
     class Config:
         from_attributes = True
 
+class ConfiguracionPublic(ConfiguracionBase):
+    """Versión pública de la configuración: NUNCA incluye admin_password."""
+    id: int
+
+    class Config:
+        from_attributes = True
+
 # --- SCHEMAS DE SHORT LINKS ---
 class ShortLinkBase(BaseModel):
     tenant_id: Optional[str] = None

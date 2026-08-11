@@ -207,8 +207,17 @@ def obtener_pedidos(limit=100, offset=0, search_term=None, page=None):
         return []
 
 def obtener_total_pedidos(search_term=None, page=None):
-    pedidos = obtener_pedidos(limit=1000, search_term=search_term, page=page)
-    return len(pedidos)
+    """Cuenta pedidos con el endpoint /pedidos/count (COUNT(*) en el servidor)."""
+    try:
+        params = {}
+        if search_term: params["search"] = search_term
+        response = httpx.get(f"{API_URL}/pedidos/count", params=params, headers=get_auth_headers(page), timeout=10.0)
+        if response.status_code == 200:
+            return response.json().get("total", 0)
+        return 0
+    except Exception as e:
+        print(f"Error contando pedidos: {e}")
+        return 0
 
 def obtener_pedidos_sin_paginacion(search_term=None, page=None):
     return obtener_pedidos(limit=5000, search_term=search_term, page=page)

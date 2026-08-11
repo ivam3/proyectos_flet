@@ -168,11 +168,18 @@ def delete_grupo_opciones(db: Session, tenant_id: str, grupo_id: int):
 def get_configuracion(db: Session, tenant_id: str):
     config = db.query(models.Configuracion).filter(models.Configuracion.tenant_id == tenant_id).first()
     if not config:
+        # Nunca usar una contraseña por defecto conocida ("zz"): si no hay
+        # DEFAULT_ADMIN_PASSWORD se genera una aleatoria y se documenta el reset.
+        default_pw = os.getenv("DEFAULT_ADMIN_PASSWORD")
+        if not default_pw:
+            default_pw = secrets.token_urlsafe(12)
+            print(f"⚠️ DEFAULT_ADMIN_PASSWORD no configurado para el nuevo tenant '{tenant_id}'. "
+                  "Se generó una contraseña aleatoria; usa 'db_admin.py passwd' para reestablecerla.")
         config = models.Configuracion(
             tenant_id=tenant_id,
             horario="Lunes a Viernes 9-10", 
             codigos_postales="12345",
-            admin_password=hash_password(os.getenv("DEFAULT_ADMIN_PASSWORD", "zz")),
+            admin_password=hash_password(default_pw),
             costo_envio=20.0,
             metodos_pago_activos='{"efectivo": true, "terminal": true}',
             tipos_tarjeta='["Visa", "Mastercard"]',
@@ -200,16 +207,19 @@ def verify_admin_password(db: Session, tenant_id: str, password: str):
     if not config or not config.admin_password:
         return False
 
-    # 1. Intentar verificar con Bcrypt (Estándar nuevo)
+    # 1. Verificar con Bcrypt (Estándar actual)
     try:
         if pwd_context.verify(password, config.admin_password):
             return True
     except Exception:
         pass
 
-    # 2. Verificar con SHA256 (Migración)
+    # 2. Migración: hash SHA256 sin sal (legacy). Al validar correctamente,
+    #    se re-hashea con bcrypt para eliminar el hash débil de la base.
     legacy_hash = hashlib.sha256(password.encode()).hexdigest()
     if config.admin_password == legacy_hash:
+        config.admin_password = hash_password(password)
+        db.commit()
         return True
 
     return False
@@ -281,6 +291,43 @@ def delete_short_link(db: Session, tenant_id: str, link_id: int):
 
 # --- PEDIDOS ---
 def create_pedido(db: Session, tenant_id: str, orden: schemas.OrdenCreate):
+    # --- VALIDACIÓN SERVER-SIDE CONTRA EL MENÚ DEL TENANT ---
+    # El cliente NO es confiable: precios y total se validan contra la DB.
+    menu_items = db.query(models.Menu).filter(models.Menu.tenant_id == tenant_id).all()
+    price_map = {}
+    for m in menu_items:
+        discount = (m.descuento or 0) / 100.0
+        price_map[m.nombre.strip().lower()] = m.precio * (1 - discount)
+
+    expected_items_total = 0.0
+    validated_items = []
+    for item in orden.items:
+        if item.cantidad <= 0 or item.precio_unitario <= 0:
+            raise ValueError("Datos de producto inválidos en el pedido")
+        full_name = item.producto.strip().lower()
+        base_name = full_name if full_name in price_map else item.producto.split("(")[0].strip().lower()
+        unit_price = price_map.get(base_name)
+        if unit_price is None:
+            raise ValueError(f"El producto '{item.producto}' ya no está disponible en el menú")
+        if abs(item.precio_unitario - unit_price) > 0.5:
+            raise ValueError(f"El precio de '{item.producto}' no es válido. Actualiza tu carrito.")
+        expected_items_total += unit_price * item.cantidad
+        validated_items.append(item)
+
+    config = get_configuracion(db, tenant_id)
+    try:
+        envio = float(config.costo_envio or 0)
+    except (TypeError, ValueError):
+        envio = 0.0
+
+    client_total = float(orden.total or 0)
+    allowed_totals = [expected_items_total, expected_items_total + envio]
+    if not any(abs(client_total - t) <= 0.5 for t in allowed_totals):
+        raise ValueError("El total del pedido no coincide con el menú")
+
+    if orden.metodo_pago == "efectivo" and (orden.paga_con is None or orden.paga_con < client_total):
+        raise ValueError("El monto indicado no cubre el total del pedido")
+
     codigo = _generar_codigo_unico(db, tenant_id)
     db_orden = models.Orden(
         tenant_id=tenant_id,
@@ -288,7 +335,7 @@ def create_pedido(db: Session, tenant_id: str, orden: schemas.OrdenCreate):
         telefono=orden.telefono,
         direccion=orden.direccion,
         referencias=orden.referencias,
-        total=orden.total,
+        total=client_total,
         metodo_pago=orden.metodo_pago,
         paga_con=orden.paga_con,
         codigo_seguimiento=codigo,
@@ -296,7 +343,7 @@ def create_pedido(db: Session, tenant_id: str, orden: schemas.OrdenCreate):
     )
     db.add(db_orden)
     db.flush()
-    for item in orden.items:
+    for item in validated_items:
         db_detalle = models.OrdenDetalle(
             tenant_id=tenant_id,
             orden_id=db_orden.id,
@@ -334,6 +381,14 @@ def get_pedidos(db: Session, tenant_id: str, skip: int = 0, limit: int = 100, se
         term = f"%{search_term}%"
         query = query.filter(or_(models.Orden.nombre_cliente.like(term), models.Orden.codigo_seguimiento.like(term)))
     return query.offset(skip).limit(limit).all()
+
+def count_pedidos(db: Session, tenant_id: str, search_term: str = None):
+    """Cuenta pedidos con COUNT(*) (sin cargar filas), para paginación eficiente."""
+    query = db.query(models.Orden).filter(models.Orden.tenant_id == tenant_id)
+    if search_term:
+        term = f"%{search_term}%"
+        query = query.filter(or_(models.Orden.nombre_cliente.like(term), models.Orden.codigo_seguimiento.like(term)))
+    return query.count()
 
 def update_estado_pedido(db: Session, tenant_id: str, orden_id: int, nuevo_estado: str, motivo: str = None):
     orden = db.query(models.Orden).filter(

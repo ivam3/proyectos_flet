@@ -2,7 +2,7 @@ import flet as ft
 import json
 from database import obtener_pedidos, obtener_total_pedidos, actualizar_estado_pedido, actualizar_pago_pedido, obtener_datos_exportacion, obtener_menu, get_configuracion
 from config import COMPANY_NAME
-from components.notifier import init_pubsub, play_notification_sound, show_notification # Importar herramientas de notificación
+from components.notifier import init_pubsub, subscribe_view_handler, play_notification_sound, show_notification # Importar herramientas de notificación
 import math
 import csv
 import datetime
@@ -640,7 +640,7 @@ def pedidos_view(page: ft.Page, export_file_picker: ft.FilePicker):
                 print(f"Error en impresion automatica: {e}")
 
     pubsub = init_pubsub(page)
-    pubsub.subscribe(on_new_order)
+    subscribe_view_handler(page, "admin_pedidos", on_new_order)
 
     content_container = ft.Container(
         padding=20,

@@ -4,7 +4,7 @@ import json
 import datetime
 from fpdf import FPDF
 from config import COMPANY_NAME
-from components.notifier import init_pubsub, show_notification
+from components.notifier import subscribe_view_handler, show_notification
 from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pago_pedido, actualizar_estado_pedido
 
 # Adjust path to DB relative to src/views
@@ -12,8 +12,6 @@ from database import obtener_pedido_por_codigo, get_configuracion, actualizar_pa
 
 def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
     """Pantalla donde el cliente ve y recibe actualizaciones de un pedido específico."""
-
-    pubsub = init_pubsub(page)
     
     # --- LÓGICA DE PLATAFORMA ---
     plat = str(page.platform).lower() if page.platform else ""
@@ -506,7 +504,7 @@ def seguimiento_view(page: ft.Page, export_file_picker: ft.FilePicker = None):
             show_notification(page, f"🔔 Tu pedido #{data['orden_id']} ahora está '{data['nuevo_estado']}'", ft.Colors.BLUE)
             buscar_pedidos(None)
 
-    pubsub.subscribe(recibir_mensaje)
+    subscribe_view_handler(page, "seguimiento", recibir_mensaje)
 
     return ft.Column([
         ft.Text("📲 Seguimiento de tu pedido", size=24, weight="bold", color=ft.Colors.BLACK),

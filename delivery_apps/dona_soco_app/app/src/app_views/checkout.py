@@ -134,18 +134,8 @@ def create_checkout_view(page: ft.Page, show_snackbar, nav):
         # 2. Cerrar el diálogo
         dialog_instance.open = False
         
-        # 3. Forzar cambio visual inmediato
-        from app_views.seguimiento import seguimiento_view
+        # 3. Navegar: handle_route_change en main.py monta la vista correctamente
         nav.selected_index = 2
-        
-        # Intentamos encontrar el contenedor de contenido en el layout
-        # Basado en main.py: page.add(top_bar, content_area, nav, picker_shield)
-        # content_area es el control en el índice 1
-        try:
-            page.controls[1].content = seguimiento_view(page)
-        except:
-            pass # Si falla por índice, al menos intentamos la ruta
-            
         await page.push_route("/seguimiento")
         page.update()
 

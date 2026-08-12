@@ -1,4 +1,4 @@
-name: Build Flet Web (Multi-tenant)
+name: Build Flet Web & Linux (Multi-tenant)
 
 on:
   push:
@@ -12,7 +12,6 @@ permissions:
 jobs:
   build-web:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -30,48 +29,27 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgtk-3-dev \
-            libglib2.0-0 \
-            libnss3 \
-            libx11-6 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxrandr2 \
-            libxtst6 \
-            libxkbcommon0 \
-            libasound2t64
+            libgtk-3-dev libglib2.0-0 libnss3 libx11-6 libxcomposite1 \
+            libxdamage1 libxrandr2 libxtst6 libxkbcommon0 libasound2t64
 
       - name: Install Flet CLI
         run: |
           pip install --upgrade pip
-          pip install \
-          flet==0.82.0 \
-          flet-cli==0.82.0 \
-          requests==2.32.5 \
-          urllib3==2.6.3 \
-          charset-normalizer==3.4.5
+          pip install flet==0.82.0 flet-cli==0.82.0 requests==2.32.5 urllib3==2.6.3 charset-normalizer==3.4.5
+
+      - name: Markdown Viewer Web
+        working-directory: markdown_viewer_app
+        run: |
+          export FLET_TEMPLATE_REF=0.82.0
+          flet build web -vv
 
       - name: Build Doña Soco Web
-        working-directory: delivery_apps/dona_soco_app/app
         run: |
-          export CI=true
-          pip cache purge 
-          export PYTHONFAULTHANDLER=1
-          export PYTHONIOENCODING=utf-8 
-          export PYTHONWARNINGS=default
-          export FLET_TEMPLATE_REF=0.82.0
-          flet build web -vv
+          bash delivery_apps/build_tenant.sh dona_soco delivery_apps/dona_soco_app/app
 
       - name: Build Tortas Las Originales Web
-        working-directory: delivery_apps/tortas_las_originales/app
         run: |
-          export CI=true
-          pip cache purge 
-          export PYTHONFAULTHANDLER=1
-          export PYTHONIOENCODING=utf-8 
-          export PYTHONWARNINGS=default
-          export FLET_TEMPLATE_REF=0.82.0
-          flet build web -vv
+          bash delivery_apps/build_tenant.sh tortas_las_originales delivery_apps/tortas_las_originales/app
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -89,5 +67,43 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git add delivery_apps/dona_soco_app/app/build/web
           git add delivery_apps/tortas_las_originales/app/build/web
-          git commit -m "actions(try1): fix: byte 0x89" || echo "No changes to commit"
+          git commit -m "actions(web): update web builds" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:dev
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build libgtk-3-dev liblzma-dev libstdc++6 \
+            pkg-config libblkid-dev libjsoncpp-dev
+
+      - name: Install Flet
+        run: pip install flet==0.82.0 flet-cli==0.82.0
+
+      - name: Build Markdown Viewer Linux
+        working-directory: markdown_viewer_app
+        run: |
+          export FLET_TEMPLATE_REF=0.82.0
+          flet build linux -vv
+
+      - name: Upload Linux Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: markdown-viewer-linux
+          path: markdown_viewer_app/build/linux

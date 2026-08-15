@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario de Zapatos</title>
+
+  <style>
+    :root {
+      --accent: #ffa64d;
+      --black: #000;
+      --danger: #d9534f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+    }
+
+    .app-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.4rem;
+      text-align: center;
+    }
+
+    input[type="color"] {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border-radius: 50%;
+      margin: 0 4px;
+      border: 1px solid #000;
+      vertical-align: middle;
+    }
+
+    .tallas-edit-box {
+      border: 1px solid #ccc;
+      padding: 6px;
+      background: #f9f9f9;
+      margin-top: 4px;
+      max-width: 220px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .talla-edit-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .talla-edit-row button {
+      padding: 1px 6px;
+      font-size: 12px;
+      background: var(--danger);
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+
+    /* Barra de búsqueda con borde naranja suave */
+    #buscar {
+      border: 2px solid var(--accent);
+      padding: 6px 8px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.95rem;
+    }
+
+    /* Botones negros */
+    button {
+      background: var(--black);
+      color: #fff;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* Contenedor superior */
+    .top-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .top-bar input[type="text"],
+    .top-bar input[type="number"] {
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 0.95rem;
+      width: 100%;
+    }
+
+    .top-row-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .top-row-inline > * {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .color-row span {
+      display: flex;
+      align-items: center;
+    }
+
+    /* Tabla responsive */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 650px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #eee;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      text-align: left;
+      background: #fff;
+    }
+
+    th {
+      background: #fafafa;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:nth-child(even) td {
+      background: #fcfcfc;
+    }
+
+    select {
+      padding: 3px 4px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 0.85rem;
+    }
+
+    /* Fondo oscuro del visor de fotos */
+    #fotoModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    #fotoModalContent {
+      position: relative;
+      background: #fff;
+      padding: 8px;
+      border-radius: 10px;
+      max-width: 95vw;
+      max-height: 85vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #fotoModalImgWrapper {
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow: hidden;
+    }
+
+    #fotoModalImg {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      touch-action: none;
+      transform-origin: center center;
+    }
+
+    /* Botón X arriba derecha */
+    #cerrarX {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #000;
+      background: #fff;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    #cerrarX:hover {
+      opacity: 0.7;
+    }
+
+    /* Flechas izquierda/derecha */
+    #prevFoto,
+    #nextFoto {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 900;
+    }
+
+    #prevFoto { left: 8px; }
+    #nextFoto { right: 8px; }
+
+    /* Contador y eliminar – ARRIBA CENTRO */
+    #fotoInfo {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 950;
+    }
+
+    #btnEliminarFoto {
+      background: #ff4444;
+      border-radius: 10px;
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    /* Layout búsqueda */
+    .search-row {
+      margin-bottom: 8px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap: wrap;
+    }
+
+    .search-row button {
+      padding-inline: 16px;
+    }
+
+    @media (max-width: 768px) {
+      h2 {
+        font-size: 1.2rem;
+      }
+
+      body {
+        padding: 8px;
+      }
+
+      .app-container {
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: none;
+      }
+
+      .search-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      #buscar {
+        width: 100% !important;
+      }
+
+      .search-row button {
+        width: 100%;
+      }
+
+      .top-row-inline {
+        flex-direction: column;
+      }
+
+      .top-row-inline > * {
+        width: 100%;
+      }
+
+      .color-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      button {
+        font-size: 0.95rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+
+      .app-container {
+        border-radius: 0;
+      }
+
+      th, td {
+        padding: 4px 6px;
+        font-size: 0.8rem;
+      }
+
+      table {
+        min-width: 580px;
+      }
+
+      .tallas-edit-box {
+        max-width: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <h2>Inventario – Zapatos</h2>
+
+  <!-- BÚSQUEDA -->
+  <div class="search-row">
+    <input id="buscar"
+      type="text"
+      placeholder="Buscar modelo, SKU, talla..."
+      style="flex:1; min-width: 160px;"
+      oninput="render()"
+    >
+    <button onclick="render()">Buscar</button>
+  </div>
+
+  <!-- FORMULARIO SUPERIOR -->
+  <div class="top-bar">
+
+    <!-- MODELO MAYÚSCULAS -->
+    <input
+      id="modelo"
+      placeholder="MODELO"
+      style="text-transform: uppercase;"
+      oninput="this.value = this.value.toUpperCase();"
+    >
+
+    <div class="top-row-inline">
+      <input id="tallas" type="text" placeholder="Tallas (8 9 10)">
+      <input id="sku" type="text" placeholder="SKU">
+    </div>
+
+    <div class="top-row-inline">
+      <input id="precio" type="number" step="0.01" placeholder="Precio">
+      <input id="cantidad" type="number" placeholder="Cant.">
+    </div>
+
+    <div>
+      <button onclick="seleccionarFotoNueva()">Agregar foto</button>
+      <span id="fotoStatus" style="font-size:12px;color:#555;margin-left:4px;"></span>
+    </div>
+
+    <div class="color-row">
+      <span>
+        <input id="color1" type="color" value="#000000"> -
+        <input id="color2" type="color" value="#ffffff">
+      </span>
+      <button onclick="agregar()">Agregar</button>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- TABLA -->
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>SKU</th>
+          <th>$</th>
+          <th>Size</th>
+          <th>Color</th>
+          <th>QTY</th>
+          <th>IMG</th>
+          <th>Edit</th>
+        </tr>
+      </thead>
+      <tbody id="lista"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- INPUT FILE MULTI -->
+<input type="file" id="fotoInput" accept="image/*" multiple style="display:none">
+
+<!-- MODAL -->
+<div id="fotoModal">
+  <div id="fotoModalContent">
+
+    <span id="cerrarX" onclick="cerrarModalFoto()">✕</span>
+
+    <button id="prevFoto" onclick="fotoSiguiente(-1)">‹</button>
+
+    <div id="fotoModalImgWrapper">
+      <img id="fotoModalImg" src="index.html">
+    </div>
+
+    <button id="nextFoto" onclick="fotoSiguiente(1)">›</button>
+
+    <div id="fotoInfo">
+      <span id="fotoCounter">Foto 1 / 1</span>
+      <button id="btnEliminarFoto" onclick="eliminarFotoActual()">Eliminar</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   VARIABLES
+============================================================ */
+const STORAGE_KEY = 'inventario_zapatos_v2';
+
+// --- LocalStorage safety (some hosts / embedded viewers block it) ---
+function storageDisponible() {
+  try {
+    const k = '__ls_test__';
+    window.localStorage.setItem(k, '1');
+    window.localStorage.removeItem(k);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+const PUEDE_USAR_STORAGE = storageDisponible();
+
+function mostrarAvisoStorageBloqueado() {
+  if (PUEDE_USAR_STORAGE) return;
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:8px 0;padding:10px;border:1px solid #d9534f;border-radius:10px;background:#fff5f5;color:#7a1f1c;font-size:12px;line-height:1.35';
+  box.textContent = 'Aviso: Este navegador/visor está bloqueando LocalStorage (pasa mucho en previsualizadores como Google Drive). En un hosting normal (Netlify) debería funcionar. Mientras esté bloqueado, los datos NO se guardarán.';
+  const container = document.querySelector('.app-container');
+  if (container) container.insertBefore(box, container.children[1] || null);
+}
+
+
+let inv = [];
+let editIndex = -1;
+let nuevasFotos = [];
+let fotoIndex = null;
+
+let currentItemIndex = null;
+let currentFotoIndex = 0;
+let currentScale = 1;
+let lastTouchDistance = null;
+let touchStartX = null;
+
+/* ============================================================
+   GETTERS
+============================================================ */
+const modeloEl  = () => document.getElementById('modelo');
+const tallasEl  = () => document.getElementById('tallas');
+const skuEl     = () => document.getElementById('sku');
+const precioEl  = () => document.getElementById('precio');
+const color1El  = () => document.getElementById('color1');
+const color2El  = () => document.getElementById('color2');
+const cantEl    = () => document.getElementById('cantidad');
+const buscarEl  = () => document.getElementById('buscar');
+const fotoInputEl = () => document.getElementById('fotoInput');
+const fotoStatusEl = () => document.getElementById('fotoStatus');
+
+/* ============================================================
+   LOCAL STORAGE
+============================================================ */
+function cargarDesdeStorage() {
+  if (!PUEDE_USAR_STORAGE) { inv = []; return; }
+  let data = [];
+  try {
+    data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!Array.isArray(data)) data = [];
+  } catch (e) {
+    data = [];
+  }
+  inv = data.map(item => {
+    if (!item.fotos && item.foto) return { ...item, fotos: [item.foto] };
+    return { ...item, fotos: item.fotos || [] };
+  });
+}
+
+function guardarEnStorage() {
+  if (!PUEDE_USAR_STORAGE) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(inv));
+  } catch (e) {
+    // ignore (quota / blocked)
+  }
+}
+
+/* ============================================================
+   UTILIDADES
+============================================================ */
+function parseTallas(str) {
+  return str.split(/[\s,\-]+/).map(s => s.trim()).filter(Boolean);
+}
+
+function limpiarInputs() {
+  modeloEl().value = '';
+  tallasEl().value = '';
+  skuEl().value = '';
+  precioEl().value = '';
+  cantEl().value = '';
+  nuevasFotos = [];
+  fotoStatusEl().textContent = '';
+}
+
+/* ============================================================
+   AGREGAR NUEVO
+============================================================ */
+function agregar() {
+  const modelo  = modeloEl().value.trim();
+  const tallas  = parseTallas(tallasEl().value);
+  const sku     = skuEl().value.trim();
+  const precioV = parseFloat(precioEl().value);
+  const cantidad = parseInt(cantEl().value, 10);
+
+  if (!modelo || tallas.length === 0 || isNaN(cantidad)) return;
+
+  inv.push({
+    modelo,
+    sku,
+    precio: isNaN(precioV) ? null : precioV,
+    tallas,
+    colores: [color1El().value, color2El().value],
+    cantidad,
+    fotos: nuevasFotos.slice()
+  });
+
+  guardarEnStorage();
+  limpiarInputs();
+  render();
+}
+
+/* ============================================================
+   EDITAR / ELIMINAR
+============================================================ */
+function editar(i) {
+  editIndex = i;
+  render();
+}
+
+function eliminar(i) {
+  inv.splice(i, 1);
+  guardarEnStorage();
+  render();
+}
+
+function eliminarTalla(i, j) {
+  inv[i].tallas.splice(j, 1);
+  guardarEnStorage();
+  render();
+}
+
+function guardarEdicion(i) {
+  const modelo   = document.getElementById(`edit_modelo_${i}`).value.toUpperCase();
+  const sku      = document.getElementById(`edit_sku_${i}`).value;
+  const precio   = parseFloat(document.getElementById(`edit_precio_${i}`).value);
+  const tallas   = parseTallas(document.getElementById(`edit_tallas_text_${i}`).value);
+  const cantidad = parseInt(document.getElementById(`edit_cantidad_${i}`).value, 10);
+  const c1       = document.getElementById(`edit_color1_${i}`).value;
+  const c2       = document.getElementById(`edit_color2_${i}`).value;
+
+  if (!modelo || tallas.length === 0 || isNaN(cantidad)) return;
+
+  inv[i] = {
+    modelo,
+    sku,
+    precio: isNaN(precio) ? null : precio,
+    tallas,
+    colores: [c1, c2],
+    cantidad,
+    fotos: inv[i].fotos
+  };
+
+  editIndex = -1;
+  guardarEnStorage();
+  render();
+}
+
+/* ============================================================
+   FOTOS – NUEVO & EXISTENTE
+============================================================ */
+function seleccionarFotoNueva() {
+  fotoIndex = null;
+  fotoInputEl().value = '';
+  fotoInputEl().click();
+}
+
+function abrirSelectorFoto(i) {
+  fotoIndex = i;
+  fotoInputEl().value = '';
+  fotoInputEl().click();
+}
+
+fotoInputEl().addEventListener('change', e => {
+  const files = Array.from(e.target.files);
+  files.forEach(f => procesarFoto(f, fotoIndex));
+  fotoIndex = null;
+});
+
+function procesarFoto(file, index) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+
+      // Comprimir
+      const maxW = 600, maxH = 600;
+      let w = img.width, h = img.height;
+      if (w > maxW || h > maxH) {
+        const r = Math.min(maxW / w, maxH / h);
+        w *= r; h *= r;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+      if (index === null) {
+        nuevasFotos.push(dataUrl);
+        fotoStatusEl().textContent = nuevasFotos.length + " foto(s) lista(s)";
+      } else {
+        inv[index].fotos.push(dataUrl);
+        guardarEnStorage();
+        render();
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   VISOR
+============================================================ */
+function verFoto(i, idx = 0) {
+  currentItemIndex = i;
+  currentFotoIndex = idx;
+  currentScale = 1;
+
+  const modal = document.getElementById('fotoModal');
+  const img = document.getElementById('fotoModalImg');
+  img.style.transform = 'scale(1)';
+  img.src = inv[i].fotos[idx];
+
+  modal.style.display = 'flex';
+  actualizarFotoInfo();
+}
+
+function cerrarModalFoto() {
+  document.getElementById('fotoModal').style.display = 'none';
+  currentItemIndex = null;
+}
+
+function fotoSiguiente(delta) {
+  if (currentItemIndex === null) return;
+  const item = inv[currentItemIndex];
+  currentFotoIndex += delta;
+
+  if (currentFotoIndex < 0) currentFotoIndex = item.fotos.length - 1;
+  if (currentFotoIndex >= item.fotos.length) currentFotoIndex = 0;
+
+  document.getElementById('fotoModalImg').src = item.fotos[currentFotoIndex];
+  actualizarFotoInfo();
+}
+
+function actualizarFotoInfo() {
+  const item = inv[currentItemIndex];
+  const info = document.getElementById('fotoInfo');
+  const counter = document.getElementById('fotoCounter');
+
+  counter.textContent = `Foto ${currentFotoIndex + 1} / ${item.fotos.length}`;
+  info.style.display = 'flex';
+}
+
+function eliminarFotoActual() {
+  if (currentItemIndex === null) return;
+  const item = inv[currentItemIndex];
+
+  item.fotos.splice(currentFotoIndex, 1);
+
+  if (item.fotos.length === 0) {
+    cerrarModalFoto();
+    guardarEnStorage();
+    render();
+    return;
+  }
+
+  if (currentFotoIndex >= item.fotos.length) currentFotoIndex--;
+  document.getElementById('fotoModalImg').src = item.fotos[currentFotoIndex];
+
+  guardarEnStorage();
+  actualizarFotoInfo();
+  render();
+}
+
+/* ============================================================
+   GESTOS – ZOOM & SWIPE
+============================================================ */
+const modalImg = document.getElementById('fotoModalImg');
+
+modalImg.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
+  if (e.touches.length === 2) {
+    const [a, b] = e.touches;
+    lastTouchDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
+}, { passive: true });
+
+modalImg.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    const [a, b] = e.touches;
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    if (lastTouchDistance) {
+      currentScale *= dist / lastTouchDistance;
+      if (currentScale < 1) currentScale = 1;
+      if (currentScale > 3) currentScale = 3;
+      modalImg.style.transform = `scale(${currentScale})`;
+    }
+    lastTouchDistance = dist;
+  }
+}, { passive: true });
+
+modalImg.addEventListener('touchend', e => {
+  if (e.changedTouches.length === 1 && touchStartX !== null) {
+    const endX = e.changedTouches[0].clientX;
+    const diff = endX - touchStartX;
+
+    if (Math.abs(diff) > 50 && currentScale <= 1.05) {
+      fotoSiguiente(diff < 0 ? 1 : -1);
+    }
+  }
+  lastTouchDistance = null;
+  touchStartX = null;
+}, { passive: true });
+
+/* ============================================================
+   RENDER TABLA
+============================================================ */
+function render() {
+  const tbody = document.getElementById('lista');
+  tbody.innerHTML = '';
+  const q = buscarEl().value.toLowerCase();
+
+  inv.forEach((item, i) => {
+    const texto = [
+      item.modelo,
+      item.sku,
+      item.tallas.join(' '),
+      item.cantidad,
+      item.precio
+    ].join(' ').toLowerCase();
+
+    if (q && !texto.includes(q)) return;
+
+    const tr = document.createElement('tr');
+    const precioSafe = item.precio != null ? ('$' + item.precio.toFixed(2)) : '';
+
+    const botonesImg = item.fotos.length
+      ? `<button onclick="verFoto(${i},0)">VIEW</button>
+         <button onclick="abrirSelectorFoto(${i})">+Foto</button>`
+      : `<button onclick="abrirSelectorFoto(${i})">+Foto</button>`;
+
+    if (i === editIndex) {
+      tr.innerHTML = `
+        <td><input id="edit_modelo_${i}" value="${item.modelo}" style="text-transform: uppercase; width:100%; padding:4px 6px;"></td>
+        <td><input id="edit_sku_${i}" value="${item.sku}" style="width:100%; padding:4px 6px;"></td>
+        <td><input id="edit_precio_${i}" type="number" step="0.01" value="${item.precio||''}" style="width:90px; padding:4px 6px;"></td>
+        <td>
+          <input id="edit_tallas_text_${i}" value="${item.tallas.join(' ')}" style="width:100%; padding:4px 6px;">
+          <div class="tallas-edit-box">
+            ${item.tallas.map((t,j)=>`
+              <div class="talla-edit-row">
+                <span>${t}</span>
+                <button onclick="eliminarTalla(${i},${j})">X</button>
+              </div>
+            `).join('')}
+          </div>
+        </td>
+        <td>
+          <input id="edit_color1_${i}" type="color" value="${item.colores[0]}"> -
+          <input id="edit_color2_${i}" type="color" value="${item.colores[1]}">
+        </td>
+        <td><input id="edit_cantidad_${i}" type="number" value="${item.cantidad}" style="width:70px; padding:4px 6px;"></td>
+        <td>${botonesImg}</td>
+        <td>
+          <button onclick="guardarEdicion(${i})">Guardar</button>
+          <button onclick="eliminar(${i})">Eliminar</button>
+        </td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td>${item.modelo}</td>
+        <td>${item.sku}</td>
+        <td>${precioSafe}</td>
+        <td>
+          <select>${item.tallas.map(t=>`<option>${t}</option>`).join('')}</select>
+        </td>
+        <td>
+          <span style="display:inline-block;width:20px;height:20px;border:1px solid #000;background:${item.colores[0]};border-radius:50%;margin-right:4px;"></span>
+          <span style="display:inline-block;width:20px;height:20px;border:1px solid #000;background:${item.colores[1]};border-radius:50%;"></span>
+        </td>
+        <td>${item.cantidad}</td>
+        <td>${botonesImg}</td>
+        <td><button onclick="editar(${i})">Editar</button></td>
+      `;
+    }
+
+    tbody.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   INICIO
+============================================================ */
+mostrarAvisoStorageBloqueado();
+cargarDesdeStorage();
+render();
+
+</script>
+
+</body>
+</html>

@@ -13,6 +13,7 @@ backend/static/uploads/*.db
 # (Ahora seguros porque usan os.getenv)
 !config.py
 !config.py.example
+lan_test.sh
 
 # IDEs
 .vscode/

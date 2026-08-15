@@ -189,7 +189,7 @@ def cargar_menu(page: ft.Page):
     def on_page_resize(e):
         update_menu_list(search_bar.value)
 
-    page.on_resized = on_page_resize
+    page.on_resize = on_page_resize
 
     def handle_search_change(e):
         update_menu_list(e.control.value, current_category)

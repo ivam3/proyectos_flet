@@ -53,21 +53,15 @@ def main(page: ft.Page):
         page.session.cart = Cart()
 
     page.title = APP_NAME
-    page.window_favicon_path = "favicon.png" # Mantener favicon.png (ya optimizado)
-    page.favicon = "favicon.png"
+    # Nota: el favicon web se sirve automáticamente desde assets/favicon.png
+    # (el HTML generado por Flet lo referencia). No usar page.favicon ni
+    # page.window_favicon_path: fueron eliminados del runtime.
 
     # --- CONFIGURACIÓN DE PÁGINA ---
     page.theme_mode = ft.ThemeMode.LIGHT
     # ... (resto de la configuración de tema igual)
 
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
-    
-    if "ANDROID_ARGUMENT" in os.environ:
-        page.upload_dir = os.path.join(os.path.expanduser("~"), "dona_soco_uploads")
-    else:
-        page.upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "uploads"))
-        
-    os.makedirs(page.upload_dir, exist_ok=True)
     pubsub = init_pubsub(page)
 
     page.theme_mode = ft.ThemeMode.LIGHT
@@ -221,7 +215,7 @@ def main(page: ft.Page):
 
     page.on_route_change = handle_route_change
     # Forzar procesamiento de la ruta inicial (útil para links directos como /apk)
-    page.go(page.route)
+    page.run_task(page.push_route, page.route)
 
     # --- FETCH CONFIG PARA BOTONES SOCIALES ---
     from database import get_configuracion
@@ -331,15 +325,17 @@ def main(page: ft.Page):
     content_area.content = cargar_menu(page)
 
     # --- FUNCIÓN DE DESCARGA WEB (ROBUSTA) ---
-    def web_download(filename, content_base64):
-        page.run_javascript(f"""
-            var link = document.createElement('a');
-            link.href = 'data:application/octet-stream;base64,{content_base64}';
-            link.download = '{filename}';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        """)
+    def web_download(filename, content_base64, mime_type="application/octet-stream"):
+        # Flet 0.82 eliminó page.run_javascript. Se usa launch_url con data URI,
+        # el mismo patrón que admin_views/pedidos.py.
+        import base64
+        try:
+            data = base64.b64decode(content_base64)
+            b64 = base64.b64encode(data).decode()
+            url = f"data:{mime_type};base64,{b64}"
+            page.launch_url(url, web_popup_window_name="_self")
+        except Exception as e:
+            print(f"Error en descarga web: {e}")
     page.session.web_download = web_download
 
     # --- QUITAR PANTALLA DE CARGA Y MOSTRAR APP ---
@@ -362,6 +358,11 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     assets_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets"))
+    if "ANDROID_ARGUMENT" in os.environ:
+        upload_dir = os.path.join(os.path.expanduser("~"), "dona_soco_uploads")
+    else:
+        upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "uploads"))
+    os.makedirs(upload_dir, exist_ok=True)
     os.environ["FLET_SECRET_KEY"] = "ads2025_dona_soco_secret"
     # Inicio de la aplicación con ft.run y renderer canvaskit para máxima compatibilidad
-    ft.run(main, assets_dir=assets_path, view=ft.AppView.FLET_APP, web_renderer="canvaskit")
+    ft.run(main, assets_dir=assets_path, upload_dir=upload_dir, view=ft.AppView.FLET_APP, web_renderer="canvaskit")

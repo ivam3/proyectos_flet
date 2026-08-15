@@ -16,11 +16,15 @@ def main(page: ft.Page):
     page.expand = True
     page.theme_mode = ft.ThemeMode.DARK
 
-    # Pre-definir SnackBar para mayor compatibilidad
-    page.snack_bar = ft.SnackBar(
+    # Diálogo persistente para notificaciones (Solución definitiva para invisibilidad)
+    notification_dlg = ft.AlertDialog(
+        title=ft.Text(""),
         content=ft.Text(""),
-        show_close_icon=True,
+        actions=[
+            ft.TextButton("Cerrar", on_click=lambda _: setattr(notification_dlg, "open", False) or page.update()),
+        ],
     )
+    page.overlay.append(notification_dlg)
 
     all_md_files = []
     original_md_content = ""
@@ -47,17 +51,19 @@ def main(page: ft.Page):
 
     # ---------------- PDF CONVERSION ----------------
     def convert_to_pdf(e):
-        def show_snack(message, color=ft.Colors.BLUE_GREY_900):
-            page.snack_bar.content.value = message
-            page.snack_bar.bgcolor = color
-            page.snack_bar.open = True
+        def notify(title, message):
+            notification_dlg.title.value = title
+            notification_dlg.content.value = message
+            notification_dlg.open = True
             page.update()
 
         if not original_md_content:
-            show_snack("No hay contenido para convertir", ft.Colors.ORANGE_700)
+            notify("Aviso", "No hay contenido para convertir")
             return
 
         try:
+            notify("Procesando", "Generando archivo PDF...")
+            
             # Crear HTML simple desde Markdown
             html_body = markdown.markdown(original_md_content, extensions=['extra', 'codehilite'])
             html_content = f"""
@@ -88,12 +94,12 @@ def main(page: ft.Page):
                 pisa_status = pisa.CreatePDF(html_content, dest=f)
             
             if not pisa_status.err:
-                show_snack(f"¡Éxito! PDF guardado en: src/storage/pdfs/{pdf_base_name}", ft.Colors.GREEN_700)
+                notify("¡Éxito!", f"PDF guardado en:\nsrc/storage/pdfs/{pdf_base_name}")
             else:
-                show_snack("Error al generar el PDF", ft.Colors.RED_700)
+                notify("Error", "Error al generar el PDF")
                 
         except Exception as ex:
-            show_snack(f"Error: {str(ex)}", ft.Colors.RED_700)
+            notify("Error Crítico", f"{str(ex)}")
 
     # ---------------- FILE OPEN ----------------
     def open_markdown_file(e):
@@ -246,12 +252,18 @@ def main(page: ft.Page):
             ft.Container(
                 expand=True,
                 padding=10,
-                content=ft.Markdown(
-                    ref=md_view_ref,
-                    value="**Selecciona un archivo**",
-                    selectable=True,
-                    extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
-                    on_tap_link=lambda e: page.launch_url(e.data),
+                content=ft.Column(
+                    [
+                        ft.Markdown(
+                            ref=md_view_ref,
+                            value="**Selecciona un archivo**",
+                            selectable=True,
+                            extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                            on_tap_link=lambda e: page.launch_url(e.data),
+                        ),
+                    ],
+                    scroll=ft.ScrollMode.ALWAYS,
+                    expand=True,
                 ),
             ),
         ],
@@ -283,8 +295,11 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
+    # En Termux puro, usar rutas relativas para evitar PermissionError del motor Starlette/Flet
+    assets_path = "assets" if os.path.exists(os.path.join(APP_DIR, "assets")) else None
+
     ft.run(
         main,
-        assets_dir=os.path.join(APP_DIR, "assets"),
+        assets_dir=assets_path,
         web_renderer=ft.WebRenderer.CANVAS_KIT,
     )

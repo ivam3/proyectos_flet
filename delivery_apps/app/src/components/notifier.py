@@ -21,7 +21,7 @@ def subscribe_view_handler(page: ft.Page, view_key: str, handler):
     se desuscribe el handler previo antes de suscribir el nuevo, de modo que
     nunca se apile más de un handler por sesión.
     """
-    session_id = str(page.session_id)
+    session_id = str(page.session.id)
     pubsub = init_pubsub(page)
     if session_id in _subscribed_handlers:
         try:
@@ -33,13 +33,14 @@ def subscribe_view_handler(page: ft.Page, view_key: str, handler):
 
 def show_notification(page: ft.Page, text: str, color=ft.Colors.GREEN):
     """Muestra un SnackBar de forma robusta."""
-    page.snack_bar = ft.SnackBar(
+    snack = ft.SnackBar(
         content=ft.Text(text, color=ft.Colors.WHITE),
         bgcolor=color,
         action="Cerrar",
         duration=3000
     )
-    page.snack_bar.open = True
+    snack.open = True
+    page.overlay.append(snack)
     page.update()
 
 def play_notification_sound(page: ft.Page):

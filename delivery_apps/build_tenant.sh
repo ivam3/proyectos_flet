@@ -2,7 +2,7 @@
 # Build a tenant web build from shared source + tenant config/assets.
 # Usage: build_tenant.sh <tenant_id> <deploy_dir>
 #   <tenant_id>   e.g. dona_soco | tortas_las_originales
-#   <deploy_dir>  repo-relative destination, e.g. delivery_apps/dona_soco_app/app
+#   <deploy_dir>  repo-relative destination, e.g. delivery_apps/tenants/dona_soco
 set -euo pipefail
 
 TENANT_ID="${1:?tenant id required}"
